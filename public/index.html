@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>حضور شركة مساعد | نظام الحضور والانصراف الذكي</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Tajawal', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#00c288',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            },
+            blue: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#00c288',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            },
+            slate: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#0d2238',
+              850: '#091b2c',
+              900: '#0a1827',
+              950: '#060e18',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+  <!-- ========================================== -->
+  <!-- Toast Container -->
+  <!-- ========================================== -->
+  <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================== -->
+  <!-- 1. LOGIN SCREEN VIEW -->
+  <!-- ========================================== -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <!-- Background glowing accents -->
+    <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-emerald-600/10 blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200/80 dark:border-slate-800 relative z-10 modal-enter">
+      <!-- Brand & Header -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge-emerald-pill text-xs font-bold mb-4 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>نظام حضور ذكي • أمان وموقع جغرافي</span>
+        </div>
+        <div class="w-16 h-16 rounded-2xl bg-emerald-grad text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-glow mb-4">
+          <i data-lucide="shield-check" class="w-8 h-8"></i>
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight" data-i18n="login_title">
+          حضور شركة مساعد
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-i18n="login_subtitle">
+          إدارة الحضور والانصراف الذكي والتحقق الجغرافي
+        </p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5" data-i18n="email_or_code">
+            البريد الإلكتروني أو الرقم الوظيفي
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+              <i data-lucide="user" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="login-identifier" required placeholder="admin@workforce.local"
+              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5" data-i18n="password">
+            كلمة المرور
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+            </span>
+            <input type="password" id="login-password" required placeholder="••••••••"
+              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+          </div>
+        </div>
+
+        <button type="submit" id="login-submit-btn"
+          class="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all transform active:scale-98 flex items-center justify-center gap-2 mt-2">
+          <span data-i18n="login_button">تسجيل الدخول</span>
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+
+        <div class="pt-2 text-center">
+          <button type="button" onclick="App.openRegisterManagerModal()" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            <span>حساب مدير جديد؟ ابدأ منظومة عملك الآن</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN APPLICATION PORTAL -->
+  <!-- ========================================== -->
+  <div id="app-view" class="min-h-screen flex flex-col hidden">
+    <!-- Top Global Header -->
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-grad text-white flex items-center justify-center shadow-md shadow-emerald-glow flex-shrink-0">
+            <i data-lucide="shield-check" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight truncate" data-i18n="system_title">
+              حضور شركة مساعد
+            </h1>
+            <span class="hidden md:block text-[11px] text-slate-500 dark:text-slate-400">GPS Geofencing & Photo Verification</span>
+          </div>
+        </div>
+
+        <!-- Controls: Language, Theme, Notifications, User Profile -->
+        <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
+          <!-- Language Toggle Button -->
+          <button id="lang-toggle-btn" onclick="App.toggleLanguage()"
+            class="px-2 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors whitespace-nowrap">
+            EN
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button onclick="App.toggleTheme()"
+            class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            title="تبديل الوضع الليلي">
+            <i id="theme-toggle-icon" data-lucide="moon" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Notifications Bell -->
+          <div class="relative">
+            <button onclick="App.toggleNotificationsDropdown()"
+              class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 relative transition-colors" title="الإشعارات">
+              <i data-lucide="bell" class="w-4 h-4"></i>
+              <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center hidden">0</span>
+            </button>
+          </div>
+
+          <!-- User Card -->
+          <div onclick="App.openProfile()" class="flex items-center gap-1.5 sm:gap-3 pr-1.5 sm:pr-3 border-r border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" title="الملف الشخصي">
+            <img id="header-user-avatar" src="/uploads/avatar.svg" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+            <div class="hidden sm:block text-right">
+              <span id="header-user-name" class="font-bold text-xs text-slate-900 dark:text-white block leading-tight truncate max-w-[100px]">مستخدم</span>
+              <span id="header-user-role" class="text-[10px] text-slate-500 font-medium">موظف</span>
+            </div>
+            <button onclick="event.stopPropagation(); App.logout()" class="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="تسجيل الخروج">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Notifications Dropdown Modal (Mobile Responsive) -->
+    <div id="notif-modal" class="fixed top-16 left-3 right-3 sm:right-auto sm:left-6 z-40 max-w-sm sm:w-84 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 hidden modal-enter">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+          <i data-lucide="bell" class="w-4 h-4 text-emerald-500"></i> الإشعارات
+        </h4>
+        <div class="flex items-center gap-2">
+          <button onclick="App.clearAllNotifications()" class="text-[11px] text-rose-500 hover:text-rose-600 font-bold hover:underline flex items-center gap-1" title="مسح كافة الإشعارات">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> مسح الكل
+          </button>
+          <button onclick="App.toggleNotificationsDropdown()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <div id="notif-list-container" class="mt-3 max-h-80 overflow-y-auto space-y-2"></div>
+    </div>
+
+    <!-- Main Dynamic Body -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+
+      <!-- ========================================== -->
+      <!-- VIEW A: EMPLOYEE PORTAL -->
+      <!-- ========================================== -->
+      <div id="employee-layout" class="hidden space-y-6">
+        <!-- Subnavigation Tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800" id="employee-subnav"></div>
+
+        <!-- Tab Content -->
+        <div id="employee-content"></div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- VIEW B: MANAGER / ADMIN PORTAL -->
+      <!-- ========================================== -->
+      <div id="manager-layout" class="hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+          <!-- Sidebar Navigation (Horizontal on mobile, vertical on desktop) -->
+          <aside class="lg:col-span-1">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl lg:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-slate-200 dark:border-slate-800 sticky top-18 lg:top-24 z-20">
+              <span class="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">قائمة الإدارة</span>
+              <ul id="manager-nav-list" class="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-1 lg:pb-0 scrollbar-none"></ul>
+            </div>
+          </aside>
+
+          <!-- Main Content Area -->
+          <section class="lg:col-span-4" id="manager-content"></section>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 1: CAMERA ATTENDANCE VERIFICATION -->
+  <!-- ========================================== -->
+  <div id="camera-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-center">
+      <!-- Title -->
+      <div class="mb-4">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="camera_title">
+          التقط صورة لإثبات وجودك في مكان العمل
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-i18n="camera_disclaimer">
+          سيتم تسجيل موقعك الحالي وصورة لإثبات وجودك في مقر العمل.
+        </p>
+      </div>
+
+      <!-- Camera Feed / Preview Container -->
+      <div class="relative w-full aspect-4/3 rounded-2xl bg-black overflow-hidden flex items-center justify-center shadow-inner mb-4">
+        <!-- Live Video Element -->
+        <video id="camera-video" autoplay playsinline class="w-full h-full object-cover camera-mirror"></video>
+
+        <!-- Preview Image after capture -->
+        <img id="camera-preview-img" class="w-full h-full object-cover hidden" />
+
+        <!-- Fallback File Input if webcam is unavailable -->
+        <div id="camera-fallback-input" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-white hidden">
+          <i data-lucide="camera" class="w-10 h-10 text-slate-400 mb-2"></i>
+          <span class="text-xs text-slate-300 mb-3">التقط صورة بالكاميرا مباشرة:</span>
+          <input type="file" accept="image/*" capture="user" onchange="EmployeeUI.handleFallbackFile(event)" class="text-xs file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white file:font-bold" />
+        </div>
+      </div>
+
+      <!-- Control Buttons -->
+      <div class="flex items-center justify-center gap-3">
+        <!-- Snap Photo Button -->
+        <button id="camera-snap-btn" onclick="EmployeeUI.takeSnapshot()"
+          class="flex-1 py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+          <i data-lucide="camera" class="w-5 h-5"></i>
+          <span data-i18n="camera_take_photo">التقاط الصورة</span>
+        </button>
+
+        <!-- Retake Photo Button -->
+        <button id="camera-retake-btn" onclick="EmployeeUI.retakeSnapshot()"
+          class="flex-1 py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-sm flex items-center justify-center gap-2 hidden">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          <span data-i18n="camera_retake">إعادة التقاط</span>
+        </button>
+
+        <!-- Confirm and Submit Button -->
+        <button id="camera-confirm-btn" onclick="EmployeeUI.confirmAndSubmitAttendance()"
+          class="flex-1 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 hidden">
+          <i data-lucide="check" class="w-5 h-5"></i>
+          <span data-i18n="camera_confirm">تأكيد وإرسال الحضور</span>
+        </button>
+
+        <!-- Cancel / Close Button -->
+        <button onclick="EmployeeUI.closeCameraModal()"
+          class="py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-400 font-bold text-sm"
+          title="إلغاء">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: NEW ATTENDANCE CORRECTION REQUEST -->
+  <!-- ========================================== -->
+  <div id="new-correction-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <h3 class="font-bold text-base text-slate-900 dark:text-white">تقديم طلب تصحيح حضور أو انصراف</h3>
+        <button onclick="EmployeeUI.closeNewCorrectionModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="EmployeeUI.submitNewCorrection(event)" class="space-y-3.5 pt-4">
+        <div>
+          <label class="block text-slate-500 mb-1">تاريخ اليوم المطلوب تصحيحه *</label>
+          <input type="date" id="corr-date-input" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-500 mb-1">وقت الحضور الفعلي</label>
+            <input type="time" step="1" id="corr-in-input" placeholder="09:00:00" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-slate-500 mb-1">وقت الانصراف الفعلي</label>
+            <input type="time" step="1" id="corr-out-input" placeholder="17:00:00" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-500 mb-1">سبب التصحيح *</label>
+          <select id="corr-type-select" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <option value="forgot_checkin">نسيان تسجيل الحضور</option>
+            <option value="forgot_checkout">نسيان تسجيل الانصراف</option>
+            <option value="gps_issue">مشكلة في إشارة الـ GPS</option>
+            <option value="internet_issue">انقطاع اتصال الإنترنت</option>
+            <option value="other">سبب آخر</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-500 mb-1">تفاصيل إضافية ومبرر الطلب</label>
+          <textarea id="corr-details-input" placeholder="يرجى كتابة التفاصيل التي تدعم طلبك ليراجعها المدير..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-20"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="EmployeeUI.closeNewCorrectionModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600">إلغاء</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">إرسال الطلب للمدير</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: REGISTER NEW MANAGER -->
+  <!-- ========================================== -->
+  <div id="register-manager-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 class="font-bold text-base text-slate-900 dark:text-white">إنشاء حساب مدير جديد</h3>
+          <p class="text-[11px] text-slate-500">سيبدأ حسابك فارغاً تماماً بدون أي موظفين لتجهيز بيئة العمل بنفسك</p>
+        </div>
+        <button onclick="App.closeRegisterManagerModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="App.handleRegisterManager(event)" class="space-y-3.5 pt-4">
+        <div>
+          <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">اسم المدير الكامل *</label>
+          <input type="text" id="reg-mgr-name" required placeholder="مثال: أحمد عبد الله" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        </div>
+        <div>
+          <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">اسم المؤسسة أو الشركة</label>
+          <input type="text" id="reg-mgr-company" placeholder="مثال: شركة الحلول المبتكرة" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        </div>
+        <div>
+          <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">البريد الإلكتروني للمدير *</label>
+          <input type="email" id="reg-mgr-email" required placeholder="manager@company.com" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">كلمة المرور *</label>
+            <input type="password" id="reg-mgr-pass" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تأكيد كلمة المرور *</label>
+            <input type="password" id="reg-mgr-confirm-pass" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          </div>
+        </div>
+        <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300">
+          <p class="leading-relaxed">📌 بمجرد إنشاء الحساب، ستتمكن من إضافة الموظفين يدوياً وتحديد موقع العمل وأوقات الدوام الرسمية ولن يتمكن أي موظف من تسجيل الحضور حتى تكمل إعداد النظام.</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="App.closeRegisterManagerModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600">إلغاء</button>
+          <button type="submit" id="reg-mgr-btn" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-2">
+            <span>إنشاء الحساب وبدء الإعداد</span>
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dynamic Modals Containers -->
+  <div id="employee-crud-modal"></div>
+  <div id="employee-stats-modal"></div>
+  <div id="month-details-modal"></div>
+  <div id="record-inspect-modal"></div>
+  <div id="manual-edit-modal"></div>
+
+  <!-- General Photo Modal -->
+  <div id="photo-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-4 shadow-2xl modal-enter text-center">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
+        <h4 id="photo-modal-title" class="font-bold text-xs text-slate-800 dark:text-white">إثبات الحضور</h4>
+        <button onclick="document.getElementById('photo-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <img id="photo-modal-img" class="w-full rounded-2xl object-cover bg-slate-950 aspect-square" />
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/i18n.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/employee-ui.js"></script>
+  <script src="/js/manager-ui.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

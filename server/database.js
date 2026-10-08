@@ -1,0 +1,285 @@
+const { DatabaseSync } = require('node:sqlite');
+const path = require('path');
+const fs = require('fs');
+
+const DB_FILE = path.join(__dirname, '..', 'attendance.db');
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const db = new DatabaseSync(DB_FILE);
+
+// Enable WAL mode & foreign keys for performance and consistency
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA foreign_keys = ON;
+
+  CREATE TABLE IF NOT EXISTS departments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    manager_name TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start_time TEXT NOT NULL DEFAULT '09:00',
+    end_time TEXT NOT NULL DEFAULT '17:00',
+    grace_period_minutes INTEGER NOT NULL DEFAULT 15,
+    half_day_threshold TEXT NOT NULL DEFAULT '12:00',
+    absence_threshold TEXT NOT NULL DEFAULT '13:00',
+    working_days TEXT NOT NULL DEFAULT '0,1,2,3,4', -- 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu
+    is_default INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS workplaces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_name TEXT NOT NULL DEFAULT 'شركة الرؤية للحلول الرقمية',
+    name TEXT NOT NULL DEFAULT 'المقر الرئيسي',
+    latitude REAL NOT NULL DEFAULT 30.0444,
+    longitude REAL NOT NULL DEFAULT 31.2357,
+    allowed_radius_meters REAL NOT NULL DEFAULT 150,
+    max_gps_accuracy_meters REAL NOT NULL DEFAULT 150,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_code TEXT UNIQUE NOT NULL,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'employee', -- 'manager' or 'employee'
+    department_id INTEGER,
+    job_title TEXT,
+    phone TEXT,
+    hire_date TEXT,
+    base_salary REAL DEFAULT 5000,
+    schedule_id INTEGER,
+    is_active INTEGER DEFAULT 1,
+    profile_photo TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(department_id) REFERENCES departments(id) ON DELETE SET NULL,
+    FOREIGN KEY(schedule_id) REFERENCES schedules(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS attendance_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    check_in_time TEXT, -- HH:MM:SS
+    check_out_time TEXT, -- HH:MM:SS
+    check_in_lat REAL,
+    check_in_lng REAL,
+    check_in_distance REAL,
+    check_in_accuracy REAL,
+    check_in_photo TEXT,
+    check_out_lat REAL,
+    check_out_lng REAL,
+    check_out_distance REAL,
+    check_out_accuracy REAL,
+    check_out_photo TEXT,
+    status TEXT NOT NULL, -- 'Present', 'On Time', 'Late', 'Half Day', 'Absent', 'Early Leave', 'Outside Location', 'Pending Review'
+    scheduled_start TEXT DEFAULT '09:00',
+    scheduled_end TEXT DEFAULT '17:00',
+    late_minutes INTEGER DEFAULT 0,
+    early_leave_minutes INTEGER DEFAULT 0,
+    worked_hours REAL DEFAULT 0,
+    estimated_deduction REAL DEFAULT 0,
+    verification_status TEXT DEFAULT 'verified', -- 'verified', 'outside_radius', 'poor_gps', 'suspicious', 'manual_override'
+    ip_address TEXT,
+    user_agent TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS attendance_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    attendance_record_id INTEGER,
+    date TEXT NOT NULL,
+    requested_check_in TEXT,
+    requested_check_out TEXT,
+    reason_type TEXT NOT NULL, -- 'forgot_checkin', 'forgot_checkout', 'gps_issue', 'internet_issue', 'other'
+    reason_details TEXT,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    reviewed_by INTEGER,
+    review_notes TEXT,
+    reviewed_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(attendance_record_id) REFERENCES attendance_records(id) ON DELETE SET NULL,
+    FOREIGN KEY(reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS company_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    category TEXT DEFAULT 'general',
+    description TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS holidays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    is_recurring INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER, -- NULL means all managers
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'info', -- 'info', 'warning', 'success', 'danger'
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    user_name TEXT,
+    action TEXT NOT NULL,
+    target_type TEXT,
+    target_id TEXT,
+    old_values TEXT,
+    new_values TEXT,
+    reason TEXT,
+    ip_address TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_att_emp_date ON attendance_records(employee_id, date);
+  CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
+  CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
+`);
+
+// Safe migrations for multi-manager workspace separation & setup states
+try {
+  const userCols = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+  if (!userCols.includes('manager_id')) {
+    db.exec(`ALTER TABLE users ADD COLUMN manager_id INTEGER;`);
+    db.exec(`UPDATE users SET manager_id = 1 WHERE role = 'employee';`);
+  }
+
+  const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
+  if (!wpCols.includes('manager_id')) {
+    db.exec(`ALTER TABLE workplaces ADD COLUMN manager_id INTEGER;`);
+    db.exec(`UPDATE workplaces SET manager_id = 1;`);
+  }
+  if (!wpCols.includes('is_configured')) {
+    db.exec(`ALTER TABLE workplaces ADD COLUMN is_configured INTEGER DEFAULT 0;`);
+    db.exec(`UPDATE workplaces SET is_configured = 1 WHERE id = 1;`);
+  }
+
+  const schedCols = db.prepare('PRAGMA table_info(schedules)').all().map(c => c.name);
+  if (!schedCols.includes('manager_id')) {
+    db.exec(`ALTER TABLE schedules ADD COLUMN manager_id INTEGER;`);
+    db.exec(`UPDATE schedules SET manager_id = 1;`);
+  }
+  if (!schedCols.includes('is_configured')) {
+    db.exec(`ALTER TABLE schedules ADD COLUMN is_configured INTEGER DEFAULT 0;`);
+    db.exec(`UPDATE schedules SET is_configured = 1 WHERE id = 1;`);
+  }
+  if (!schedCols.includes('early_leave_grace_minutes')) {
+    db.exec(`ALTER TABLE schedules ADD COLUMN early_leave_grace_minutes INTEGER DEFAULT 0;`);
+  }
+
+  const deptCols = db.prepare('PRAGMA table_info(departments)').all().map(c => c.name);
+  if (!deptCols.includes('manager_id')) {
+    db.exec(`ALTER TABLE departments ADD COLUMN manager_id INTEGER;`);
+    db.exec(`UPDATE departments SET manager_id = 1;`);
+  }
+} catch (migErr) {
+  console.error('Migration error:', migErr);
+}
+
+// One-time monthly archive reset & test accounts purge (tareq al-najjar and test managers)
+try {
+  const resetCheck = db.prepare(`SELECT value FROM company_settings WHERE key = 'archive_reset_oct2026'`).get();
+  if (!resetCheck) {
+    db.exec(`
+      DELETE FROM attendance_records;
+      DELETE FROM attendance_corrections;
+      DELETE FROM users WHERE full_name LIKE '%طارق النجار%' OR (role = 'manager' AND id != 1);
+      DELETE FROM schedules WHERE manager_id != 1;
+      DELETE FROM workplaces WHERE manager_id != 1;
+      UPDATE users SET manager_id = 1 WHERE role = 'employee';
+      INSERT OR REPLACE INTO company_settings (key, value, category, description)
+      VALUES ('archive_reset_oct2026', '1', 'system', 'Archive zeroed and test accounts removed on launch');
+    `);
+    console.log('[Database] Archive zeroed and test users removed successfully.');
+  }
+} catch (cleanErr) {
+  console.error('Startup cleanup error:', cleanErr);
+}
+
+// Helper to log audit events
+function logAudit(userId, userName, action, targetType, targetId, oldValues, newValues, reason, ipAddress) {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO audit_logs (user_id, user_name, action, target_type, target_id, old_values, new_values, reason, ip_address)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      userId || null,
+      userName || 'System',
+      action,
+      targetType || null,
+      targetId ? String(targetId) : null,
+      oldValues ? JSON.stringify(oldValues) : null,
+      newValues ? JSON.stringify(newValues) : null,
+      reason || null,
+      ipAddress || null
+    );
+  } catch (err) {
+    console.error('Audit log error:', err);
+  }
+}
+
+// Helper to create notifications
+function createNotification(userId, title, message, type = 'info') {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (?, ?, ?, ?)
+    `);
+    stmt.run(userId || null, title, message, type);
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+}
+
+// Distance Calculation using Haversine formula (returns meters)
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth radius in meters
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) *
+    Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+}
+
+module.exports = {
+  db,
+  logAudit,
+  createNotification,
+  calculateHaversineDistance,
+  uploadsDir
+};

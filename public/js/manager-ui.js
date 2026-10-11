@@ -24,7 +24,7 @@ const ManagerUI = {
       { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
       { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
       { id: 'workplace', icon: 'map-pin', label: isEn ? 'Workplace' : 'موقع العمل' },
-      { id: 'archive', icon: 'calendar-range', label: isEn ? 'Monthly Archive' : 'أرشيف الشهور' },
+      { id: 'archive', icon: 'coins', label: isEn ? 'Payroll & Monthly Archive' : 'مسير الرواتب والخصومات' },
       { id: 'reports', icon: 'file-text', label: isEn ? 'Reports' : 'التقارير' },
       { id: 'settings', icon: 'sliders', label: isEn ? 'Settings' : 'الإعدادات' },
       { id: 'profile', icon: 'user-cog', label: isEn ? 'Profile' : 'الملف الشخصي' }
@@ -479,6 +479,7 @@ const ManagerUI = {
                 <th class="py-3.5 px-4">رقم الهاتف</th>
                 <th class="py-3.5 px-4">القسم</th>
                 <th class="py-3.5 px-4">المسمى الوظيفي</th>
+                <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
                 <th class="py-3.5 px-4">حالة الحساب</th>
                 <th class="py-3.5 px-4">حضور اليوم</th>
                 <th class="py-3.5 px-4 text-center">الإجراءات</th>
@@ -506,6 +507,11 @@ const ManagerUI = {
                   <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.phone || '—'}</td>
                   <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.department_name || 'عام'}</td>
                   <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.job_title || 'موظف'}</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20">
+                      ${(e.base_salary || 3000).toLocaleString('ar-EG')} ج.م
+                    </span>
+                  </td>
                   <td class="py-3.5 px-4">
                     <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
                       ${e.is_active ? 'نشط' : 'معطل'}
@@ -588,12 +594,15 @@ const ManagerUI = {
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">المسمى الوظيفي (اختياري)</label>
-                <input type="text" name="job_title" placeholder="مهندس برمجيات / مسوق" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">المسمى الوظيفي *</label>
+                <input type="text" name="job_title" placeholder="مثال: مونتير / سيلز / محاسب" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
               </div>
               <div>
-                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">القسم (اختياري)</label>
-                <input type="text" name="department" placeholder="التقنية / المبيعات" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">الراتب الأساسي الشهري (جنيه مصري) *</label>
+                <div class="relative">
+                  <input type="number" name="base_salary" value="3000" min="0" step="50" required placeholder="3000" class="w-full pl-12 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold font-mono text-emerald-600 dark:text-emerald-400" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
               </div>
             </div>
 
@@ -635,6 +644,7 @@ const ManagerUI = {
       confirm_password: form.confirm_password.value,
       phone: form.phone.value.trim() || null,
       job_title: form.job_title.value.trim() || null,
+      base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
       is_active: parseInt(form.is_active.value, 10)
     };
 
@@ -728,9 +738,19 @@ const ManagerUI = {
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">المسمى الوظيفي (الشغلانة) *</label>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">المسمى الوظيفي *</label>
                 <input type="text" name="job_title" value="${(emp.job_title || '').replace(/"/g, '&quot;')}" placeholder="مثال: مونتير / سيلز / محاسب" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 font-medium" />
               </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">الراتب الأساسي الشهري (جنيه مصري) *</label>
+                <div class="relative">
+                  <input type="number" name="base_salary" value="${emp.base_salary || 3000}" min="0" step="50" required class="w-full pl-12 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold font-mono text-emerald-600 dark:text-emerald-400" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">القسم</label>
                 <select name="department_id" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium">
@@ -738,17 +758,15 @@ const ManagerUI = {
                   ${departments.map(d => `<option value="${d.id}" ${emp.department_id === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}
                 </select>
               </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">البريد الإلكتروني لتسجيل الدخول *</label>
-                <input type="email" name="email" value="${(emp.email || '').replace(/"/g, '&quot;')}" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 font-mono" />
-              </div>
               <div>
                 <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم الهاتف (اختياري)</label>
                 <input type="text" name="phone" value="${(emp.phone || '').replace(/"/g, '&quot;')}" placeholder="010... / +966..." class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
               </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">البريد الإلكتروني لتسجيل الدخول *</label>
+              <input type="email" name="email" value="${(emp.email || '').replace(/"/g, '&quot;')}" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 font-mono" />
             </div>
 
             <!-- Password Change (Optional) -->
@@ -816,6 +834,7 @@ const ManagerUI = {
       job_title: form.job_title.value.trim() || null,
       phone: form.phone.value.trim() || null,
       department_id: form.department_id.value ? parseInt(form.department_id.value, 10) : null,
+      base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
       is_active: parseInt(form.is_active.value, 10)
     };
 
@@ -1120,7 +1139,10 @@ const ManagerUI = {
             </h2>
             <p class="text-xs text-slate-500">استخراج تقارير الحضور وتصديرها بصيغة Excel / CSV</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="ManagerUI.switchSection('archive')" class="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-colors">
+              <i data-lucide="coins" class="w-4 h-4"></i> مسير الرواتب وصافي القبض
+            </button>
             <button onclick="ManagerUI.exportHistoryCsv()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-2">
               <i data-lucide="download" class="w-4 h-4"></i> تصدير Excel / CSV
             </button>
@@ -1162,7 +1184,8 @@ const ManagerUI = {
                 <th class="py-3 px-4">الموظف</th>
                 <th class="py-3 px-4">الحضور</th>
                 <th class="py-3 px-4">الانصراف</th>
-                <th class="py-3 px-4">الحالة</th>
+                <th class="py-3 px-4">الحالة والتأخير</th>
+                <th class="py-3 px-4 text-center">الخصم</th>
                 <th class="py-3 px-4">ساعات العمل</th>
                 <th class="py-3 px-4">المسافة</th>
                 <th class="py-3 px-4">الصورة</th>
@@ -1178,7 +1201,13 @@ const ManagerUI = {
                   </td>
                   <td class="py-3 px-4 font-mono">${r.check_in_time || '—'}</td>
                   <td class="py-3 px-4 font-mono">${r.check_out_time || '—'}</td>
-                  <td class="py-3 px-4">${getStatusBadge(r.status)}</td>
+                  <td class="py-3 px-4">
+                    ${getStatusBadge(r.status)}
+                    ${r.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
+                  </td>
+                  <td class="py-3 px-4 text-center font-bold font-mono">
+                    ${r.estimated_deduction > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[11px]">-${r.estimated_deduction} ج.م</span>` : `<span class="text-emerald-500 text-[11px]">0</span>`}
+                  </td>
                   <td class="py-3 px-4 font-bold">${r.worked_hours || 0} س</td>
                   <td class="py-3 px-4">${r.check_in_distance ? `${r.check_in_distance}م` : '—'}</td>
                   <td class="py-3 px-4">
@@ -1244,29 +1273,64 @@ const ManagerUI = {
           </div>
 
           <div>
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span>الخصومات التقديرية</span>
-              <label class="flex items-center gap-2 cursor-pointer font-normal text-xs text-blue-600">
-                <input type="checkbox" id="rule-enable-deductions" class="rounded text-blue-600 focus:ring-blue-500" />
-                <span>تفعيل احتساب الخصومات</span>
-              </label>
-            </h3>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <label class="block text-slate-500 mb-1">قيمة الخصم لكل دقيقة تأخير</label>
-                <input type="number" step="0.5" id="rule-late-per-min" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="coins" class="w-4 h-4 text-amber-500"></i> نظام شرائح خصم التأخير (بالجنيه المصري)
+                </h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">حدد الوقت بالدقائق ومبلغ الخصم بالجنيه لكل شريحة</p>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer font-normal text-xs text-blue-600">
+                <input type="checkbox" id="rule-enable-deductions" class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                <span class="font-bold">تفعيل احتساب الخصومات</span>
+              </label>
+            </div>
+
+            <!-- Tiers Explanation Notice -->
+            <div class="mt-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2.5">
+              <i data-lucide="info" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+              <p class="leading-relaxed">
+                <strong>نظام الشرائح غير تراكمي:</strong> عند تأخر الموظف، يتم تطبيق الشريحة الأعلى التي وصل إليها فقط وتمسح ما قبلها (مثلاً: إذا حددت 15 دقيقة بـ 25 ج و 25 دقيقة بـ 50 ج، وتأخر الموظف 25 دقيقة يُخصم منه <strong>50 ج فقط</strong> وليس 75 ج).
+              </p>
+            </div>
+
+            <!-- Tiers List -->
+            <div class="mt-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-slate-700 dark:text-slate-300">شرائح التأخير المقررة:</span>
+                <button type="button" onclick="ManagerUI.addDelayTierRow()" class="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-1.5 transition-colors">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> إضافة وقت جديد
+                </button>
+              </div>
+
+              <div id="delay-tiers-container" class="space-y-2.5">
+                <!-- Dynamic Tier Rows Rendered Here -->
+              </div>
+            </div>
+
+            <!-- Absence & Fallback rates -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">خصم يوم الغياب الكامل (جنيه مصري)</label>
+                <div class="relative">
+                  <input type="number" step="1" id="rule-absence-rate" placeholder="100" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
               </div>
               <div>
-                <label class="block text-slate-500 mb-1">خصم يوم الغياب الكامل</label>
-                <input type="number" step="1" id="rule-absence-rate" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                <label class="block text-slate-500 mb-1 font-semibold">خصم نصف اليوم (جنيه مصري)</label>
+                <div class="relative">
+                  <input type="number" step="1" id="rule-half-day-rate" placeholder="50" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-            <button type="submit" class="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20">
-              حفظ القواعد
+            <button type="submit" class="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>حفظ القواعد والشرائح</span>
             </button>
           </div>
         </form>
@@ -1281,26 +1345,101 @@ const ManagerUI = {
       document.getElementById('rule-req-checkout-photo').checked = s.require_checkout_photo === '1';
       document.getElementById('rule-suspicious-ip').checked = s.suspicious_ip_detection === '1';
       document.getElementById('rule-enable-deductions').checked = s.enable_salary_deductions === '1';
-      document.getElementById('rule-late-per-min').value = s.deduction_late_per_minute || '2.0';
-      document.getElementById('rule-absence-rate').value = s.deduction_absence_rate || '250';
+      document.getElementById('rule-absence-rate').value = s.deduction_absence_rate || '100';
+      document.getElementById('rule-half-day-rate').value = s.deduction_half_day_rate || '50';
+
+      // Load Delay Tiers
+      const container = document.getElementById('delay-tiers-container');
+      container.innerHTML = '';
+      let tiers = [];
+      try {
+        if (s.delay_deduction_tiers) {
+          tiers = JSON.parse(s.delay_deduction_tiers);
+        }
+      } catch (e) {
+        tiers = [];
+      }
+
+      if (!Array.isArray(tiers) || tiers.length === 0) {
+        // Default initial tiers: 15 mins -> 25 EGP, 25 mins -> 50 EGP
+        tiers = [
+          { minutes: 15, amount: 25 },
+          { minutes: 25, amount: 50 }
+        ];
+      }
+
+      tiers.forEach(t => this.addDelayTierRow(t.minutes, t.amount));
     } catch (err) {
       showToast(err.message, 'danger');
     }
   },
 
+  addDelayTierRow(minutes = '', amount = '') {
+    const container = document.getElementById('delay-tiers-container');
+    if (!container) return;
+    const rowId = 'tier-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = 'flex items-center gap-2 sm:gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 tier-row';
+    div.innerHTML = `
+      <div class="flex-1">
+        <label class="block text-[11px] text-slate-500 mb-1 font-medium">إذا تأخر الموظف (بالدقائق):</label>
+        <div class="relative">
+          <input type="number" min="1" step="1" value="${minutes}" placeholder="مثال: 15" required class="tier-minutes w-full pl-12 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold font-mono focus:ring-2 focus:ring-blue-500" />
+          <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">دقيقة</span>
+        </div>
+      </div>
+      <div class="flex-1">
+        <label class="block text-[11px] text-slate-500 mb-1 font-medium">قيمة الخصم المالي:</label>
+        <div class="relative">
+          <input type="number" min="0" step="1" value="${amount}" placeholder="مثال: 25" required class="tier-amount w-full pl-12 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold font-mono focus:ring-2 focus:ring-blue-500 text-rose-600 dark:text-rose-400" />
+          <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">جنيه</span>
+        </div>
+      </div>
+      <div class="pt-5 flex-shrink-0">
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors" title="حذف الشريحة">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+    `;
+    container.appendChild(div);
+    if (window.lucide) lucide.createIcons();
+  },
+
   async saveCompanyRules(e) {
     e.preventDefault();
+
+    // Collect delay deduction tiers
+    const tierRows = document.querySelectorAll('#delay-tiers-container .tier-row');
+    const tiers = [];
+    tierRows.forEach(row => {
+      const minInput = row.querySelector('.tier-minutes');
+      const amtInput = row.querySelector('.tier-amount');
+      if (minInput && amtInput) {
+        const min = parseInt(minInput.value, 10);
+        const amt = parseFloat(amtInput.value);
+        if (!isNaN(min) && !isNaN(amt)) {
+          tiers.push({ minutes: min, amount: amt });
+        }
+      }
+    });
+
+    // Sort ascending by minutes
+    tiers.sort((a, b) => a.minutes - b.minutes);
+
     const data = {
       require_checkout_photo: document.getElementById('rule-req-checkout-photo').checked ? '1' : '0',
       suspicious_ip_detection: document.getElementById('rule-suspicious-ip').checked ? '1' : '0',
       enable_salary_deductions: document.getElementById('rule-enable-deductions').checked ? '1' : '0',
-      deduction_late_per_minute: document.getElementById('rule-late-per-min').value,
-      deduction_absence_rate: document.getElementById('rule-absence-rate').value
+      deduction_absence_rate: document.getElementById('rule-absence-rate').value || '100',
+      deduction_half_day_rate: document.getElementById('rule-half-day-rate').value || '50',
+      delay_deduction_tiers: JSON.stringify(tiers),
+      currency_symbol: 'ج.م'
     };
 
     try {
       const res = await API.updateCompanySettings(data);
-      showToast(res.message, 'success');
+      showToast(res.message || 'تم حفظ قواعد وشرائح الخصومات بنجاح', 'success');
     } catch (err) {
       showToast(err.message, 'danger');
     }
@@ -1538,21 +1677,30 @@ const ManagerUI = {
             </div>
           </div>
 
-          <!-- Secondary Summary Metrics -->
-          <div class="grid grid-cols-2 gap-3 text-right">
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">إجمالي ساعات العمل المنجزة:</span>
-              <span class="font-extrabold text-slate-900 dark:text-white font-mono text-sm">${s.totalWorkedHours} ساعة</span>
+          <!-- Secondary Summary Metrics & Payroll Details -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-right">
+            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي للشهر:</span>
+              <span class="font-extrabold text-slate-900 dark:text-white font-mono text-base mt-0.5 block">${(s.baseSalary || 3000).toLocaleString('ar-EG')} ج.م</span>
             </div>
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">إجمالي الخصومات التقديرية:</span>
-              <span class="font-extrabold text-rose-500 font-mono text-sm">${s.totalDeductions} ج.م</span>
+            <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+              <span class="text-[11px] text-rose-500 dark:text-rose-400 font-bold block">إجمالي الخصومات المطبقة:</span>
+              <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-base mt-0.5 block">-${(s.totalDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-rose-500/80 block mt-0.5 font-medium">
+                (تأخير: ${(s.totalLateDeductions || 0)} ج.م • غياب: ${(s.totalAbsenceDeductions || 0)} ج.م)
+              </span>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25">
+              <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق:</span>
+              <span class="font-black text-emerald-600 dark:text-emerald-400 font-mono text-lg mt-0.5 block">
+                ${(s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) - (s.totalDeductions || 0))).toLocaleString('ar-EG')} ج.م
+              </span>
             </div>
           </div>
 
           <!-- Recent Attendance History Table -->
           <div>
-            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2">سجل أيام الحضور والانصراف (${activeMonth}):</h4>
+            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2">سجل أيام الحضور والانصراف والخصم (${activeMonth}):</h4>
             ${records.length === 0 ? `
               <div class="p-6 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 لا توجد سجلات حضور مسجلة لهذا الموظف في هذا الشهر.
@@ -1566,6 +1714,7 @@ const ManagerUI = {
                       <th class="py-2.5 px-3">الحضور</th>
                       <th class="py-2.5 px-3">الانصراف</th>
                       <th class="py-2.5 px-3">الحالة والتأخير</th>
+                      <th class="py-2.5 px-3 text-center">الخصم المطبق</th>
                       <th class="py-2.5 px-3">ساعات العمل</th>
                     </tr>
                   </thead>
@@ -1579,6 +1728,11 @@ const ManagerUI = {
                           ${getStatusBadge(rec.status)}
                           ${rec.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(rec.late_minutes)}</span>` : ''}
                           ${rec.early_leave_minutes > 0 ? `<span class="text-purple-400 text-[10px] block mt-0.5">انصراف مبكر: ${formatMinutesArabic(rec.early_leave_minutes)}</span>` : ''}
+                        </td>
+                        <td class="py-2.5 px-3 text-center font-bold font-mono">
+                          ${rec.estimated_deduction > 0 ? `
+                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[11px]">-${rec.estimated_deduction} ج.م</span>
+                          ` : `<span class="text-emerald-500 text-[11px]">0</span>`}
                         </td>
                         <td class="py-2.5 px-3 font-bold">${rec.worked_hours || 0} س</td>
                       </tr>
@@ -1663,11 +1817,14 @@ const ManagerUI = {
       const summaries = summaryRes.summaries || [];
 
       // Calculate totals across all employees for this month
+      // Calculate totals across all employees for this month
       let totalLateMinsCompany = 0;
       let totalEarlyMinsCompany = 0;
       let totalAbsentCompany = 0;
       let totalWorkedHoursCompany = 0;
       let totalDeductionsCompany = 0;
+      let totalBaseSalariesCompany = 0;
+      let totalNetSalariesCompany = 0;
 
       summaries.forEach(s => {
         totalLateMinsCompany += (s.totalLateMinutes || 0);
@@ -1675,6 +1832,8 @@ const ManagerUI = {
         totalAbsentCompany += (s.absentDays || 0);
         totalWorkedHoursCompany += (s.totalWorkedHours || 0);
         totalDeductionsCompany += (s.totalDeductions || 0);
+        totalBaseSalariesCompany += (s.baseSalary || 3000);
+        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) - (s.totalDeductions || 0)));
       });
 
       const mainContainer = document.getElementById('mgr-archive-main-container');
@@ -1683,30 +1842,30 @@ const ManagerUI = {
       const activeMonthObj = months.find(m => m.value === targetMonth) || { label: targetMonth };
 
       mainContainer.innerHTML = `
-        <!-- Month Summary Cards -->
+        <!-- Month Payroll & Attendance Executive Stat Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
-            <span class="text-xs text-slate-500 dark:text-slate-400 font-bold block">إجمالي ساعات العمل</span>
-            <span class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
-            <span class="text-[11px] text-emerald-500 mt-1 block font-semibold">لكل موظفي الشركة</span>
-          </div>
-
-          <div class="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
-            <span class="text-xs text-amber-500 font-bold block">إجمالي وقت التأخير</span>
-            <span class="text-lg font-extrabold text-amber-400 mt-1 block">${formatMinutesArabic(totalLateMinsCompany)}</span>
-            <span class="text-[11px] text-amber-500/80 mt-1 block">خلال شهر ${activeMonthObj.label}</span>
-          </div>
-
-          <div class="p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
-            <span class="text-xs text-purple-400 font-bold block">إجمالي الخروج المبكر</span>
-            <span class="text-lg font-extrabold text-purple-400 mt-1 block">${formatMinutesArabic(totalEarlyMinsCompany)}</span>
-            <span class="text-[11px] text-purple-400/80 mt-1 block">قبل موعد نهاية الدوام</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-bold block">إجمالي المرتبات الأساسية</span>
+            <span class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${totalBaseSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[11px] text-slate-400 mt-1 block">لعدد ${summaries.length} موظف</span>
           </div>
 
           <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
-            <span class="text-xs text-rose-400 font-bold block">إجمالي أيام الغياب والخصم</span>
-            <span class="text-2xl font-extrabold text-rose-400 mt-1 block font-mono">${totalAbsentCompany} يوم</span>
-            <span class="text-[11px] text-rose-400/80 mt-1 block font-mono">خصومات: ${totalDeductionsCompany.toFixed(0)} ج.م</span>
+            <span class="text-xs text-rose-500 font-bold block">إجمالي الخصومات (تأخير + غياب)</span>
+            <span class="text-xl sm:text-2xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[11px] text-rose-400 mt-1 block font-mono">غياب: ${totalAbsentCompany} يوم • تأخير: ${formatMinutesArabic(totalLateMinsCompany)}</span>
+          </div>
+
+          <div class="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right">
+            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">صافي مسيرات الرواتب المستحقة</span>
+            <span class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${totalNetSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[11px] text-emerald-500/80 mt-1 block font-semibold">المبلغ المستحق بعد الخصومات</span>
+          </div>
+
+          <div class="p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 shadow-sm text-right">
+            <span class="text-xs text-blue-500 font-bold block">إجمالي ساعات العمل</span>
+            <span class="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
+            <span class="text-[11px] text-blue-400/80 mt-1 block">خلال شهر ${activeMonthObj.label}</span>
           </div>
         </div>
 
@@ -1714,17 +1873,20 @@ const ManagerUI = {
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-between text-xs font-semibold">
           <div class="flex items-center gap-2.5">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
-            <span>تذكير تلقائي: مع بداية كل شهر جديد، يبدأ العداد من الصفر تلقائياً وتُحفظ بيانات الشهور السابقة هنا في الأرشيف الدائم للرجوع إليها في أي وقت.</span>
+            <span>تذكير تلقائي: مع بداية كل شهر جديد، يبدأ العداد من الصفر تلقائياً وتُحفظ كشوفات الشهور السابقة هنا في الأرشيف الدائم للرجوع إليها في أي وقت.</span>
           </div>
         </div>
 
-        <!-- Employees Month Archive Table -->
+        <!-- Employees Month Archive & Payroll Table -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="users" class="w-4 h-4 text-emerald-500"></i>
-              تقرير التزام الموظفين لشهر: <span class="text-emerald-500">${activeMonthObj.label}</span>
-            </h3>
+          <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i>
+                مسير رواتب وكشف حساب الموظفين لشهر: <span class="text-emerald-500 font-bold">${activeMonthObj.label}</span>
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، خصم التأخير بالشرائح، الغياب، وصافي القبض لكل موظف</p>
+            </div>
             <span class="text-xs text-slate-400 font-mono">${summaries.length} موظف مسجل</span>
           </div>
 
@@ -1732,70 +1894,73 @@ const ManagerUI = {
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
             <div class="overflow-x-auto">
-              <table class="w-full text-right text-xs min-w-[740px]">
-                <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
+              <table class="w-full text-right text-xs min-w-[850px]">
+                <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th class="py-3 px-4">الموظف</th>
-                    <th class="py-3 px-4 text-center">في الموعد</th>
-                    <th class="py-3 px-4">التأخير</th>
-                    <th class="py-3 px-4">الخروج المبكر</th>
-                    <th class="py-3 px-4 text-center">الغياب</th>
-                    <th class="py-3 px-4 text-center">ساعات العمل</th>
-                    <th class="py-3 px-4 text-center">الخصومات</th>
-                    <th class="py-3 px-4 text-center">التفاصيل</th>
+                    <th class="py-3.5 px-4">الموظف</th>
+                    <th class="py-3.5 px-3 text-center">المرتب الأساسي</th>
+                    <th class="py-3.5 px-3 text-center">أيام الحضور</th>
+                    <th class="py-3.5 px-4">التأخير (نظام الشرائح)</th>
+                    <th class="py-3.5 px-3 text-center">أيام الغياب</th>
+                    <th class="py-3.5 px-3 text-center">إجمالي الخصم</th>
+                    <th class="py-3.5 px-4 text-center">صافي القبض المستحق</th>
+                    <th class="py-3.5 px-3 text-center">كشف الحساب</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  ${summaries.map(s => `
+                  ${summaries.map(s => {
+                    const baseSal = s.baseSalary || 3000;
+                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal - (s.totalDeductions || 0));
+                    return `
                     <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                       <td class="py-3.5 px-4">
                         <div class="flex items-center gap-3">
                           <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800" />
                           <div>
                             <span class="font-bold text-slate-800 dark:text-slate-200 block">${s.employee.full_name}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">${s.employee.employee_code} • ${s.employee.department_name || 'عام'}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
                           </div>
                         </div>
                       </td>
-                      <td class="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                        ${s.onTimeDays} يوم
+                      <td class="py-3.5 px-3 text-center font-bold text-slate-700 dark:text-slate-300 font-mono">
+                        ${baseSal.toLocaleString('ar-EG')} ج.م
+                      </td>
+                      <td class="py-3.5 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        ${s.presentDays || s.onTimeDays} يوم
                       </td>
                       <td class="py-3.5 px-4">
                         ${s.lateDays > 0 ? `
                           <div>
-                            <span class="font-bold text-amber-500 block">${s.lateDays} يوم</span>
-                            <span class="text-[10px] text-amber-500/80">${formatMinutesArabic(s.totalLateMinutes)}</span>
+                            <span class="font-bold text-amber-500 block">${s.lateDays} يوم (${formatMinutesArabic(s.totalLateMinutes)})</span>
+                            <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم شرائح: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
                           </div>
                         ` : '<span class="text-emerald-500 font-bold">لا يوجد تأخير ✓</span>'}
                       </td>
-                      <td class="py-3.5 px-4">
-                        ${s.earlyLeaves > 0 ? `
-                          <div>
-                            <span class="font-bold text-purple-400 block">${s.earlyLeaves} يوم</span>
-                            <span class="text-[10px] text-purple-400/80">${formatMinutesArabic(s.totalEarlyLeaveMinutes)}</span>
-                          </div>
-                        ` : '<span class="text-slate-400">—</span>'}
-                      </td>
-                      <td class="py-3.5 px-4 text-center">
+                      <td class="py-3.5 px-3 text-center">
                         ${s.absentDays > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono">${s.absentDays} يوم</span>
+                          <div>
+                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono">${s.absentDays} يوم</span>
+                            ${s.totalAbsenceDeductions > 0 ? `<span class="text-[10px] text-rose-400 block font-mono mt-0.5">-${(s.totalAbsenceDeductions).toLocaleString('ar-EG')} ج.م</span>` : ''}
+                          </div>
                         ` : '<span class="text-emerald-500 font-bold">0</span>'}
                       </td>
-                      <td class="py-3.5 px-4 text-center font-bold text-slate-800 dark:text-white font-mono">
-                        ${s.totalWorkedHours} س
-                      </td>
-                      <td class="py-3.5 px-4 text-center font-bold text-rose-500 font-mono">
-                        ${s.totalDeductions > 0 ? `${s.totalDeductions} ج.م` : '0'}
+                      <td class="py-3.5 px-3 text-center font-bold text-rose-500 font-mono">
+                        ${s.totalDeductions > 0 ? `-${(s.totalDeductions).toLocaleString('ar-EG')} ج.م` : '0 ج.م'}
                       </td>
                       <td class="py-3.5 px-4 text-center">
+                        <span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-sm border border-emerald-500/25 inline-block">
+                          ${netSal.toLocaleString('ar-EG')} ج.م
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-3 text-center">
                         <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
                           class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all shadow-xs">
-                          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                          <span>سجل الشهر</span>
+                          <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                          <span>كشف الحساب 🔍</span>
                         </button>
                       </td>
                     </tr>
-                  `).join('')}
+                  `}).join('')}
                 </tbody>
               </table>
             </div>
@@ -1858,40 +2023,75 @@ const ManagerUI = {
       const stats = res.stats || {};
       const records = res.records || [];
 
+      // Calculate late & absence deductions breakdown
+      let lateDeductions = stats.totalLateDeductions || 0;
+      let absenceDeductions = stats.totalAbsenceDeductions || 0;
+      if (!lateDeductions && !absenceDeductions) {
+        records.forEach(r => {
+          const ded = parseFloat(r.estimated_deduction || 0);
+          if (r.status === 'Absent') absenceDeductions += ded;
+          else if (ded > 0) lateDeductions += ded;
+        });
+      }
+      const baseSal = stats.baseSalary || parseFloat(emp.base_salary || 3000);
+      const totalDed = stats.totalDeductions !== undefined ? stats.totalDeductions : (lateDeductions + absenceDeductions);
+      const netSal = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSal - totalDed);
+
       const titleEl = document.getElementById('month-details-title');
       const subEl = document.getElementById('month-details-sub');
       const bodyEl = document.getElementById('month-details-body');
 
-      if (titleEl) titleEl.innerHTML = `<i data-lucide="calendar" class="w-5 h-5 text-emerald-500"></i> سجل شهر ${month}: ${emp.full_name}`;
+      if (titleEl) titleEl.innerHTML = `<i data-lucide="calendar" class="w-5 h-5 text-emerald-500"></i> كشف حساب وسجل شهر ${month}: ${emp.full_name}`;
       if (subEl) subEl.textContent = `${emp.employee_code} • ${emp.job_title || 'موظف'} (${emp.department_name || 'عام'})`;
 
       if (bodyEl) {
         bodyEl.innerHTML = `
           <div class="space-y-4 overflow-y-auto pr-1 max-h-[75vh] text-right">
-            <!-- 4 Quick Month Stat Cards -->
+            <!-- 1. Executive Financial Payroll Card -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                <span class="text-[11px] text-emerald-500 font-bold block">في الموعد</span>
-                <span class="text-xl font-extrabold text-emerald-400 font-mono">${stats.onTimeDays} يوم</span>
+              <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي للشهر</span>
+                <span class="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">${baseSal.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                <span class="text-[11px] text-amber-500 font-bold block">أيام التأخير</span>
-                <span class="text-xl font-extrabold text-amber-400 font-mono">${stats.lateDays} يوم</span>
-                <span class="text-[10px] text-amber-500/80 block mt-0.5">${formatMinutesArabic(stats.totalLateMinutes)}</span>
+              <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                <span class="text-[11px] text-amber-500 font-bold block">خصومات التأخير بالشرائح</span>
+                <span class="text-xl font-black text-amber-500 font-mono mt-0.5 block">-${lateDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-amber-500/80 block mt-0.5">${stats.lateDays || 0} يوم (${formatMinutesArabic(stats.totalLateMinutes || 0)})</span>
               </div>
-              <div class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
-                <span class="text-[11px] text-purple-400 font-bold block">خروج مبكر</span>
-                <span class="text-xl font-extrabold text-purple-400 font-mono">${stats.earlyLeaveDays} يوم</span>
-                <span class="text-[10px] text-purple-400/80 block mt-0.5">${formatMinutesArabic(stats.totalEarlyLeaveMinutes)}</span>
+              <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <span class="text-[11px] text-rose-400 font-bold block">خصومات الغياب</span>
+                <span class="text-xl font-black text-rose-500 font-mono mt-0.5 block">-${absenceDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-rose-400/80 block mt-0.5">${stats.absentDays || 0} يوم غياب</span>
               </div>
-              <div class="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                <span class="text-[11px] text-rose-400 font-bold block">أيام الغياب</span>
-                <span class="text-xl font-extrabold text-rose-400 font-mono">${stats.absentDays} يوم</span>
+              <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق</span>
+                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">${netSal.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-emerald-500/80 block mt-0.5 font-semibold">المبلغ المستحق بعد الخصم</span>
               </div>
             </div>
 
-            <!-- Daily Table -->
+            <!-- 2. Attendance Summary Mini-Stats -->
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                <span class="text-[10px] text-slate-400 block font-medium">حضور في الموعد</span>
+                <span class="text-sm font-bold text-emerald-500 font-mono">${stats.onTimeDays || 0} يوم</span>
+              </div>
+              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                <span class="text-[10px] text-slate-400 block font-medium">إجمالي ساعات العمل</span>
+                <span class="text-sm font-bold text-blue-500 font-mono">${stats.totalWorkedHours || 0} س</span>
+              </div>
+              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+                <span class="text-[10px] text-slate-400 block font-medium">إجمالي الخصم للشهر</span>
+                <span class="text-sm font-bold text-rose-500 font-mono">-${totalDed.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+            </div>
+
+            <!-- 3. Daily Attendance and Deductions Breakdown Table -->
             <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+              <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">سجل أيام الشهر وتفاصيل كل خصم يومي:</span>
+                <span class="text-[11px] text-slate-400">${records.length} يوم مسجل</span>
+              </div>
               ${records.length === 0 ? `
                 <div class="p-8 text-center text-slate-500">لا توجد أيام مسجلة لهذا الموظف في هذا الشهر.</div>
               ` : `
@@ -1902,6 +2102,8 @@ const ManagerUI = {
                       <th class="py-2.5 px-3">الحضور</th>
                       <th class="py-2.5 px-3">الانصراف</th>
                       <th class="py-2.5 px-3">الحالة والتأخير</th>
+                      <th class="py-2.5 px-3 text-center">الخصم المطبق</th>
+                      <th class="py-2.5 px-3">ساعات العمل</th>
                       <th class="py-2.5 px-3 text-center">المعاينة</th>
                     </tr>
                   </thead>
@@ -1916,6 +2118,12 @@ const ManagerUI = {
                           ${r.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
                           ${r.early_leave_minutes > 0 ? `<span class="text-purple-400 text-[10px] block mt-0.5">انصراف مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>` : ''}
                         </td>
+                        <td class="py-2.5 px-3 text-center font-bold font-mono">
+                          ${r.estimated_deduction > 0 ? `
+                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[11px]">-${r.estimated_deduction} ج.م</span>
+                          ` : `<span class="text-emerald-500 text-[11px]">0</span>`}
+                        </td>
+                        <td class="py-2.5 px-3 font-bold">${r.worked_hours || 0} س</td>
                         <td class="py-2.5 px-3 text-center">
                           ${r.check_in_photo || r.check_out_photo ? `
                             <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="text-emerald-500 hover:underline font-bold text-xs">

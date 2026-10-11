@@ -236,25 +236,47 @@ router.post('/check-in', authenticateToken, (req, res) => {
     const settings = {};
     settingsRows.forEach(r => settings[r.key] = r.value);
 
+    // Deduction rules with Dynamic Tiered Delay Deductions
     const deductionsEnabled = settings['enable_salary_deductions'] === '1';
-    const latePerMin = parseFloat(settings['deduction_late_per_minute'] || '2.0');
-    const lateThreshold = parseInt(settings['deduction_late_threshold_mins'] || '15', 10);
-    const halfDayRate = parseFloat(settings['deduction_half_day_rate'] || '100.0');
+    let delayTiers = [];
+    try {
+      if (settings['delay_deduction_tiers']) {
+        delayTiers = JSON.parse(settings['delay_deduction_tiers']);
+      }
+    } catch (e) {
+      delayTiers = [];
+    }
 
     if (currentMins >= halfDayMins) {
       status = 'Half Day';
       lateMinutes = Math.max(0, currentMins - startMins);
       if (deductionsEnabled) {
-        deduction = halfDayRate;
+        deduction = parseFloat(settings['deduction_half_day_rate'] || '100.0');
       }
       notes = `حضور متأخر بعد حد نصف اليوم (${halfDayThreshold})`;
     } else if (currentMins > graceMins) {
       status = 'Late';
       lateMinutes = currentMins - startMins;
-      if (deductionsEnabled && lateMinutes >= lateThreshold) {
-        deduction = lateMinutes * latePerMin;
+      if (deductionsEnabled) {
+        if (Array.isArray(delayTiers) && delayTiers.length > 0) {
+          // Non-cumulative tier evaluation: highest reached tier overwrites earlier tiers ("يمسح الأولاني")
+          delayTiers.sort((a, b) => parseFloat(a.minutes) - parseFloat(b.minutes));
+          for (const tier of delayTiers) {
+            const min = parseFloat(tier.minutes);
+            const amt = parseFloat(tier.amount);
+            if (lateMinutes >= min && !isNaN(amt)) {
+              deduction = amt;
+            }
+          }
+        } else {
+          const latePerMin = parseFloat(settings['deduction_late_per_minute'] || '2.0');
+          const lateThreshold = parseInt(settings['deduction_late_threshold_mins'] || '15', 10);
+          if (lateMinutes >= lateThreshold) {
+            deduction = lateMinutes * latePerMin;
+          }
+        }
       }
-      notes = `حضور متأخر بمقدار ${lateMinutes} دقيقة`;
+      notes = `حضور متأخر بمقدار ${lateMinutes} دقيقة` + (deduction > 0 ? ` (خصم تأخير: ${deduction} ج.م)` : '');
     } else {
       status = 'On Time';
     }
@@ -359,8 +381,9 @@ router.post('/check-out', authenticateToken, (req, res) => {
     const today = getTodayString();
     const currentTime = getCurrentTimeString();
 
-    // Check today's record
-    const record = db.prepare(`SELECT * FROM attendance_records WHERE employee_id = ? AND date = ?`).get(employeeId, today);
+    // Check today's record (prioritize checked-in record)
+    const record = db.prepare(`SELECT * FROM attendance_records WHERE employee_id = ? AND date = ? AND check_in_time IS NOT NULL ORDER BY id DESC LIMIT 1`).get(employeeId, today)
+      || db.prepare(`SELECT * FROM attendance_records WHERE employee_id = ? AND date = ? ORDER BY id DESC LIMIT 1`).get(employeeId, today);
     if (!record || !record.check_in_time) {
       return res.status(400).json({ success: false, error: 'لا يمكنك تسجيل الانصراف قبل تسجيل الحضور أولاً لهذا اليوم' });
     }

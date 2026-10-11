@@ -62,15 +62,26 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       let totalEarlyLeaveMinutes = 0;
       let totalWorkedHours = 0;
       let totalDeductions = 0;
+      let totalLateDeductions = 0;
+      let totalAbsenceDeductions = 0;
 
       records.forEach(r => {
         if (r.check_in_time) {
           presentDays++;
           if (r.status === 'On Time') onTimeDays++;
-          if (r.status === 'Late') lateDays++;
-          if (r.status === 'Half Day') halfDays++;
+          if (r.status === 'Late' || r.late_minutes > 0) {
+            lateDays++;
+            totalLateDeductions += (r.estimated_deduction || 0);
+          }
+          if (r.status === 'Half Day') {
+            halfDays++;
+            totalLateDeductions += (r.estimated_deduction || 0);
+          }
         }
-        if (r.status === 'Absent') absentDays++;
+        if (r.status === 'Absent') {
+          absentDays++;
+          totalAbsenceDeductions += (r.estimated_deduction || 0);
+        }
         if (r.early_leave_minutes > 0 || r.status === 'Early Leave') {
           earlyLeaves++;
           totalEarlyLeaveMinutes += (r.early_leave_minutes || 0);
@@ -81,9 +92,13 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         totalDeductions += (r.estimated_deduction || 0);
       });
 
+      const baseSalary = parseFloat(emp.base_salary || 3000);
+      const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
+
       return {
         employee: emp,
         month,
+        baseSalary,
         totalWorkingDays: totalRecords,
         presentDays,
         onTimeDays,
@@ -93,8 +108,11 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         earlyLeaves,
         totalLateMinutes,
         totalEarlyLeaveMinutes,
+        totalLateDeductions: parseFloat(totalLateDeductions.toFixed(2)),
+        totalAbsenceDeductions: parseFloat(totalAbsenceDeductions.toFixed(2)),
         totalWorkedHours: parseFloat(totalWorkedHours.toFixed(1)),
-        totalDeductions: parseFloat(totalDeductions.toFixed(2))
+        totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+        netSalary
       };
     });
 
@@ -160,7 +178,7 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     }
 
     const employee = db.prepare(`
-      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo,
+      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo, u.base_salary,
              d.name as department_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
@@ -205,11 +223,15 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
       totalDeductions += (r.estimated_deduction || 0);
     });
 
+    const baseSalary = parseFloat(employee.base_salary || 3000);
+    const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
+
     res.json({
       success: true,
       employee,
       month,
       stats: {
+        baseSalary,
         totalDays: records.length,
         presentDays,
         onTimeDays,
@@ -219,7 +241,8 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
         totalEarlyLeaveMinutes,
         absentDays,
         totalWorkedHours: parseFloat(totalWorkedHours.toFixed(1)),
-        totalDeductions: parseFloat(totalDeductions.toFixed(2))
+        totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+        netSalary
       },
       records
     });

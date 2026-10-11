@@ -448,6 +448,18 @@ const EmployeeUI = {
     const retakeBtn = document.getElementById('camera-retake-btn');
     const confirmBtn = document.getElementById('camera-confirm-btn');
 
+    // Update modal title and confirm text based on action
+    const titleEl = document.querySelector('#camera-modal [data-i18n="camera_title"]');
+    if (titleEl) {
+      titleEl.textContent = action === 'check-out' ? 'التقط صورة لإثبات الانصراف' : 'التقط صورة لإثبات الحضور';
+    }
+    if (confirmBtn) {
+      confirmBtn.innerHTML = action === 'check-out'
+        ? `<i data-lucide="log-out" class="w-5 h-5"></i><span>تأكيد وإرسال الانصراف</span>`
+        : `<i data-lucide="check" class="w-5 h-5"></i><span>تأكيد وإرسال الحضور</span>`;
+      confirmBtn.disabled = false;
+    }
+
     if (previewImg) previewImg.classList.add('hidden');
     if (video) video.classList.remove('hidden');
     if (snapshotBtn) snapshotBtn.classList.remove('hidden');
@@ -503,9 +515,23 @@ const EmployeeUI = {
 
     if (!video) return;
 
+    // Intelligent resizing: max 640px to ensure fast upload (<50KB) and prevent hanging
+    const maxDim = 640;
+    let w = video.videoWidth || 640;
+    let h = video.videoHeight || 480;
+    if (w > maxDim || h > maxDim) {
+      if (w > h) {
+        h = Math.round((h * maxDim) / w);
+        w = maxDim;
+      } else {
+        w = Math.round((w * maxDim) / h);
+        h = maxDim;
+      }
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
 
     // Mirror image for realistic selfie preview
@@ -513,7 +539,8 @@ const EmployeeUI = {
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    capturedPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+    // Compress JPEG to 0.70 for ultra-fast instant transfer (~40KB)
+    capturedPhotoData = canvas.toDataURL('image/jpeg', 0.70);
 
     this.stopCameraStream();
     video.classList.add('hidden');
@@ -551,21 +578,44 @@ const EmployeeUI = {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      capturedPhotoData = e.target.result;
-      const previewImg = document.getElementById('camera-preview-img');
-      const video = document.getElementById('camera-video');
-      const snapshotBtn = document.getElementById('camera-snap-btn');
-      const retakeBtn = document.getElementById('camera-retake-btn');
-      const confirmBtn = document.getElementById('camera-confirm-btn');
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 640;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        capturedPhotoData = canvas.toDataURL('image/jpeg', 0.70);
 
-      if (video) video.classList.add('hidden');
-      if (previewImg) {
-        previewImg.src = capturedPhotoData;
-        previewImg.classList.remove('hidden');
-      }
-      if (snapshotBtn) snapshotBtn.classList.add('hidden');
-      if (retakeBtn) retakeBtn.classList.remove('hidden');
-      if (confirmBtn) confirmBtn.classList.remove('hidden');
+        const previewImg = document.getElementById('camera-preview-img');
+        const video = document.getElementById('camera-video');
+        const snapshotBtn = document.getElementById('camera-snap-btn');
+        const retakeBtn = document.getElementById('camera-retake-btn');
+        const confirmBtn = document.getElementById('camera-confirm-btn');
+
+        if (video) video.classList.add('hidden');
+        if (previewImg) {
+          previewImg.src = capturedPhotoData;
+          previewImg.classList.remove('hidden');
+        }
+        if (snapshotBtn) snapshotBtn.classList.add('hidden');
+        if (retakeBtn) retakeBtn.classList.remove('hidden');
+        if (confirmBtn) confirmBtn.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   },
@@ -760,15 +810,24 @@ const EmployeeUI = {
           <span class="text-[11px] text-rose-500 mt-1 block">${s.halfDays ? `+ ${s.halfDays} نصف يوم` : 'لا يوجد نصف يوم'}</span>
         </div>
 
-        <div class="p-5 rounded-3xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-indigo-900 dark:text-indigo-200 col-span-2">
-          <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold block">إجمالي ساعات العمل المنجزة</span>
-          <span class="text-3xl font-extrabold mt-1 block">${s.totalWorkedHours || 0} <span class="text-sm font-normal">ساعة</span></span>
+        <div class="p-5 rounded-3xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-indigo-900 dark:text-indigo-200">
+          <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold block">ساعات العمل المنجزة</span>
+          <span class="text-2xl font-black mt-1 block font-mono">${s.totalWorkedHours || 0} <span class="text-xs font-normal">ساعة</span></span>
         </div>
 
-        <div class="p-5 rounded-3xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900 text-purple-900 dark:text-purple-200 col-span-2">
-          <span class="text-xs text-purple-600 dark:text-purple-400 font-semibold block">الخصومات المقدرة (إن وجدت)</span>
-          <span class="text-3xl font-extrabold mt-1 block text-rose-600 dark:text-rose-400">${s.totalDeductions || 0} <span class="text-sm font-normal">ر.س</span></span>
-          <span class="text-[11px] text-purple-500 mt-1 block">تقديرية قابلة للاعتماد من الإدارة</span>
+        <div class="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+          <span class="text-xs text-slate-500 font-semibold block">المرتب الأساسي للشهر</span>
+          <span class="text-2xl font-black mt-1 block font-mono">${(s.baseSalary || 3000).toLocaleString('ar-EG')} <span class="text-xs font-normal">ج.م</span></span>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-200">
+          <span class="text-xs text-rose-600 dark:text-rose-400 font-semibold block">إجمالي الخصومات (تأخير وغياب)</span>
+          <span class="text-2xl font-black mt-1 block text-rose-600 dark:text-rose-400 font-mono">-${(s.totalDeductions || 0).toLocaleString('ar-EG')} <span class="text-xs font-normal">ج.م</span></span>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-200">
+          <span class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold block">صافي القبض المستحق</span>
+          <span class="text-2xl font-black mt-1 block text-emerald-600 dark:text-emerald-400 font-mono">${(s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) - (s.totalDeductions || 0))).toLocaleString('ar-EG')} <span class="text-xs font-normal">ج.م</span></span>
         </div>
       `;
     } catch (err) {

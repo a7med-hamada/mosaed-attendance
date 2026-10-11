@@ -45,10 +45,14 @@ const API = {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
-        headers
+        headers,
+        signal: options.signal || controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (response.status === 401) {
         this.setToken(null);

@@ -163,11 +163,18 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
     let totalWorkedHours = 0;
     let totalDeductions = 0;
 
+    let totalLateDeductions = 0;
+    let totalAbsenceDeductions = 0;
+
     records.forEach(r => {
+      const deduction = parseFloat(r.estimated_deduction || 0);
       if (r.check_in_time) {
         presentDays++;
         if (r.worked_hours) totalWorkedHours += parseFloat(r.worked_hours);
-        if (r.estimated_deduction) totalDeductions += parseFloat(r.estimated_deduction);
+        if (deduction > 0) {
+          totalDeductions += deduction;
+          totalLateDeductions += deduction;
+        }
 
         if (r.status === 'On Time' && (!r.early_leave_minutes || r.early_leave_minutes <= 0)) {
           onTimeDays++;
@@ -185,12 +192,20 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
         }
       } else if (r.status === 'Absent') {
         absentDays++;
-        if (r.estimated_deduction) totalDeductions += parseFloat(r.estimated_deduction);
+        if (deduction > 0) {
+          totalDeductions += deduction;
+          totalAbsenceDeductions += deduction;
+        }
       }
     });
 
     totalWorkedHours = parseFloat(totalWorkedHours.toFixed(2));
     totalDeductions = parseFloat(totalDeductions.toFixed(2));
+    totalLateDeductions = parseFloat(totalLateDeductions.toFixed(2));
+    totalAbsenceDeductions = parseFloat(totalAbsenceDeductions.toFixed(2));
+
+    const baseSalary = parseFloat(employee.base_salary || 3000);
+    const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
 
     const totalTrackedDays = records.length;
     const disciplineRate = presentDays > 0 ? Math.round((onTimeDays / presentDays) * 100) : 0;
@@ -202,6 +217,10 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
       currentMonth,
       availableMonths: availableMonthsRaw,
       stats: {
+        baseSalary,
+        netSalary,
+        totalLateDeductions,
+        totalAbsenceDeductions,
         totalTrackedDays,
         presentDays,
         onTimeDays,

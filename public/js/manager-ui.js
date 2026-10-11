@@ -471,7 +471,7 @@ const ManagerUI = {
 
       container.innerHTML = `
         <div class="overflow-x-auto">
-          <table class="w-full text-right text-xs min-w-[700px]">
+          <table class="w-full text-right text-xs min-w-[980px]">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th class="py-3.5 px-4">اسم الموظف</th>
@@ -480,47 +480,41 @@ const ManagerUI = {
                 <th class="py-3.5 px-4">القسم</th>
                 <th class="py-3.5 px-4">المسمى الوظيفي</th>
                 <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
-                <th class="py-3.5 px-4">حالة الحساب</th>
-                <th class="py-3.5 px-4">حضور اليوم</th>
+                <th class="py-3.5 px-4 text-center">حالة الحساب</th>
+                <th class="py-3.5 px-4 text-center">حضور اليوم</th>
                 <th class="py-3.5 px-4 text-center">الإجراءات</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               ${employees.map(e => `
                 <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3.5 px-4">
+                  <td class="py-3.5 px-4 whitespace-nowrap">
                     <div class="flex items-center gap-3">
-                      <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-9 h-9 rounded-full object-cover bg-slate-100 dark:bg-slate-800" />
+                      <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-9 h-9 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
                       <div>
                         <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">${e.full_name}</span>
-                        <div class="flex items-center gap-2 mt-1">
-                          <span class="text-[10px] text-slate-400 font-mono">${e.employee_code}</span>
-                          <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name}')" class="px-2 py-0.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1 transition-all shadow-xs">
-                            <i data-lucide="bar-chart-2" class="w-3 h-3"></i>
-                            <span>إحصائيات الموظف</span>
-                          </button>
-                        </div>
+                        <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${e.employee_code}</span>
                       </div>
                     </div>
                   </td>
-                  <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400">${e.email}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.phone || '—'}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.department_name || 'عام'}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400">${e.job_title || 'موظف'}</td>
-                  <td class="py-3.5 px-4 text-center">
-                    <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20">
-                      ${(e.base_salary || 3000).toLocaleString('ar-EG')} ج.م
+                  <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.email}</td>
+                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono">${e.phone || '—'}</td>
+                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.department_name || 'عام'}</td>
+                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.job_title || 'موظف'}</td>
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20 whitespace-nowrap shadow-2xs">
+                      ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
                     </span>
                   </td>
-                  <td class="py-3.5 px-4">
-                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
                       ${e.is_active ? 'نشط' : 'معطل'}
                     </span>
                   </td>
-                  <td class="py-3.5 px-4">
-                    ${e.today_status ? getStatusBadge(e.today_status) : '<span class="text-slate-400">لم يسجل بعد</span>'}
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    ${e.today_status ? getStatusBadge(e.today_status) : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>'}
                   </td>
-                  <td class="py-3.5 px-4 text-center">
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
                     <div class="flex items-center justify-center gap-1.5">
                       <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات الموظف (تأخير، خروج مبكر، غياب)">
                         <i data-lucide="bar-chart-2" class="w-4 h-4"></i>

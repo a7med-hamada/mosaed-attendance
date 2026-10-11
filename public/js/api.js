@@ -471,5 +471,5 @@ function getStatusBadge(status) {
       label = s;
   }
 
-  return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${label}</span>`;
+  return `<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badgeClass}">${label}</span>`;
 }

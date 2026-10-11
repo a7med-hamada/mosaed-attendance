@@ -4,3 +4,5 @@ cloudflared.exe
 *.db-shm
 test-*.js
 .DS_Store
+public/uploads/*
+!public/uploads/.gitkeep

@@ -17,29 +17,29 @@ const ManagerUI = {
     const nav = document.getElementById('manager-nav-list');
     if (!nav) return;
 
-    // Sections required: Dashboard, Employees, Attendance, Working Hours, Workplace, Archive, Reports, Settings, Profile
+    const isEn = window.I18n && window.I18n.currentLang === 'en';
     const sections = [
-      { id: 'dashboard', icon: 'layout-dashboard', label: 'لوحة التحكم (Dashboard)' },
-      { id: 'employees', icon: 'users', label: 'الموظفون (Employees)' },
-      { id: 'attendance', icon: 'clock', label: 'الحضور (Attendance)' },
-      { id: 'hours', icon: 'calendar-clock', label: 'مواعيد العمل (Working Hours)' },
-      { id: 'workplace', icon: 'map-pin', label: 'موقع العمل (Workplace)' },
-      { id: 'archive', icon: 'calendar-range', label: 'أرشيف الشهور (Monthly Archive)' },
-      { id: 'reports', icon: 'file-text', label: 'التقارير (Reports)' },
-      { id: 'settings', icon: 'sliders', label: 'الإعدادات (Settings)' },
-      { id: 'profile', icon: 'user-cog', label: 'الملف الشخصي (Profile)' }
+      { id: 'dashboard', icon: 'layout-dashboard', label: isEn ? 'Dashboard' : 'لوحة التحكم' },
+      { id: 'employees', icon: 'users', label: isEn ? 'Employees' : 'الموظفون' },
+      { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
+      { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
+      { id: 'workplace', icon: 'map-pin', label: isEn ? 'Workplace' : 'موقع العمل' },
+      { id: 'archive', icon: 'calendar-range', label: isEn ? 'Monthly Archive' : 'أرشيف الشهور' },
+      { id: 'reports', icon: 'file-text', label: isEn ? 'Reports' : 'التقارير' },
+      { id: 'settings', icon: 'sliders', label: isEn ? 'Settings' : 'الإعدادات' },
+      { id: 'profile', icon: 'user-cog', label: isEn ? 'Profile' : 'الملف الشخصي' }
     ];
 
     nav.innerHTML = sections.map(s => `
-      <li class="flex-shrink-0 lg:flex-shrink">
+      <li class="flex-shrink-0 lg:flex-shrink w-auto lg:w-full">
         <button onclick="ManagerUI.switchSection('${s.id}')"
-          class="flex items-center gap-2 px-3 lg:px-3.5 py-2 lg:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all w-full ${
+          class="flex items-center gap-3 px-3.5 py-2.5 lg:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all w-full text-right ${
             this.activeSection === s.id
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-bold'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
           }">
-          <i data-lucide="${s.icon}" class="w-4 h-4 flex-shrink-0"></i>
-          <span>${s.label}</span>
+          <i data-lucide="${s.icon}" class="w-4.5 h-4.5 flex-shrink-0"></i>
+          <span class="truncate">${s.label}</span>
         </button>
       </li>
     `).join('');

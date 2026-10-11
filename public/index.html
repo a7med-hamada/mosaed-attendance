@@ -244,17 +244,17 @@
       <!-- VIEW B: MANAGER / ADMIN PORTAL -->
       <!-- ========================================== -->
       <div id="manager-layout" class="hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           <!-- Sidebar Navigation (Horizontal on mobile, vertical on desktop) -->
-          <aside class="lg:col-span-1">
+          <aside class="lg:col-span-3 min-w-0">
             <div class="bg-white dark:bg-slate-900 rounded-2xl lg:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-slate-200 dark:border-slate-800 sticky top-18 lg:top-24 z-20">
-              <span class="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">قائمة الإدارة</span>
-              <ul id="manager-nav-list" class="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-1 lg:pb-0 scrollbar-none"></ul>
+              <span class="hidden lg:block text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2.5">قائمة الإدارة</span>
+              <ul id="manager-nav-list" class="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-1 lg:pb-0 scrollbar-none w-full"></ul>
             </div>
           </aside>
 
           <!-- Main Content Area -->
-          <section class="lg:col-span-4" id="manager-content"></section>
+          <section class="lg:col-span-9 min-w-0" id="manager-content"></section>
         </div>
       </div>
 

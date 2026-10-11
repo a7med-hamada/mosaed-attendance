@@ -368,7 +368,13 @@ const ManagerUI = {
                         <span class="text-[10px] text-purple-400 font-bold block mt-0.5">انصراف مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>
                       ` : ''}
                     </div>
-                  ` : '<span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 text-[11px] font-medium inline-block">على رأس العمل</span>'}
+                  ` : (r.check_in_time ? `
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold inline-flex items-center gap-1.5 border border-emerald-500/20">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> على رأس العمل
+                    </span>
+                  ` : `
+                    <span class="text-slate-400 font-medium">—</span>
+                  `)}
                 </td>
                 <td class="py-3 px-4">
                   ${r.status ? getStatusBadge(r.status) : '<span class="text-slate-400 font-medium">لم يحضر بعد</span>'}

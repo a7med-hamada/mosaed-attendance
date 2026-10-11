@@ -114,6 +114,12 @@
         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-i18n="login_subtitle">
           إدارة الحضور والانصراف الذكي والتحقق الجغرافي
         </p>
+
+        <!-- Install PWA Button -->
+        <button type="button" onclick="installPwa()" class="pwa-install-btn hidden w-full mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold transition-all shadow-sm">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>تثبيت التطبيق على جهازك (Install)</span>
+        </button>
       </div>
 
       <!-- Login Form -->
@@ -463,8 +469,32 @@
   <script src="/js/manager-ui.js"></script>
   <script src="/js/app.js"></script>
 
-  <!-- PWA Service Worker Registration -->
+  <!-- PWA Service Worker & Install Handling -->
   <script>
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      document.querySelectorAll('.pwa-install-btn').forEach(btn => btn.classList.remove('hidden'));
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      document.querySelectorAll('.pwa-install-btn').forEach(btn => btn.classList.add('hidden'));
+      console.log('Mosaed Attendance App successfully installed!');
+    });
+
+    window.installPwa = async function() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        console.log('PWA prompt user choice:', choice);
+        deferredInstallPrompt = null;
+      } else {
+        alert('يمكنك تثبيت التطبيق مباشرة من خيارات المتصفح (⋮) -> تثبيت التطبيق / Install app');
+      }
+    };
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then((reg) => {

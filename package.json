@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node server/app.js",
-    "seed": "node server/seed.js",
+    "start": "node --experimental-sqlite server/app.js",
+    "seed": "node --experimental-sqlite server/seed.js",
     "test": "echo \"No test specified\""
   },
   "keywords": [],

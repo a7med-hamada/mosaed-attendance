@@ -10,5 +10,6 @@ COPY . .
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--experimental-sqlite"
 
-CMD ["node", "server/app.js"]
+CMD ["node", "--experimental-sqlite", "server/app.js"]

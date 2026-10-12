@@ -291,6 +291,51 @@ const API = {
     return this.request('/reports/reset-archive', { method: 'POST' });
   },
 
+  // Salary Advances (السلف والمسحوبات)
+  getAdvances(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/advances?${qs}`);
+  },
+
+  submitAdvance(data) {
+    return this.request('/advances', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  reviewAdvance(id, action, review_notes) {
+    return this.request(`/advances/${id}/review`, {
+      method: 'PUT',
+      body: { action, review_notes }
+    });
+  },
+
+  deleteAdvance(id) {
+    return this.request(`/advances/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Bonuses & Incentives (المكافآت والحوافز)
+  getBonuses(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/bonuses?${qs}`);
+  },
+
+  createBonus(data) {
+    return this.request('/bonuses', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  deleteBonus(id) {
+    return this.request(`/bonuses/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Notifications
   getNotifications() {
     return this.request('/notifications');

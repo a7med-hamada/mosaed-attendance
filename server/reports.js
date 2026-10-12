@@ -92,8 +92,20 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         totalDeductions += (r.estimated_deduction || 0);
       });
 
+      const advancesSum = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM salary_advances
+        WHERE employee_id = ? AND month = ? AND status = 'approved'
+      `).get(emp.id, month);
+      const totalAdvances = parseFloat(((advancesSum && advancesSum.total) || 0).toFixed(2));
+
+      const bonusesSum = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM employee_bonuses
+        WHERE employee_id = ? AND month = ?
+      `).get(emp.id, month);
+      const totalBonuses = parseFloat(((bonusesSum && bonusesSum.total) || 0).toFixed(2));
+
       const baseSalary = parseFloat(emp.base_salary || 3000);
-      const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
+      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
 
       return {
         employee: emp,
@@ -112,6 +124,8 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         totalAbsenceDeductions: parseFloat(totalAbsenceDeductions.toFixed(2)),
         totalWorkedHours: parseFloat(totalWorkedHours.toFixed(1)),
         totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+        totalBonuses,
+        totalAdvances,
         netSalary
       };
     });
@@ -178,7 +192,7 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     }
 
     const employee = db.prepare(`
-      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo, u.base_salary,
+      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.phone, u.hire_date, u.profile_photo, u.base_salary,
              d.name as department_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
@@ -204,27 +218,67 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     let absentDays = 0;
     let totalWorkedHours = 0;
     let totalDeductions = 0;
+    let totalLateDeductions = 0;
+    let totalAbsenceDeductions = 0;
 
     records.forEach(r => {
+      const ded = parseFloat(r.estimated_deduction || 0);
       if (r.check_in_time) {
         presentDays++;
         if (r.status === 'On Time') onTimeDays++;
         if (r.status === 'Late' || r.late_minutes > 0) {
           lateDays++;
           totalLateMinutes += (r.late_minutes || 0);
+          totalLateDeductions += ded;
+        }
+        if (r.status === 'Half Day') {
+          totalLateDeductions += ded;
         }
       }
-      if (r.status === 'Absent') absentDays++;
+      if (r.status === 'Absent') {
+        absentDays++;
+        totalAbsenceDeductions += ded;
+      }
       if (r.early_leave_minutes > 0 || r.status === 'Early Leave') {
         earlyLeaveDays++;
         totalEarlyLeaveMinutes += (r.early_leave_minutes || 0);
       }
       totalWorkedHours += (r.worked_hours || 0);
-      totalDeductions += (r.estimated_deduction || 0);
+      totalDeductions += ded;
+    });
+
+    // Query salary advances for this employee in this month
+    const advances = db.prepare(`
+      SELECT a.*, approver.full_name as approver_name
+      FROM salary_advances a
+      LEFT JOIN users approver ON a.approved_by = approver.id
+      WHERE a.employee_id = ? AND a.month = ?
+      ORDER BY a.date DESC, a.created_at DESC
+    `).all(employeeId, month);
+
+    let totalAdvances = 0;
+    advances.forEach(a => {
+      if (a.status === 'approved') {
+        totalAdvances += parseFloat(a.amount || 0);
+      }
+    });
+
+    // Query bonuses for this employee in this month
+    const bonuses = db.prepare(`
+      SELECT b.*, creator.full_name as creator_name
+      FROM employee_bonuses b
+      LEFT JOIN users creator ON b.created_by = creator.id
+      WHERE b.employee_id = ? AND b.month = ?
+      ORDER BY b.date DESC, b.created_at DESC
+    `).all(employeeId, month);
+
+    let totalBonuses = 0;
+    bonuses.forEach(b => {
+      totalBonuses += parseFloat(b.amount || 0);
     });
 
     const baseSalary = parseFloat(employee.base_salary || 3000);
-    const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
 
     res.json({
       success: true,
@@ -241,10 +295,16 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
         totalEarlyLeaveMinutes,
         absentDays,
         totalWorkedHours: parseFloat(totalWorkedHours.toFixed(1)),
+        totalLateDeductions: parseFloat(totalLateDeductions.toFixed(2)),
+        totalAbsenceDeductions: parseFloat(totalAbsenceDeductions.toFixed(2)),
         totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+        totalBonuses: parseFloat(totalBonuses.toFixed(2)),
+        totalAdvances: parseFloat(totalAdvances.toFixed(2)),
         netSalary
       },
-      records
+      records,
+      advances,
+      bonuses
     });
   } catch (error) {
     console.error('Employee month details error:', error);

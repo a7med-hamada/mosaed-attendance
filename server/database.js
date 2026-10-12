@@ -158,9 +158,41 @@ db.exec(`
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS salary_advances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    reason TEXT,
+    month TEXT NOT NULL, -- YYYY-MM
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    approved_by INTEGER,
+    approved_at TEXT,
+    review_notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(approved_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS employee_bonuses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    reason TEXT NOT NULL,
+    month TEXT NOT NULL, -- YYYY-MM
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    created_by INTEGER NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_att_emp_date ON attendance_records(employee_id, date);
   CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
   CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
+  CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
+  CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
 `);
 
 // Safe migrations for multi-manager workspace separation & setup states

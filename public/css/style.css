@@ -207,17 +207,55 @@ body[dir="ltr"] {
   transform: scaleX(-1);
 }
 
-/* Print styling for reports */
+/* Print styling for reports & Payslips */
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
-  header, nav, .no-print, button {
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  header, nav, aside, #toast-container, .no-print, button, #camera-modal, #new-correction-modal, #register-manager-modal {
     display: none !important;
   }
-  .print-only {
+  /* When printing payslip modal */
+  body.printing-payslip #login-view,
+  body.printing-payslip #app-view,
+  body.printing-payslip > *:not(#payslip-modal) {
+    display: none !important;
+  }
+  body.printing-payslip #payslip-modal {
     display: block !important;
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+  body.printing-payslip #payslip-modal .modal-enter {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+  #payslip-print-container {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #0f172a !important;
   }
   table {
     width: 100% !important;
@@ -225,8 +263,8 @@ body[dir="ltr"] {
   }
   th, td {
     border: 1px solid #cbd5e1 !important;
-    padding: 8px !important;
-    color: black !important;
+    padding: 6px 8px !important;
+    color: #0f172a !important;
   }
 }
 

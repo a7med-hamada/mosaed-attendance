@@ -31,7 +31,7 @@ if (!fs.existsSync(targetExe)) {
   else if (fs.existsSync(chromeExe)) targetExe = chromeExe;
 }
 
-const targetUrl = 'https://mosaedattendance-hllzqpnc.b4a.run/';
+const targetUrl = 'https://panel-attributes-harley-provision.trycloudflare.com';
 const tempShortcutPath = path.join(desktop, 'MosaedApp.lnk');
 const finalShortcutPath = path.join(desktop, 'حضور شركة مساعد.lnk');
 

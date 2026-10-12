@@ -40,10 +40,11 @@ const EmployeeUI = {
     const nav = document.getElementById('employee-subnav');
     if (!nav) return;
 
-    // Required: Attendance, History, Profile
+    // Subnavigation: Attendance, History, Finances, Profile
     const tabs = [
       { id: 'attendance', icon: 'clock', label: 'الحضور (Attendance)' },
       { id: 'history', icon: 'calendar', label: 'سجل الحضور (History)' },
+      { id: 'finances', icon: 'wallet-cards', label: 'المرتب والسلف (Payroll)' },
       { id: 'profile', icon: 'user', label: 'الملف الشخصي (Profile)' }
     ];
 
@@ -72,6 +73,8 @@ const EmployeeUI = {
       this.renderAttendanceTab();
     } else if (tabId === 'history') {
       this.renderHistoryTab();
+    } else if (tabId === 'finances') {
+      this.renderFinancesTab();
     } else if (tabId === 'profile') {
       this.renderProfileTab();
     }
@@ -997,6 +1000,328 @@ const EmployeeUI = {
         </div>
       </div>
     `;
+  },
+
+  // 6. Finances & Payroll Tab (المرتب والسلف وقسيمة الراتب)
+  async renderFinancesTab(selectedMonth = null) {
+    const container = document.getElementById('employee-content');
+    if (!container) return;
+
+    const user = API.getCurrentUser() || {};
+    const todayMonth = new Date().toISOString().substring(0, 7);
+    const targetMonth = selectedMonth || todayMonth;
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="wallet-cards" class="w-5 h-5 text-emerald-500"></i> كشف المرتب والسلف والمكافآت
+            </h2>
+            <p class="text-xs text-slate-500">متابعة حسابك المالي، طلبات السلف، المكافآت التقديرية، وطباعة قسيمة الراتب الرسمية</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap" id="emp-finances-actions-bar">
+            <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+
+        <div id="emp-finances-main-container">
+          <div class="p-12 text-center text-slate-400">جاري تحميل بيانات المرتب والسلف...</div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const monthsRes = await API.getAvailableMonths();
+      const months = monthsRes.months || [];
+
+      const actionsBar = document.getElementById('emp-finances-actions-bar');
+      if (actionsBar) {
+        actionsBar.innerHTML = `
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-slate-600 dark:text-slate-300">الشهر:</label>
+            <select id="emp-finance-month-select" onchange="EmployeeUI.renderFinancesTab(this.value)"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+              ${months.map(m => `
+                <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
+                  📅 ${m.label}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <button onclick="EmployeeUI.openRequestAdvanceModal('${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
+            <i data-lucide="plus" class="w-4 h-4"></i> طلب سلفة
+          </button>
+          <button onclick="EmployeeUI.printMyPayslip('${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all">
+            <i data-lucide="printer" class="w-4 h-4"></i> طباعة قسيمة الراتب 📄
+          </button>
+        `;
+      }
+
+      const res = await API.getEmployeeMonthDetails(user.id, targetMonth);
+      const emp = res.employee || {};
+      const stats = res.stats || {};
+      const bonuses = res.bonuses || [];
+      const advances = res.advances || [];
+
+      const baseSalary = stats.baseSalary || parseFloat(emp.base_salary || 3000);
+      const totalBonuses = stats.totalBonuses || 0;
+      const totalLateDeductions = stats.totalLateDeductions || 0;
+      const totalAbsenceDeductions = stats.totalAbsenceDeductions || 0;
+      const totalDeductions = stats.totalDeductions || (totalLateDeductions + totalAbsenceDeductions);
+      const totalAdvances = stats.totalAdvances || 0;
+      const netSalary = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances);
+
+      const mainContainer = document.getElementById('emp-finances-main-container');
+      if (!mainContainer) return;
+
+      mainContainer.innerHTML = `
+        <div class="space-y-6">
+          <!-- 1. Financial Overview Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
+              <span class="text-xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${baseSalary.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-slate-400 mt-0.5 block">الراتب الشهري الثابت</span>
+            </div>
+
+            <div class="p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
+              <span class="text-xs text-purple-600 dark:text-purple-400 font-bold block">المكافآت والحوافز</span>
+              <span class="text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-purple-400 mt-0.5 block font-semibold">${bonuses.length} مكافأة معتمدة 🎁</span>
+            </div>
+
+            <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
+              <span class="text-xs text-rose-500 font-bold block">الخصومات (تأخير+غياب)</span>
+              <span class="text-xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductions.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-rose-400 mt-0.5 block font-mono">تأخير: ${stats.lateDays || 0}ي • غياب: ${stats.absentDays || 0}ي</span>
+            </div>
+
+            <div class="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
+              <span class="text-xs text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات</span>
+              <span class="text-xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-amber-500 mt-0.5 block font-semibold">سلف معتمدة ومخصومة 💸</span>
+            </div>
+
+            <div class="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right col-span-2 sm:col-span-1">
+              <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المتوقع</span>
+              <span class="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${netSalary.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-emerald-500 mt-0.5 block font-semibold">المبلغ المستحق للصرف</span>
+            </div>
+          </div>
+
+          <!-- 2. Salary Advances Hub -->
+          <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i> سجل طلبات السلف لشهر ${targetMonth}
+                </h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">يمكنك تقديم طلب سلفة ومتابعة حالة موافقة الإدارة عليها</p>
+              </div>
+              <button onclick="EmployeeUI.openRequestAdvanceModal('${targetMonth}')"
+                class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-amber-500/20 transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> تقديم طلب سلفة جديد
+              </button>
+            </div>
+
+            ${advances.length === 0 ? `
+              <div class="p-8 text-center text-slate-400 text-xs">لا توجد سلف مسجلة لحسابك في هذا الشهر.</div>
+            ` : `
+              <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                  <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 font-semibold uppercase">
+                    <tr>
+                      <th class="py-2.5 px-3">التاريخ</th>
+                      <th class="py-2.5 px-3">المبلغ</th>
+                      <th class="py-2.5 px-3">السبب</th>
+                      <th class="py-2.5 px-3 text-center">حالة الطلب</th>
+                      <th class="py-2.5 px-3">ملاحظات الإدارة</th>
+                      <th class="py-2.5 px-3 text-center">الإجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                    ${advances.map(a => {
+                      const badge = a.status === 'approved'
+                        ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans">تمت الموافقة ✓</span>'
+                        : (a.status === 'rejected'
+                          ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold font-sans">مرفوضة ✗</span>'
+                          : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold font-sans animate-pulse">قيد المراجعة ⏳</span>');
+                      return `
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                          <td class="py-3 px-3 text-slate-700 dark:text-slate-300">${a.date}</td>
+                          <td class="py-3 px-3 font-bold text-amber-600 dark:text-amber-400 text-sm">${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م</td>
+                          <td class="py-3 px-3 font-sans text-slate-800 dark:text-slate-200 font-medium">${a.reason || 'سلفة على الراتب'}</td>
+                          <td class="py-3 px-3 text-center font-sans">${badge}</td>
+                          <td class="py-3 px-3 font-sans text-slate-500 text-[11px]">${a.review_notes || '—'}</td>
+                          <td class="py-3 px-3 text-center">
+                            ${a.status === 'pending' ? `
+                              <button onclick="EmployeeUI.cancelAdvanceRequest(${a.id}, '${targetMonth}')" class="text-rose-500 hover:text-rose-700 text-xs font-bold font-sans hover:underline">
+                                إلغاء الطلب
+                              </button>
+                            ` : `<span class="text-slate-400 font-sans text-[11px]">—</span>`}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+
+          <!-- 3. Bonuses & Incentives Showcase -->
+          <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="gift" class="w-4 h-4 text-purple-500"></i> المكافآت والحوافز التقديرية لشهر ${targetMonth}
+                </h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">المكافآت التي منحتها لك إدارة الشركة تقديراً لجهودك وكفاءتك</p>
+              </div>
+              <span class="text-xs text-purple-600 dark:text-purple-400 font-bold font-mono">${bonuses.length} مكافأة</span>
+            </div>
+
+            ${bonuses.length === 0 ? `
+              <div class="p-8 text-center text-slate-400 text-xs">لا توجد مكافآت مسجلة في هذا الشهر. نتمنى لك التوفيق والتميز دائماً! ✨</div>
+            ` : `
+              <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${bonuses.map(b => `
+                  <div class="p-4 rounded-2xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/20 flex items-center justify-between">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-lg">🎁</span>
+                        <span class="font-bold text-slate-900 dark:text-white text-xs">${b.reason}</span>
+                      </div>
+                      <span class="text-[10px] text-slate-400 font-mono mt-1 block">${b.date} • بواسطة: ${b.creator_name || 'الإدارة'}</span>
+                      ${b.notes ? `<p class="text-[11px] text-purple-700 dark:text-purple-300 mt-1">${b.notes}</p>` : ''}
+                    </div>
+                    <div class="text-left font-mono font-black text-emerald-600 dark:text-emerald-400 text-base">
+                      +${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      const mainContainer = document.getElementById('emp-finances-main-container');
+      if (mainContainer) mainContainer.innerHTML = `<div class="p-6 text-center text-rose-500">${err.message}</div>`;
+    }
+  },
+
+  // Modal: Employee Submits Advance Request
+  openRequestAdvanceModal(month = null) {
+    const modal = document.getElementById('advances-modal');
+    if (!modal) return;
+
+    const todayDate = new Date().toISOString().substring(0, 10);
+    const targetMonth = month || todayDate.substring(0, 7);
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> تقديم طلب سلفة مالية
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">سيتم إرسال الطلب للمدير للمراجعة واعتماده لخصمه من كشف الراتب</p>
+            </div>
+            <button onclick="document.getElementById('advances-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="EmployeeUI.submitRequestAdvance(event, '${targetMonth}')" class="space-y-3.5 pt-4">
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">المبلغ المطلوب (ج.م) *</label>
+              <input type="number" id="emp-adv-amount" step="1" min="50" required placeholder="مثال: 500"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-amber-600 text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب طلب السلفة *</label>
+              <input type="text" id="emp-adv-reason" required placeholder="مثال: ظرف أسري طارئ، مصاريف شخصية، التزامات شهرية"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الخصم المطلوب</label>
+                <input type="month" id="emp-adv-month" required value="${targetMonth}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ الطلب</label>
+                <input type="date" id="emp-adv-date" required value="${todayDate}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-300">
+              <p class="leading-relaxed text-[11px]">📌 بمجرد إرسال الطلب، سيتلقى المدير إشعاراً فورياً لدراسة الطلب والموافقة عليه وإدراجه بمسير الراتب.</p>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('advances-modal').innerHTML=''"
+                class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">إلغاء</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/25">
+                <i data-lucide="send" class="w-4 h-4"></i> إرسال الطلب للمدير
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitRequestAdvance(event, currentMonth) {
+    event.preventDefault();
+    const amount = document.getElementById('emp-adv-amount').value;
+    const reason = document.getElementById('emp-adv-reason').value;
+    const month = document.getElementById('emp-adv-month').value;
+    const date = document.getElementById('emp-adv-date').value;
+
+    try {
+      const res = await API.submitAdvance({ amount, reason, month, date });
+      showToast(res.message || 'تم إرسال طلب السلفة إلى الإدارة بنجاح', 'success');
+      document.getElementById('advances-modal').innerHTML = '';
+      await this.renderFinancesTab(month);
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async cancelAdvanceRequest(advanceId, month) {
+    if (!confirm('هل تريد بالتأكيد إلغاء طلب السلفة؟')) return;
+    try {
+      const res = await API.deleteAdvance(advanceId);
+      showToast(res.message || 'تم إلغاء طلب السلفة بنجاح', 'success');
+      await this.renderFinancesTab(month);
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async printMyPayslip(month) {
+    try {
+      const u = API.getCurrentUser() || {};
+      showToast('جاري استخراج قسيمة الراتب...', 'info');
+      const res = await API.getEmployeeMonthDetails(u.id, month);
+      if (window.Tafqeet && window.Tafqeet.showPayslipModal) {
+        window.Tafqeet.showPayslipModal(res, false);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
   },
 
   viewPhoto(photoUrl, title) {

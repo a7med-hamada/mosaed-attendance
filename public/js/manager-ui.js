@@ -1780,7 +1780,7 @@ const ManagerUI = {
       const currentMonth = monthsRes.currentMonth || '';
       const targetMonth = selectedMonth || currentMonth;
 
-      // Update action bar with Month Picker and Export buttons
+      // Update action bar with Month Picker, Bonus, Advances, and Export buttons
       const actionsBar = document.getElementById('mgr-archive-actions-bar');
       if (actionsBar) {
         actionsBar.innerHTML = `
@@ -1795,6 +1795,14 @@ const ManagerUI = {
               `).join('')}
             </select>
           </div>
+          <button onclick="ManagerUI.openAddBonusModal(null, '${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-500/20 flex items-center gap-1.5 transition-all">
+            <i data-lucide="gift" class="w-4 h-4"></i> + إضافة مكافأة
+          </button>
+          <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
+            <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة ومراجعة السلف
+          </button>
           <button onclick="window.open('/api/reports/export/csv?date_from=${targetMonth}-01&date_to=${targetMonth}-31', '_blank')"
             class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="download" class="w-4 h-4"></i> تصدير Excel
@@ -1811,13 +1819,14 @@ const ManagerUI = {
       const summaries = summaryRes.summaries || [];
 
       // Calculate totals across all employees for this month
-      // Calculate totals across all employees for this month
       let totalLateMinsCompany = 0;
       let totalEarlyMinsCompany = 0;
       let totalAbsentCompany = 0;
       let totalWorkedHoursCompany = 0;
       let totalDeductionsCompany = 0;
       let totalBaseSalariesCompany = 0;
+      let totalBonusesCompany = 0;
+      let totalAdvancesCompany = 0;
       let totalNetSalariesCompany = 0;
 
       summaries.forEach(s => {
@@ -1827,7 +1836,9 @@ const ManagerUI = {
         totalWorkedHoursCompany += (s.totalWorkedHours || 0);
         totalDeductionsCompany += (s.totalDeductions || 0);
         totalBaseSalariesCompany += (s.baseSalary || 3000);
-        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) - (s.totalDeductions || 0)));
+        totalBonusesCompany += (s.totalBonuses || 0);
+        totalAdvancesCompany += (s.totalAdvances || 0);
+        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0)));
       });
 
       const mainContainer = document.getElementById('mgr-archive-main-container');
@@ -1837,29 +1848,41 @@ const ManagerUI = {
 
       mainContainer.innerHTML = `
         <!-- Month Payroll & Attendance Executive Stat Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
-            <span class="text-xs text-slate-500 dark:text-slate-400 font-bold block">إجمالي المرتبات الأساسية</span>
-            <span class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${totalBaseSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
-            <span class="text-[11px] text-slate-400 mt-1 block">لعدد ${summaries.length} موظف</span>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block">المرتبات الأساسية</span>
+            <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${totalBaseSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-slate-400 mt-0.5 block">${summaries.length} موظف</span>
           </div>
 
-          <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
-            <span class="text-xs text-rose-500 font-bold block">إجمالي الخصومات (تأخير + غياب)</span>
-            <span class="text-xl sm:text-2xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
-            <span class="text-[11px] text-rose-400 mt-1 block font-mono">غياب: ${totalAbsentCompany} يوم • تأخير: ${formatMinutesArabic(totalLateMinsCompany)}</span>
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-purple-600 dark:text-purple-400 font-bold block">المكافآت والحوافز</span>
+            <span class="text-lg sm:text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonusesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-purple-400/80 mt-0.5 block font-semibold">حوافز شهرية 🎁</span>
           </div>
 
-          <div class="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right">
-            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">صافي مسيرات الرواتب المستحقة</span>
-            <span class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${totalNetSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
-            <span class="text-[11px] text-emerald-500/80 mt-1 block font-semibold">المبلغ المستحق بعد الخصومات</span>
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-rose-500 font-bold block">خصومات (تأخير+غياب)</span>
+            <span class="text-lg sm:text-xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-rose-400 mt-0.5 block font-mono truncate">تأخير: ${formatMinutesArabic(totalLateMinsCompany)}</span>
           </div>
 
-          <div class="p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 shadow-sm text-right">
-            <span class="text-xs text-blue-500 font-bold block">إجمالي ساعات العمل</span>
-            <span class="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
-            <span class="text-[11px] text-blue-400/80 mt-1 block">خلال شهر ${activeMonthObj.label}</span>
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات</span>
+            <span class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvancesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-amber-500/80 mt-0.5 block font-semibold">سلف معتمدة 💸</span>
+          </div>
+
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-bold block">صافي مسيرات الرواتب</span>
+            <span class="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${totalNetSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-emerald-500/80 mt-0.5 block font-semibold">المبلغ المستحق للصرف</span>
+          </div>
+
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-blue-500 font-bold block">ساعات العمل</span>
+            <span class="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
+            <span class="text-[10px] text-blue-400/80 mt-0.5 block">خلال ${activeMonthObj.label}</span>
           </div>
         </div>
 
@@ -1867,7 +1890,7 @@ const ManagerUI = {
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-between text-xs font-semibold">
           <div class="flex items-center gap-2.5">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
-            <span>تذكير تلقائي: مع بداية كل شهر جديد، يبدأ العداد من الصفر تلقائياً وتُحفظ كشوفات الشهور السابقة هنا في الأرشيف الدائم للرجوع إليها في أي وقت.</span>
+            <span>نظام الرواتب الذكي: يتم احتساب صافي القبض وفق المعادلة: <strong>(المرتب الأساسي + المكافآت - خصومات التأخير والغياب - السلف المعتمدة)</strong>.</span>
           </div>
         </div>
 
@@ -1879,7 +1902,7 @@ const ManagerUI = {
                 <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i>
                 مسير رواتب وكشف حساب الموظفين لشهر: <span class="text-emerald-500 font-bold">${activeMonthObj.label}</span>
               </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، خصم التأخير بالشرائح، الغياب، وصافي القبض لكل موظف</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، المكافآت، الخصومات بالشرائح، السلف، وصافي القبض مع طباعة قسيمة الراتب</p>
             </div>
             <span class="text-xs text-slate-400 font-mono">${summaries.length} موظف مسجل</span>
           </div>
@@ -1888,23 +1911,24 @@ const ManagerUI = {
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
             <div class="overflow-x-auto">
-              <table class="w-full text-right text-xs min-w-[850px]">
+              <table class="w-full text-right text-xs min-w-[980px]">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th class="py-3.5 px-4">الموظف</th>
                     <th class="py-3.5 px-3 text-center">المرتب الأساسي</th>
-                    <th class="py-3.5 px-3 text-center">أيام الحضور</th>
-                    <th class="py-3.5 px-4">التأخير (نظام الشرائح)</th>
-                    <th class="py-3.5 px-3 text-center">أيام الغياب</th>
-                    <th class="py-3.5 px-3 text-center">إجمالي الخصم</th>
-                    <th class="py-3.5 px-4 text-center">صافي القبض المستحق</th>
-                    <th class="py-3.5 px-3 text-center">كشف الحساب</th>
+                    <th class="py-3.5 px-3 text-center">الحضور</th>
+                    <th class="py-3.5 px-3">التأخير (الشرائح)</th>
+                    <th class="py-3.5 px-3 text-center">الغياب</th>
+                    <th class="py-3.5 px-3 text-center">المكافآت (+)</th>
+                    <th class="py-3.5 px-3 text-center">السلف (-)</th>
+                    <th class="py-3.5 px-3 text-center">صافي القبض</th>
+                    <th class="py-3.5 px-4 text-center">الإجراءات والطباعة</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                   ${summaries.map(s => {
                     const baseSal = s.baseSalary || 3000;
-                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal - (s.totalDeductions || 0));
+                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0));
                     return `
                     <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                       <td class="py-3.5 px-4">
@@ -1922,13 +1946,13 @@ const ManagerUI = {
                       <td class="py-3.5 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                         ${s.presentDays || s.onTimeDays} يوم
                       </td>
-                      <td class="py-3.5 px-4">
+                      <td class="py-3.5 px-3">
                         ${s.lateDays > 0 ? `
                           <div>
                             <span class="font-bold text-amber-500 block">${s.lateDays} يوم (${formatMinutesArabic(s.totalLateMinutes)})</span>
-                            <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم شرائح: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
+                            <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
                           </div>
-                        ` : '<span class="text-emerald-500 font-bold">لا يوجد تأخير ✓</span>'}
+                        ` : '<span class="text-emerald-500 font-bold">لا يوجد ✓</span>'}
                       </td>
                       <td class="py-3.5 px-3 text-center">
                         ${s.absentDays > 0 ? `
@@ -1938,20 +1962,34 @@ const ManagerUI = {
                           </div>
                         ` : '<span class="text-emerald-500 font-bold">0</span>'}
                       </td>
-                      <td class="py-3.5 px-3 text-center font-bold text-rose-500 font-mono">
-                        ${s.totalDeductions > 0 ? `-${(s.totalDeductions).toLocaleString('ar-EG')} ج.م` : '0 ج.م'}
+                      <td class="py-3.5 px-3 text-center">
+                        ${(s.totalBonuses || 0) > 0 ? `
+                          <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold font-mono">+${s.totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+                        ` : `<span class="text-slate-400 font-mono">0</span>`}
                       </td>
-                      <td class="py-3.5 px-4 text-center">
-                        <span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-sm border border-emerald-500/25 inline-block">
+                      <td class="py-3.5 px-3 text-center">
+                        ${(s.totalAdvances || 0) > 0 ? `
+                          <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold font-mono">-${s.totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+                        ` : `<span class="text-slate-400 font-mono">0</span>`}
+                      </td>
+                      <td class="py-3.5 px-3 text-center">
+                        <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-sm border border-emerald-500/25 inline-block">
                           ${netSal.toLocaleString('ar-EG')} ج.م
                         </span>
                       </td>
-                      <td class="py-3.5 px-3 text-center">
-                        <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
-                          class="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all shadow-xs">
-                          <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-                          <span>كشف الحساب 🔍</span>
-                        </button>
+                      <td class="py-3.5 px-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                          <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
+                            class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold inline-flex items-center gap-1 transition-all" title="كشف الحساب وسجل الأيام">
+                            <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-500"></i>
+                            <span>كشف الحساب</span>
+                          </button>
+                          <button onclick="ManagerUI.printPayslip(${s.employee.id}, '${targetMonth}')"
+                            class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm shadow-emerald-500/20 transition-all" title="طباعة قسيمة الراتب ومفردات المرتب">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                            <span>قسيمة الراتب 📄</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `}).join('')}
@@ -2016,8 +2054,9 @@ const ManagerUI = {
       const emp = res.employee || {};
       const stats = res.stats || {};
       const records = res.records || [];
+      const bonuses = res.bonuses || [];
+      const advances = res.advances || [];
 
-      // Calculate late & absence deductions breakdown
       let lateDeductions = stats.totalLateDeductions || 0;
       let absenceDeductions = stats.totalAbsenceDeductions || 0;
       if (!lateDeductions && !absenceDeductions) {
@@ -2028,8 +2067,10 @@ const ManagerUI = {
         });
       }
       const baseSal = stats.baseSalary || parseFloat(emp.base_salary || 3000);
-      const totalDed = stats.totalDeductions !== undefined ? stats.totalDeductions : (lateDeductions + absenceDeductions);
-      const netSal = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSal - totalDed);
+      const totalBonuses = stats.totalBonuses || bonuses.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
+      const totalAdvances = stats.totalAdvances || advances.filter(a => a.status === 'approved').reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+      const totalDed = (lateDeductions + absenceDeductions);
+      const netSal = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSal + totalBonuses - totalDed - totalAdvances);
 
       const titleEl = document.getElementById('month-details-title');
       const subEl = document.getElementById('month-details-sub');
@@ -2041,50 +2082,133 @@ const ManagerUI = {
       if (bodyEl) {
         bodyEl.innerHTML = `
           <div class="space-y-4 overflow-y-auto pr-1 max-h-[75vh] text-right">
-            <!-- 1. Executive Financial Payroll Card -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي للشهر</span>
-                <span class="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5 block">${baseSal.toLocaleString('ar-EG')} ج.م</span>
-              </div>
-              <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                <span class="text-[11px] text-amber-500 font-bold block">خصومات التأخير بالشرائح</span>
-                <span class="text-xl font-black text-amber-500 font-mono mt-0.5 block">-${lateDeductions.toLocaleString('ar-EG')} ج.م</span>
-                <span class="text-[10px] text-amber-500/80 block mt-0.5">${stats.lateDays || 0} يوم (${formatMinutesArabic(stats.totalLateMinutes || 0)})</span>
-              </div>
-              <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                <span class="text-[11px] text-rose-400 font-bold block">خصومات الغياب</span>
-                <span class="text-xl font-black text-rose-500 font-mono mt-0.5 block">-${absenceDeductions.toLocaleString('ar-EG')} ج.م</span>
-                <span class="text-[10px] text-rose-400/80 block mt-0.5">${stats.absentDays || 0} يوم غياب</span>
-              </div>
-              <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
-                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق</span>
-                <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">${netSal.toLocaleString('ar-EG')} ج.م</span>
-                <span class="text-[10px] text-emerald-500/80 block mt-0.5 font-semibold">المبلغ المستحق بعد الخصم</span>
+
+            <!-- 0. Quick Action Toolbar -->
+            <div class="flex items-center justify-between flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300">إجراءات الموظف لهذا الشهر:</span>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="ManagerUI.printPayslip(${emp.id}, '${month}')"
+                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-500/25 transition-all">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i> طباعة قسيمة الراتب 📄
+                </button>
+                <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${month}')"
+                  class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <i data-lucide="gift" class="w-3.5 h-3.5"></i> + إضافة مكافأة
+                </button>
+                <button onclick="ManagerUI.openAddAdvanceModal(${emp.id}, '${month}')"
+                  class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i> + تسجيل سلفة
+                </button>
               </div>
             </div>
 
-            <!-- 2. Attendance Summary Mini-Stats -->
-            <div class="grid grid-cols-3 gap-3 text-center">
-              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <span class="text-[10px] text-slate-400 block font-medium">حضور في الموعد</span>
-                <span class="text-sm font-bold text-emerald-500 font-mono">${stats.onTimeDays || 0} يوم</span>
+            <!-- 1. Executive Financial Payroll Breakdown (6 Cards) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
+                <span class="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">${baseSal.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <span class="text-[10px] text-slate-400 block font-medium">إجمالي ساعات العمل</span>
-                <span class="text-sm font-bold text-blue-500 font-mono">${stats.totalWorkedHours || 0} س</span>
+              <div class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                <span class="text-[10px] text-purple-600 dark:text-purple-400 font-bold block">المكافآت (+)</span>
+                <span class="text-base font-black text-purple-600 dark:text-purple-400 font-mono mt-0.5 block">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <span class="text-[10px] text-slate-400 block font-medium">إجمالي الخصم للشهر</span>
-                <span class="text-sm font-bold text-rose-500 font-mono">-${totalDed.toLocaleString('ar-EG')} ج.م</span>
+              <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                <span class="text-[10px] text-amber-500 font-bold block">خصم التأخير (-)</span>
+                <span class="text-base font-black text-amber-500 font-mono mt-0.5 block">-${lateDeductions.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <span class="text-[10px] text-rose-400 font-bold block">خصم الغياب (-)</span>
+                <span class="text-base font-black text-rose-500 font-mono mt-0.5 block">-${absenceDeductions.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-amber-600/10 border border-amber-600/20">
+                <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold block">السلف المعتمدة (-)</span>
+                <span class="text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 block">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق</span>
+                <span class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">${netSal.toLocaleString('ar-EG')} ج.م</span>
               </div>
             </div>
 
-            <!-- 3. Daily Attendance and Deductions Breakdown Table -->
+            <!-- 2. Bonuses List Section -->
+            <div class="border border-purple-200 dark:border-purple-900/50 rounded-2xl overflow-hidden bg-purple-50/20 dark:bg-purple-950/10">
+              <div class="p-3 bg-purple-50/80 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <i data-lucide="gift" class="w-4 h-4 text-purple-500"></i> المكافآت والحوافز المسجلة لهذا الشهر (${bonuses.length})
+                </span>
+                <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${month}')" class="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline">
+                  + إضافة مكافأة جديدة
+                </button>
+              </div>
+              ${bonuses.length === 0 ? `
+                <div class="p-4 text-center text-slate-400 text-xs">لا توجد مكافآت مسجلة لهذا الموظف في شهر ${month}.</div>
+              ` : `
+                <div class="divide-y divide-purple-100 dark:divide-purple-900/30 p-2">
+                  ${bonuses.map(b => `
+                    <div class="flex items-center justify-between py-2 px-2 hover:bg-purple-100/30 rounded-xl transition-colors">
+                      <div>
+                        <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">🎁 ${b.reason}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">${b.date} • بواسطة: ${b.creator_name || 'الإدارة'}</span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
+                        <button onclick="ManagerUI.deleteBonus(${b.id}, ${emp.id}, '${month}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف المكافأة">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+
+            <!-- 3. Advances List Section -->
+            <div class="border border-amber-200 dark:border-amber-900/50 rounded-2xl overflow-hidden bg-amber-50/20 dark:bg-amber-950/10">
+              <div class="p-3 bg-amber-50/80 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i> السلف والمسحوبات لهذا الشهر (${advances.length})
+                </span>
+                <button onclick="ManagerUI.openAddAdvanceModal(${emp.id}, '${month}')" class="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline">
+                  + تسجيل سلفة جديدة
+                </button>
+              </div>
+              ${advances.length === 0 ? `
+                <div class="p-4 text-center text-slate-400 text-xs">لا توجد سلف مسجلة لهذا الموظف في شهر ${month}.</div>
+              ` : `
+                <div class="divide-y divide-amber-100 dark:divide-amber-900/30 p-2">
+                  ${advances.map(a => {
+                    const statusBadge = a.status === 'approved'
+                      ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة ✓</span>'
+                      : (a.status === 'rejected'
+                        ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة ✗</span>'
+                        : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة ⏳</span>');
+                    return `
+                      <div class="flex items-center justify-between py-2 px-2 hover:bg-amber-100/30 rounded-xl transition-colors">
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">💸 ${a.reason || 'سلفة على الراتب'}</span>
+                            ${statusBadge}
+                          </div>
+                          <span class="text-[10px] text-slate-400 font-mono">${a.date} ${a.review_notes ? '• ' + a.review_notes : ''}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                          <span class="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">-${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م</span>
+                          <button onclick="ManagerUI.deleteAdvance(${a.id}, ${emp.id}, '${month}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف السلفة">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `}
+            </div>
+
+            <!-- 4. Daily Attendance and Deductions Breakdown Table -->
             <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
               <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <span class="font-bold text-xs text-slate-800 dark:text-slate-200">سجل أيام الشهر وتفاصيل كل خصم يومي:</span>
-                <span class="text-[11px] text-slate-400">${records.length} يوم مسجل</span>
+                <span class="text-[11px] text-slate-400 font-mono">${records.length} يوم مسجل • حضور: ${stats.presentDays || 0}</span>
               </div>
               ${records.length === 0 ? `
                 <div class="p-8 text-center text-slate-500">لا توجد أيام مسجلة لهذا الموظف في هذا الشهر.</div>
@@ -2138,6 +2262,447 @@ const ManagerUI = {
     } catch (err) {
       const bodyEl = document.getElementById('month-details-body');
       if (bodyEl) bodyEl.innerHTML = `<div class="p-6 text-center text-rose-500">${err.message}</div>`;
+    }
+  },
+
+  // ========================================================
+  // PAYSLIP PRINTING & FINANCIAL ACTIONS (BONUSES & ADVANCES)
+  // ========================================================
+
+  async printPayslip(employeeId, month) {
+    try {
+      showToast('جاري تجهيز قسيمة الراتب ومفردات المرتب...', 'info');
+      const res = await API.getEmployeeMonthDetails(employeeId, month);
+      if (window.Tafqeet && window.Tafqeet.showPayslipModal) {
+        window.Tafqeet.showPayslipModal(res, true);
+      } else {
+        alert('حدث خطأ في تحميل وحدة توليد قسائم الرواتب.');
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  // Modal: Add Bonus to Employee
+  async openAddBonusModal(preselectedEmployeeId = null, preselectedMonth = null) {
+    const modal = document.getElementById('bonuses-modal');
+    if (!modal) return;
+
+    const todayDate = new Date().toISOString().substring(0, 10);
+    const targetMonth = preselectedMonth || todayDate.substring(0, 7);
+
+    let employees = [];
+    try {
+      const empRes = await API.getEmployees({ is_active: 1 });
+      employees = empRes.employees || [];
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    }
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="gift" class="w-5 h-5 text-purple-500"></i> إضافة مكافأة / بونص لموظف
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">تضاف المكافأة تلقائياً إلى راتب الموظف في كشف حساب الشهر المحدد</p>
+            </div>
+            <button onclick="document.getElementById('bonuses-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="ManagerUI.submitAddBonus(event, '${targetMonth}')" class="space-y-3.5 pt-4">
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">الموظف المستحق *</label>
+              <select id="bonus-emp-select" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <option value="">-- اختر الموظف --</option>
+                ${employees.map(e => `
+                  <option value="${e.id}" ${e.id === parseInt(preselectedEmployeeId, 10) ? 'selected' : ''}>
+                    ${e.full_name} (${e.employee_code} - ${e.job_title || 'موظف'})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">مبلغ المكافأة (ج.م) *</label>
+              <input type="number" id="bonus-amount-input" step="1" min="1" required placeholder="مثال: 500"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-emerald-600 text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب أو عنوان المكافأة *</label>
+              <input type="text" id="bonus-reason-input" required placeholder="مثال: كفاءة وإنجاز مهمة، تميز في العمل، حافز شهري"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الصرف *</label>
+                <input type="month" id="bonus-month-input" required value="${targetMonth}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ المكافأة</label>
+                <input type="date" id="bonus-date-input" required value="${todayDate}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">ملاحظات إضافية (اختياري)</label>
+              <textarea id="bonus-notes-input" placeholder="أي تفاصيل خاصة بتسليم المكافأة..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-16"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('bonuses-modal').innerHTML=''"
+                class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">إلغاء</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-purple-500/25">
+                <i data-lucide="check" class="w-4 h-4"></i> اعتماد المكافأة
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitAddBonus(event, currentMonth) {
+    event.preventDefault();
+    const employee_id = document.getElementById('bonus-emp-select').value;
+    const amount = document.getElementById('bonus-amount-input').value;
+    const reason = document.getElementById('bonus-reason-input').value;
+    const month = document.getElementById('bonus-month-input').value;
+    const date = document.getElementById('bonus-date-input').value;
+    const notes = document.getElementById('bonus-notes-input').value;
+
+    try {
+      const res = await API.createBonus({ employee_id, amount, reason, month, date, notes });
+      showToast(res.message || 'تمت إضافة المكافأة بنجاح!', 'success');
+      document.getElementById('bonuses-modal').innerHTML = '';
+
+      // Refresh relevant views
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+      const detailsModal = document.getElementById('month-details-modal');
+      if (detailsModal && detailsModal.innerHTML) {
+        await this.openEmployeeMonthDetailsModal(employee_id, month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async deleteBonus(bonusId, employeeId = null, month = null) {
+    if (!confirm('هل أنت متأكد من حذف هذه المكافأة من حساب الموظف؟')) return;
+    try {
+      const res = await API.deleteBonus(bonusId);
+      showToast(res.message || 'تم حذف المكافأة بنجاح', 'success');
+      if (employeeId && month) {
+        await this.openEmployeeMonthDetailsModal(employeeId, month);
+      }
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  // Modal: Add / Record Direct Advance (سلفة)
+  async openAddAdvanceModal(preselectedEmployeeId = null, preselectedMonth = null) {
+    const modal = document.getElementById('advances-modal');
+    if (!modal) return;
+
+    const todayDate = new Date().toISOString().substring(0, 10);
+    const targetMonth = preselectedMonth || todayDate.substring(0, 7);
+
+    let employees = [];
+    try {
+      const empRes = await API.getEmployees({ is_active: 1 });
+      employees = empRes.employees || [];
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    }
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> تسجيل سلفة مالية لموظف
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">تُخصم السلفة تلقائياً من صافي راتب الموظف في كشف الشهر المحدد</p>
+            </div>
+            <button onclick="document.getElementById('advances-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="ManagerUI.submitAddAdvance(event, '${targetMonth}')" class="space-y-3.5 pt-4">
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">الموظف *</label>
+              <select id="adv-emp-select" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <option value="">-- اختر الموظف --</option>
+                ${employees.map(e => `
+                  <option value="${e.id}" ${e.id === parseInt(preselectedEmployeeId, 10) ? 'selected' : ''}>
+                    ${e.full_name} (${e.employee_code} - ${e.job_title || 'موظف'})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">مبلغ السلفة (ج.م) *</label>
+              <input type="number" id="adv-amount-input" step="1" min="1" required placeholder="مثال: 1000"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-amber-600 text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب السلفة</label>
+              <input type="text" id="adv-reason-input" placeholder="مثال: سلفة شخصية على الراتب، ظرف طارئ"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الخصم *</label>
+                <input type="month" id="adv-month-input" required value="${targetMonth}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ استلام السلفة</label>
+                <input type="date" id="adv-date-input" required value="${todayDate}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">ملاحظات الإدارة</label>
+              <textarea id="adv-notes-input" placeholder="أي تفاصيل أو طريقة الاستلام..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-16"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('advances-modal').innerHTML=''"
+                class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">إلغاء</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/25">
+                <i data-lucide="check" class="w-4 h-4"></i> تسجيل واعتماد السلفة
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitAddAdvance(event, currentMonth) {
+    event.preventDefault();
+    const employee_id = document.getElementById('adv-emp-select').value;
+    const amount = document.getElementById('adv-amount-input').value;
+    const reason = document.getElementById('adv-reason-input').value || 'سلفة على الراتب';
+    const month = document.getElementById('adv-month-input').value;
+    const date = document.getElementById('adv-date-input').value;
+    const notes = document.getElementById('adv-notes-input').value;
+
+    try {
+      const res = await API.submitAdvance({ employee_id, amount, reason, month, date, notes, status: 'approved' });
+      showToast(res.message || 'تم تسجيل السلفة بنجاح!', 'success');
+      document.getElementById('advances-modal').innerHTML = '';
+
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+      const detailsModal = document.getElementById('month-details-modal');
+      if (detailsModal && detailsModal.innerHTML) {
+        await this.openEmployeeMonthDetailsModal(employee_id, month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  // Modal: Advances Review & Management Hub
+  async openAdvancesManagementModal(selectedMonth = null, filterStatus = 'all') {
+    const modal = document.getElementById('advances-modal');
+    if (!modal) return;
+
+    const targetMonth = selectedMonth || new Date().toISOString().substring(0, 7);
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[90vh] flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> إدارة ومراجعة سلف الموظفين
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">مراجعة طلبات السلف المقدمة من الموظفين والموافقة عليها أو تسجيل سلف مباشرة</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="ManagerUI.openAddAdvanceModal(null, '${targetMonth}')"
+                class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-amber-500/25">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> تسجيل سلفة جديدة
+              </button>
+              <button onclick="document.getElementById('advances-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Tabs -->
+          <div class="flex items-center gap-2 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800 overflow-x-auto">
+            <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'all')"
+              class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'all' ? 'bg-amber-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+              جميع السلف
+            </button>
+            <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'pending')"
+              class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'pending' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+              طلبات قيد المراجعة ⏳
+            </button>
+            <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'approved')"
+              class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'approved' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+              السلف المعتمدة ✓
+            </button>
+            <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'rejected')"
+              class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'rejected' ? 'bg-rose-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+              الطلبات المرفوضة ✗
+            </button>
+          </div>
+
+          <!-- Advances Table Container -->
+          <div class="py-3 flex-1 overflow-y-auto" id="advances-hub-body">
+            <div class="p-8 text-center text-slate-400">جاري تحميل سجل السلف...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const params = { month: targetMonth };
+      if (filterStatus !== 'all') params.status = filterStatus;
+      const res = await API.getAdvances(params);
+      const advances = res.advances || [];
+      const hubBody = document.getElementById('advances-hub-body');
+      if (!hubBody) return;
+
+      if (advances.length === 0) {
+        hubBody.innerHTML = `<div class="p-12 text-center text-slate-400">لا توجد سلف مطابقة لهذا الفلتر في شهر ${targetMonth}.</div>`;
+        return;
+      }
+
+      hubBody.innerHTML = `
+        <table class="w-full text-right text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 font-semibold uppercase">
+            <tr>
+              <th class="py-2.5 px-3">الموظف</th>
+              <th class="py-2.5 px-3">المبلغ</th>
+              <th class="py-2.5 px-3">السبب والتاريخ</th>
+              <th class="py-2.5 px-3 text-center">الحالة</th>
+              <th class="py-2.5 px-3 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+            ${advances.map(a => {
+              const statusBadge = a.status === 'approved'
+                ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">معتمدة ✓</span>'
+                : (a.status === 'rejected'
+                  ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold">مرفوضة ✗</span>'
+                  : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold animate-pulse">قيد المراجعة ⏳</span>');
+
+              return `
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                  <td class="py-3 px-3 font-sans">
+                    <span class="font-bold text-slate-800 dark:text-slate-200 block">${a.full_name}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${a.employee_code} • ${a.department_name || 'عام'}</span>
+                  </td>
+                  <td class="py-3 px-3 font-black text-amber-600 dark:text-amber-400 text-sm">
+                    ${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م
+                  </td>
+                  <td class="py-3 px-3 font-sans">
+                    <span class="font-bold text-slate-700 dark:text-slate-300 block">${a.reason || 'سلفة راتب'}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${a.date} (شهر: ${a.month})</span>
+                  </td>
+                  <td class="py-3 px-3 text-center font-sans">
+                    ${statusBadge}
+                  </td>
+                  <td class="py-3 px-3 text-center font-sans">
+                    ${a.status === 'pending' ? `
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="ManagerUI.reviewAdvanceRequest(${a.id}, 'approved', '${targetMonth}')"
+                          class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs" title="موافقة على السلفة وخصمها من الراتب">
+                          موافقة ✓
+                        </button>
+                        <button onclick="ManagerUI.reviewAdvanceRequest(${a.id}, 'rejected', '${targetMonth}')"
+                          class="px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 font-bold text-xs" title="رفض طلب السلفة">
+                          رفض ✗
+                        </button>
+                      </div>
+                    ` : `
+                      <div class="flex items-center justify-center gap-2">
+                        <span class="text-[10px] text-slate-400 font-mono">${a.approver_name ? 'بواسطة: ' + a.approver_name : 'تمت المعالجة'}</span>
+                        <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف السجل">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                      </div>
+                    `}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      const hubBody = document.getElementById('advances-hub-body');
+      if (hubBody) hubBody.innerHTML = `<div class="p-6 text-center text-rose-500">${err.message}</div>`;
+    }
+  },
+
+  async reviewAdvanceRequest(advanceId, action, month = null) {
+    let review_notes = '';
+    if (action === 'rejected') {
+      review_notes = prompt('يرجى كتابة سبب رفض السلفة (اختياري، سيظهر للموظف):') || '';
+    }
+    try {
+      const res = await API.reviewAdvance(advanceId, action, review_notes);
+      showToast(res.message || 'تمت معالجة الطلب بنجاح', 'success');
+      await this.openAdvancesManagementModal(month, 'all');
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async deleteAdvance(advanceId, employeeId = null, month = null) {
+    if (!confirm('هل أنت متأكد من حذف هذه السلفة من السجلات؟')) return;
+    try {
+      const res = await API.deleteAdvance(advanceId);
+      showToast(res.message || 'تم حذف السلفة بنجاح', 'success');
+      if (employeeId && month) {
+        await this.openEmployeeMonthDetailsModal(employeeId, month);
+      }
+      const advModal = document.getElementById('advances-hub-body');
+      if (advModal) {
+        await this.openAdvancesManagementModal(month, 'all');
+      }
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
     }
   },
 

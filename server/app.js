@@ -16,6 +16,7 @@ const settingsRouter = require('./settings');
 const reportsRouter = require('./reports');
 const notificationsRouter = require('./notifications');
 const auditRouter = require('./audit');
+const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
 
 // Auto seed on boot
 seedDatabase();
@@ -44,6 +45,8 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/advances', advancesRouter);
+app.use('/api/bonuses', bonusesRouter);
 
 // Fallback to SPA index.html
 app.use((req, res) => {

@@ -7,8 +7,11 @@ RUN npm install --production
 
 COPY . .
 
-EXPOSE 3000
-ENV PORT=3000
+# Permissions for Hugging Face Spaces non-root container
+RUN chmod -R 777 /app
+
+EXPOSE 7860
+ENV PORT=7860
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--experimental-sqlite"
 

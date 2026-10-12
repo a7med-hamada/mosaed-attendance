@@ -1,3 +1,12 @@
+---
+title: Mosaed Attendance
+emoji: 🏢
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+---
+
 # 🏢 منظومة إدارة حضور وانصراف قوى العمل المتطورة
 ### Workforce Attendance & HR Management System
 

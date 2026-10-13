@@ -153,6 +153,9 @@ async function loadFromCloud(force = false) {
 
 async function saveToCloud() {
   try {
+    if (!initialLoadDone) {
+      await loadFromCloud(true);
+    }
     const token = getSyncToken();
     const updatedAt = new Date().toISOString();
     const snapshot = {
@@ -163,7 +166,8 @@ async function saveToCloud() {
 
     for (const table of SYNC_TABLES) {
       try {
-        snapshot.tables[table] = db.prepare(`SELECT * FROM ${table}`).all();
+        const rows = db.prepare(`SELECT * FROM ${table}`).all();
+        snapshot.tables[table] = rows;
       } catch (_) {
         snapshot.tables[table] = [];
       }

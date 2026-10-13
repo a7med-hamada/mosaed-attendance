@@ -22,7 +22,8 @@ const ManagerUI = {
       { id: 'dashboard', icon: 'layout-dashboard', label: isEn ? 'Dashboard' : 'لوحة التحكم' },
       { id: 'employees', icon: 'users', label: isEn ? 'Employees' : 'الموظفون' },
       { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
-      { id: 'leaderboard', icon: 'trophy', label: isEn ? 'Leaderboard & Score' : 'لوحة الشرف وموظف الشهر 🏆' },
+      { id: 'adjust_attendance', icon: 'shield-alert', label: isEn ? 'Adjust Attendance' : 'تعديل وإضافة الحضور 🔐' },
+      { id: 'leaderboard', icon: 'award', label: isEn ? 'Commitment Score' : 'مؤشر تقييم الالتزام' },
       { id: 'leaves', icon: 'calendar-check', label: isEn ? 'Leaves & Permissions' : 'الإجازات والأذونات' },
       { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
       { id: 'workplace', icon: 'map-pin', label: isEn ? 'Workplace' : 'موقع العمل' },
@@ -63,6 +64,8 @@ const ManagerUI = {
       await this.renderEmployeesSection();
     } else if (sectionId === 'attendance') {
       await this.renderAttendanceSection();
+    } else if (sectionId === 'adjust_attendance') {
+      await this.renderAttendanceAdjustmentSection();
     } else if (sectionId === 'leaderboard') {
       await this.renderLeaderboardSection();
     } else if (sectionId === 'leaves') {
@@ -171,54 +174,61 @@ const ManagerUI = {
         return;
       }
       const emp = top.employee;
+      const score = Math.round(top.score || 0);
 
       bannerContainer.innerHTML = `
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-emerald-500/10 border border-amber-500/30 p-4 sm:p-5 shadow-sm transition-all mb-4">
+        <div class="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm transition-all mb-4">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-3.5">
               <div class="relative flex-shrink-0">
                 ${emp.profile_photo ? `
-                  <img src="${emp.profile_photo}" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover ring-2 ring-amber-400 shadow-md" />
+                  <img src="${emp.profile_photo}" class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover ring-2 ring-emerald-500/20 shadow-sm" />
                 ` : `
-                  <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-white font-black text-xl flex items-center justify-center ring-2 ring-amber-400 shadow-md">
+                  <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xl flex items-center justify-center ring-2 ring-emerald-500/20">
                     ${(emp.full_name || 'م').charAt(0)}
                   </div>
                 `}
-                <span class="absolute -top-2 -right-2 text-xl" title="موظف الشهر">👑</span>
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                    <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-500"></i> موظف الشهر الأكثر التزاماً 🏆
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                    <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i> الموظف الأكثر التزاماً لهذا الشهر
                   </span>
                   <span class="text-[11px] text-slate-400 font-mono">(${res.month})</span>
                 </div>
-                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 truncate">${emp.full_name}</h3>
+                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1 truncate">${emp.full_name}</h3>
                 <p class="text-xs text-slate-500 truncate">${emp.job_title || 'موظف'} • ${emp.department_name || 'الشركة'} • <span class="font-mono">${emp.employee_code}</span></p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap md:flex-nowrap">
-              <div class="px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-emerald-500/30 text-center flex-1 sm:flex-initial">
-                <span class="text-[10px] text-slate-400 block font-bold">مؤشر الالتزام</span>
-                <span class="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">${top.score}%</span>
+            <div class="flex items-center gap-3 flex-wrap md:flex-nowrap">
+              <!-- Circular Commitment Indicator -->
+              <div class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div class="relative inline-flex items-center justify-center w-12 h-12 flex-shrink-0">
+                  <svg class="transform -rotate-90 w-12 h-12" viewBox="0 0 36 36">
+                    <path class="text-slate-200 dark:text-slate-700" stroke-width="3.5" stroke="currentColor" fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="${score >= 90 ? 'text-emerald-500' : 'text-blue-500'}" stroke-dasharray="${score}, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  </svg>
+                  <span class="absolute font-mono font-bold text-xs ${score >= 90 ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}">${score}%</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block font-semibold">نسبة الالتزام</span>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${top.onTimeDays} يوم بالموعد</span>
+                </div>
               </div>
-              <div class="px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-amber-500/30 text-center flex-1 sm:flex-initial">
-                <span class="text-[10px] text-slate-400 block font-bold">أيام في الموعد</span>
-                <span class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 font-mono">${top.onTimeDays} يوم</span>
-              </div>
-              <div class="px-3.5 py-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-indigo-500/30 text-center flex-1 sm:flex-initial">
-                <span class="text-[10px] text-slate-400 block font-bold">سلسلة الالتزام</span>
-                <span class="text-lg sm:text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono">${top.streak} يوم 🔥</span>
-              </div>
-              <div class="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
-                <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${res.month}', 'مكافأة تميز: موظف الشهر الأكثر التزاماً 🏆', 500)"
-                  class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/25 transition-all whitespace-nowrap">
-                  <i data-lucide="gift" class="w-4 h-4"></i> منح مكافأة تميز 🎁
-                </button>
+
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                ${score >= 90 ? `
+                  <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${res.month}', 'مكافأة تميز في الالتزام', 500)"
+                    class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all whitespace-nowrap">
+                    <i data-lucide="gift" class="w-4 h-4"></i> منح مكافأة تميز
+                  </button>
+                ` : ''}
                 <button onclick="ManagerUI.switchSection('leaderboard')"
-                  class="px-3.5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all whitespace-nowrap">
-                  <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i> لوحة الشرف
+                  class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all whitespace-nowrap">
+                  <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-500"></i> مؤشر الالتزام
                 </button>
               </div>
             </div>
@@ -1431,17 +1441,17 @@ const ManagerUI = {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i> لوحة الشرف ومؤشر تقييم الالتزام
+              <i data-lucide="award" class="w-5 h-5 text-emerald-500"></i> مؤشر تقييم الالتزام والانضباط
             </h2>
-            <p class="text-xs text-slate-500">مؤشر أداء دقيق ومحفز للالتزام بالمواعيد ومكافأة موظف الشهر الأكثر انضباطاً</p>
+            <p class="text-xs text-slate-500">مؤشر أداء هادئ وواضح لقياس التزام موظفي الشركة بمواعيد العمل بدقة</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap" id="mgr-leaderboard-actions-bar">
-            <div class="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         </div>
 
         <div id="mgr-leaderboard-main-container" class="space-y-6">
-          <div class="p-12 text-center text-slate-400">جاري تحميل لوحة الشرف...</div>
+          <div class="p-12 text-center text-slate-400">جاري تحميل مؤشر الالتزام...</div>
         </div>
       </div>
     `;
@@ -1460,17 +1470,13 @@ const ManagerUI = {
           <div class="flex items-center gap-2">
             <label class="text-xs font-bold text-slate-600 dark:text-slate-300">الشهر:</label>
             <select id="leaderboard-month-select" onchange="ManagerUI.renderLeaderboardSection(this.value)"
-              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500">
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
                   📅 ${m.label}
                 </option>
               `).join('')}
             </select>
-            <button onclick="ManagerUI.openAddBonusModal(null, '${targetMonth}', 'مكافأة تميز في الالتزام 🌟', 300)"
-              class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition-all">
-              <i data-lucide="gift" class="w-4 h-4"></i> منح مكافأة تميز 🎁
-            </button>
           </div>
         `;
       }
@@ -1492,24 +1498,20 @@ const ManagerUI = {
         return;
       }
 
-      const first = list[0] || null;
-      const second = list[1] || null;
-      const third = list[2] || null;
-
       mainContainer.innerHTML = `
-        <!-- 4 Summary KPI Cards -->
+        <!-- Summary KPI Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20">
-            <span class="text-xs font-bold text-amber-600 dark:text-amber-400 block mb-1">موظف الشهر المتصدر</span>
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 block mb-1">الموظف الأكثر التزاماً</span>
             <div class="flex items-baseline justify-between">
-              <span class="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">${topEmp ? topEmp.employee.full_name : '—'}</span>
-              <span class="text-sm font-black text-amber-500 font-mono">${topEmp ? `${topEmp.score}%` : ''}</span>
+              <span class="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">${topEmp ? topEmp.employee.full_name : '—'}</span>
+              <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">${topEmp ? `${topEmp.score}%` : ''}</span>
             </div>
-            <span class="text-[11px] text-slate-400 block mt-1">المركز الأول 👑</span>
+            <span class="text-[11px] text-slate-400 block mt-1">${topEmp ? `${topEmp.onTimeDays} يوم في الموعد` : '—'}</span>
           </div>
 
-          <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20">
-            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 block mb-1">متوسط التزام الشركة</span>
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 block mb-1">متوسط التزام الشركة</span>
             <div class="flex items-baseline justify-between">
               <span class="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">${summary.avgScore || 0}%</span>
               <span class="text-xs font-bold text-emerald-500">معدل عام</span>
@@ -1517,114 +1519,30 @@ const ManagerUI = {
             <span class="text-[11px] text-slate-400 block mt-1">لكافة أيام الشهر</span>
           </div>
 
-          <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
-            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block mb-1">فائقو الالتزام (💎 95%+)</span>
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 block mb-1">فائقو الالتزام (90%+)</span>
             <div class="flex items-baseline justify-between">
               <span class="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 font-mono">${summary.legendaryCount || 0}</span>
               <span class="text-xs text-slate-400">موظف</span>
             </div>
-            <span class="text-[11px] text-slate-400 block mt-1">انضباط استثنائي</span>
+            <span class="text-[11px] text-slate-400 block mt-1">مؤهلون لمكافأة التميز</span>
           </div>
 
-          <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border border-purple-500/20">
-            <span class="text-xs font-bold text-purple-600 dark:text-purple-400 block mb-1">الموظفون في التقييم</span>
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 block mb-1">الموظفون في التقييم</span>
             <div class="flex items-baseline justify-between">
-              <span class="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 font-mono">${summary.totalEmployees || 0}</span>
+              <span class="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-200 font-mono">${summary.totalEmployees || 0}</span>
               <span class="text-xs text-slate-400">موظف</span>
             </div>
             <span class="text-[11px] text-slate-400 block mt-1">جميع النشطين</span>
           </div>
         </div>
 
-        <!-- PODIUM FOR TOP 3 -->
-        ${first ? `
-          <div class="bg-gradient-to-b from-slate-900/5 to-slate-900/0 dark:from-slate-900/60 dark:to-slate-950/40 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
-            <div class="text-center mb-6">
-              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
-                <span>🏆</span> منصة التتويج لشهر ${targetMonth} <span>🏆</span>
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">فرسان الانضباط الأكثر التزاماً بمواعيد العمل</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end max-w-4xl mx-auto">
-              <!-- Second Place (Silver) -->
-              ${second ? `
-                <div class="order-2 md:order-1 p-5 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 shadow-sm text-center relative transform md:-translate-y-2">
-                  <span class="text-2xl absolute -top-3.5 right-1/2 translate-x-1/2">🥈</span>
-                  <div class="w-16 h-16 mx-auto rounded-2xl overflow-hidden ring-4 ring-slate-300 dark:ring-slate-700 mt-2">
-                    ${second.employee.profile_photo ? `<img src="${second.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center font-bold text-xl text-slate-700 dark:text-slate-200">${second.employee.full_name.charAt(0)}</div>`}
-                  </div>
-                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white mt-3">${second.employee.full_name}</h4>
-                  <span class="text-[11px] text-slate-400 block">${second.employee.job_title || 'موظف'}</span>
-                  <div class="mt-3 py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono font-black text-slate-800 dark:text-slate-200 text-lg">
-                    ${second.score}%
-                  </div>
-                  <div class="text-[11px] text-slate-400 mt-2 space-y-0.5">
-                    <div>في الموعد: <strong>${second.onTimeDays} يوم</strong></div>
-                    <div>سلسلة: <strong>${second.streak} يوم 🔥</strong></div>
-                  </div>
-                  <button onclick="ManagerUI.openAddBonusModal(${second.employee.id}, '${targetMonth}', 'مكافأة تميز المركز الثاني 🥈', 300)"
-                    class="w-full mt-3 py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all">
-                    منح بونص 🎁
-                  </button>
-                </div>
-              ` : '<div></div>'}
-
-              <!-- First Place (Gold - Employee of the Month) -->
-              <div class="order-1 md:order-2 p-6 rounded-3xl bg-gradient-to-b from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-yellow-500/10 dark:to-slate-900 border-2 border-amber-400 dark:border-amber-400/80 shadow-xl text-center relative transform md:-translate-y-6">
-                <span class="text-3xl absolute -top-4 right-1/2 translate-x-1/2">👑</span>
-                <div class="w-20 h-20 mx-auto rounded-2xl overflow-hidden ring-4 ring-amber-400 shadow-lg mt-2">
-                  ${first.employee.profile_photo ? `<img src="${first.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center font-black text-2xl text-white">${first.employee.full_name.charAt(0)}</div>`}
-                </div>
-                <div class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-[11px] mt-3 border border-amber-500/30">
-                  <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-500"></i> موظف الشهر 🏆
-                </div>
-                <h4 class="font-black text-base text-slate-900 dark:text-white mt-1">${first.employee.full_name}</h4>
-                <span class="text-xs text-slate-500 block">${first.employee.job_title || 'موظف'} • ${first.employee.department_name || 'الشركة'}</span>
-                <div class="mt-3 py-2 px-4 rounded-2xl bg-amber-500/20 dark:bg-amber-500/30 font-mono font-black text-amber-700 dark:text-amber-300 text-2xl border border-amber-500/30">
-                  ${first.score}%
-                </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-2 space-y-0.5">
-                  <div>في الموعد: <strong class="text-emerald-600 dark:text-emerald-400">${first.onTimeDays} يوم</strong></div>
-                  <div>سلسلة الالتزام: <strong class="text-amber-500 font-bold">${first.streak} يوم 🔥</strong></div>
-                </div>
-                <button onclick="ManagerUI.openAddBonusModal(${first.employee.id}, '${targetMonth}', 'مكافأة تميز: موظف الشهر الأكثر التزاماً 🏆', 500)"
-                  class="w-full mt-4 py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow-md shadow-purple-500/30 flex items-center justify-center gap-1.5 transition-all">
-                  <i data-lucide="gift" class="w-4 h-4"></i> منح مكافأة موظف الشهر 🎁
-                </button>
-              </div>
-
-              <!-- Third Place (Bronze) -->
-              ${third ? `
-                <div class="order-3 p-5 rounded-3xl bg-white dark:bg-slate-900 border-2 border-amber-700/40 dark:border-amber-700/50 shadow-sm text-center relative transform md:-translate-y-1">
-                  <span class="text-2xl absolute -top-3.5 right-1/2 translate-x-1/2">🥉</span>
-                  <div class="w-16 h-16 mx-auto rounded-2xl overflow-hidden ring-4 ring-amber-700/40 mt-2">
-                    ${third.employee.profile_photo ? `<img src="${third.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-amber-800/40 flex items-center justify-center font-bold text-xl text-amber-300">${third.employee.full_name.charAt(0)}</div>`}
-                  </div>
-                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white mt-3">${third.employee.full_name}</h4>
-                  <span class="text-[11px] text-slate-400 block">${third.employee.job_title || 'موظف'}</span>
-                  <div class="mt-3 py-1.5 px-3 rounded-xl bg-amber-700/10 font-mono font-black text-amber-800 dark:text-amber-300 text-lg">
-                    ${third.score}%
-                  </div>
-                  <div class="text-[11px] text-slate-400 mt-2 space-y-0.5">
-                    <div>في الموعد: <strong>${third.onTimeDays} يوم</strong></div>
-                    <div>سلسلة: <strong>${third.streak} يوم 🔥</strong></div>
-                  </div>
-                  <button onclick="ManagerUI.openAddBonusModal(${third.employee.id}, '${targetMonth}', 'مكافأة تميز المركز الثالث 🥉', 200)"
-                    class="w-full mt-3 py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all">
-                    منح بونص 🎁
-                  </button>
-                </div>
-              ` : '<div></div>'}
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- FULL LEADERBOARD TABLE -->
+        <!-- Full Attendance Commitment Table (Calm & Professional) -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="list-ordered" class="w-4 h-4 text-blue-500"></i> الترتيب الشامل لجميع موظفي الشركة
+              <i data-lucide="users" class="w-4 h-4 text-emerald-500"></i> مؤشرات التزام الموظفين لشهر ${targetMonth}
             </h3>
             <span class="text-xs font-bold text-slate-400 font-mono">${list.length} موظف</span>
           </div>
@@ -1633,72 +1551,57 @@ const ManagerUI = {
             <table class="w-full text-right text-xs">
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
                 <tr>
-                  <th class="py-3 px-3 text-center">الترتيب</th>
                   <th class="py-3 px-3">الموظف</th>
-                  <th class="py-3 px-3 text-center">مؤشر الالتزام</th>
+                  <th class="py-3 px-3 text-center">نسبة الالتزام</th>
                   <th class="py-3 px-3 text-center">الحالة</th>
                   <th class="py-3 px-3 text-center">في الموعد</th>
                   <th class="py-3 px-3 text-center">التأخير</th>
                   <th class="py-3 px-3 text-center">الغياب</th>
-                  <th class="py-3 px-3 text-center">سلسلة الانضباط</th>
-                  <th class="py-3 px-3 text-center">إجراء</th>
+                  <th class="py-3 px-3 text-center">مكافأة التميز</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
                 ${list.map(item => {
                   const emp = item.employee;
                   const tier = item.tier || {};
-                  const isTop = item.rank === 1;
-                  const rankBadgeClass = item.rank === 1 ? 'bg-amber-400 text-slate-900 font-black' :
-                                         item.rank === 2 ? 'bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-white font-bold' :
-                                         item.rank === 3 ? 'bg-amber-700/60 text-white font-bold' :
-                                         'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold';
-
-                  const scoreColor = item.score >= 95 ? 'text-emerald-600 dark:text-emerald-400' :
-                                     item.score >= 85 ? 'text-blue-600 dark:text-blue-400' :
-                                     item.score >= 70 ? 'text-amber-600 dark:text-amber-400' :
-                                     'text-rose-600 dark:text-rose-400';
-
-                  const progressColor = item.score >= 95 ? 'bg-emerald-500' :
-                                        item.score >= 85 ? 'bg-blue-500' :
-                                        item.score >= 70 ? 'bg-amber-500' :
-                                        'bg-rose-500';
+                  const s = Math.round(item.score || 0);
+                  const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
+                  const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
 
                   return `
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isTop ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''}">
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <span class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-xs ${rankBadgeClass}">
-                          ${item.rankBadge}
-                        </span>
-                      </td>
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td class="py-3 px-3">
-                        <div class="flex items-center gap-2.5">
+                        <div class="flex items-center gap-3">
                           <div class="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
                             ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500">${emp.full_name.charAt(0)}</div>`}
                           </div>
                           <div class="min-w-0">
-                            <span class="font-bold text-slate-900 dark:text-white block truncate flex items-center gap-1">
+                            <span class="font-bold text-slate-900 dark:text-white block truncate">
                               ${emp.full_name}
-                              ${isTop ? '<span title="موظف الشهر">👑</span>' : ''}
                             </span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${emp.employee_code} • ${emp.job_title || 'موظف'}</span>
+                            <span class="text-[10px] text-slate-400 font-mono block">${emp.employee_code} • ${emp.job_title || 'موظف'} • ${emp.department_name || ''}</span>
                           </div>
                         </div>
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <div class="inline-flex flex-col items-center">
-                          <span class="font-mono font-black text-sm ${scoreColor}">${item.score}%</span>
-                          <div class="w-20 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div class="${progressColor} h-full rounded-full" style="width: ${item.score}%"></div>
+                        <div class="inline-flex items-center justify-center">
+                          <div class="relative inline-flex items-center justify-center w-11 h-11 flex-shrink-0">
+                            <svg class="transform -rotate-90 w-11 h-11" viewBox="0 0 36 36">
+                              <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span class="absolute font-mono font-bold text-[11px] ${circleText}">${s}%</span>
                           </div>
                         </div>
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          tier.color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' :
-                          tier.color === 'blue' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300' :
-                          tier.color === 'amber' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' :
-                          'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                          tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
+                          tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
+                          tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
+                          'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
                         }">
                           ${tier.name || 'ملتزم'}
                         </span>
@@ -1708,27 +1611,22 @@ const ManagerUI = {
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${item.lateDays > 0 ? `
-                          <span class="font-bold text-amber-500 font-mono text-[11px]">${item.lateDays}ي (${item.totalLateMinutes}د)</span>
-                        ` : `<span class="text-emerald-500 font-bold text-[11px]">0</span>`}
+                          <span class="font-bold text-amber-600 dark:text-amber-400 font-mono text-[11px]">${item.lateDays} يوم (${item.totalLateMinutes}د)</span>
+                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${item.absentDays > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono text-[11px]">${item.absentDays} يوم</span>
-                        ` : `<span class="text-emerald-500 font-bold text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-3 text-center font-mono font-bold whitespace-nowrap">
-                        ${item.streak > 0 ? `
-                          <span class="text-amber-500 flex items-center justify-center gap-1">
-                            <span>🔥</span> <span>${item.streak}</span>
-                          </span>
-                        ` : '<span class="text-slate-400">-</span>'}
+                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold font-mono text-[11px]">${item.absentDays} يوم</span>
+                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${targetMonth}', 'مكافأة تميز في الالتزام 🌟', 300)"
-                          class="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/50 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="منح مكافأة تشجيعية">
-                          <i data-lucide="gift" class="w-3.5 h-3.5"></i>
-                          <span>بونص 🎁</span>
-                        </button>
+                        ${s >= 90 ? `
+                          <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${targetMonth}', 'مكافأة تميز في الالتزام', 300)"
+                            class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
+                            <i data-lucide="gift" class="w-3.5 h-3.5"></i>
+                            <span>منح مكافأة تميز</span>
+                          </button>
+                        ` : '<span class="text-slate-300 dark:text-slate-700 text-xs font-bold">—</span>'}
                       </td>
                     </tr>
                   `;
@@ -1742,7 +1640,7 @@ const ManagerUI = {
       if (window.lucide) lucide.createIcons();
     } catch (err) {
       console.error('Error rendering leaderboard section:', err);
-      showToast(err.message || 'فشل في تحميل لوحة الشرف', 'danger');
+      showToast(err.message || 'فشل في تحميل مؤشر الالتزام', 'danger');
     }
   },
 
@@ -2010,6 +1908,563 @@ const ManagerUI = {
   // ========================================================
   async renderAttendanceSection() {
     await this.renderDashboard();
+  },
+
+  // ========================================================
+  // 5.5 ATTENDANCE ADJUSTMENT (إضافة وتعديل الحضور بأثر رجعي بحماية كلمة المرور)
+  // ========================================================
+  currentEditableRecords: [],
+
+  async renderAttendanceAdjustmentSection() {
+    const container = document.getElementById('manager-content');
+    if (!container) return;
+
+    const isUnlocked = sessionStorage.getItem('manager_att_adjust_unlocked') === 'true';
+
+    if (!isUnlocked) {
+      container.innerHTML = `
+        <div class="max-w-2xl mx-auto py-8">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 dark:border-slate-800 space-y-6">
+            <div class="text-center space-y-2">
+              <div class="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="shield-alert" class="w-8 h-8"></i>
+              </div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                تعديل وإضافة مواعيد الحضور (صلاحية إدارية خاصة)
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+                هذه الصفحة مخصصة لتوثيق حضور الموظفين بأثر رجعي أو تصحيح مواعيد الحضور والانصراف بدقة
+              </p>
+            </div>
+
+            <!-- Warning Notice Box -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs sm:text-sm space-y-2">
+              <div class="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300 text-sm">
+                <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
+                <span>تحذير إداري أمني هام:</span>
+              </div>
+              <ul class="list-disc list-inside space-y-1.5 text-xs sm:text-[13px] text-amber-900 dark:text-amber-200/90 leading-relaxed">
+                <li>أي تعديل أو إضافة في مواعيد الحضور والانصراف يؤثر بصورة مباشرة على <strong>حساب الخصومات، مسير الرواتب، ونسب الالتزام الشهرية</strong>.</li>
+                <li>يتطلب النظام كتابة <strong>سبب ومبرر إداري معتمد</strong> لكل عملية تعديل.</li>
+                <li>جميع العمليات تُوثق تلقائياً بالثانية واسم المدير وعنوان IP في <strong>سجل الرقابة الإداري (Audit Log)</strong> ولا يمكن حذفها.</li>
+              </ul>
+            </div>
+
+            <!-- Password Form -->
+            <form onsubmit="event.preventDefault(); ManagerUI.verifyAdjustmentAccess();" class="space-y-4 pt-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  كلمة مرور حساب المدير لتأكيد الهوية:
+                </label>
+                <div class="relative">
+                  <input type="password" id="mgr-adjust-password" required placeholder="أدخل كلمة المرور الخاصة بحسابك..."
+                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none" />
+                  <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3 top-3.5"></i>
+                </div>
+                <div id="mgr-adjust-pwd-error" class="hidden text-xs text-rose-500 font-bold mt-1.5"></div>
+              </div>
+
+              <div class="flex items-center gap-3 pt-2">
+                <button type="submit" id="mgr-adjust-submit-btn"
+                  class="flex-1 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
+                  <i data-lucide="unlock" class="w-4 h-4"></i> تأكيد الهوية والدخول 🔓
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    // UNLOCKED VIEW
+    container.innerHTML = `
+      <div class="space-y-6">
+        <!-- Top bar with Lock button -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold flex-shrink-0">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">إضافة وتعديل الحضور بأثر رجعي</h2>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20">صلاحية مفعلة 🔓</span>
+              </div>
+              <p class="text-xs text-slate-400">إضافة سجلات لمن حضروا قبل التسجيل بالنظام وتعديل المواعيد مع توثيق الأسباب</p>
+            </div>
+          </div>
+          <button onclick="ManagerUI.lockAdjustmentAccess()"
+            class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i> قفل الصلاحية 🔒
+          </button>
+        </div>
+
+        <!-- Sub Tabs: 1) إضافة حضور بأثر رجعي | 2) تعديل السجلات القائمة -->
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <button id="tab-btn-retroactive" onclick="ManagerUI.switchAdjustmentTab('retroactive')"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-blue-600 text-white shadow-sm">
+            ➕ إضافة حضور بأثر رجعي
+          </button>
+          <button id="tab-btn-existing" onclick="ManagerUI.switchAdjustmentTab('existing')"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            ✏️ تعديل المواعيد القائمة
+          </button>
+        </div>
+
+        <!-- Panel 1: Retroactive Entry -->
+        <div id="panel-retroactive" class="space-y-6">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+              <i data-lucide="user-plus" class="w-4 h-4 text-blue-500"></i> إضافة حضور موظف ليوم سابق
+            </h3>
+            <p class="text-xs text-slate-400 mb-5">استخدم هذا النموذج لمن حضروا من أول الشهر أو أي يوم سابق ولم تكن لديهم بصمة بالسيستم</p>
+
+            <form onsubmit="event.preventDefault(); ManagerUI.submitManualAttendance();" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Employee -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الموظف *</label>
+                  <select id="manual-att-emp" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                    <option value="">-- اختر الموظف --</option>
+                  </select>
+                </div>
+
+                <!-- Date -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">تاريخ الحضور *</label>
+                  <input type="date" id="manual-att-date" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                </div>
+
+                <!-- Status -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">حالة الحضور *</label>
+                  <select id="manual-att-status" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                    <option value="On Time">حاضر في الموعد (منضبط)</option>
+                    <option value="Late">متأخر</option>
+                    <option value="On Leave">إجازة معتمدة</option>
+                    <option value="Absent">غائب</option>
+                  </select>
+                </div>
+
+                <!-- Check-in Time -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الحضور</label>
+                  <input type="time" id="manual-att-checkin" value="09:00" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                </div>
+
+                <!-- Check-out Time -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الانصراف</label>
+                  <input type="time" id="manual-att-checkout" value="17:00" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                </div>
+
+                <!-- Waive Deduction -->
+                <div class="flex items-center pt-5">
+                  <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="manual-att-waive" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
+                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إعفاء من الخصومات والتأخير (حضور منضبط)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Mandatory Reason -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  المبرر / سبب الإضافة اليدوية (مطلوب لسجل الرقابة) *
+                </label>
+                <input type="text" id="manual-att-reason" required placeholder="مثال: حضور فعلي من أول الشهر قبل تفعيل حساب الموظف في النظام"
+                  class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
+              </div>
+
+              <div class="flex justify-end pt-2">
+                <button type="submit" id="manual-att-submit-btn"
+                  class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+                  <i data-lucide="check" class="w-4 h-4"></i> حفظ وتوثيق سجل الحضور
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Panel 2: Existing Records Edit -->
+        <div id="panel-existing" class="hidden space-y-4">
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap flex-1">
+              <div>
+                <label class="text-[11px] font-bold text-slate-400 block mb-1">التاريخ:</label>
+                <input type="date" id="filter-edit-date" class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-slate-400 block mb-1">الموظف:</label>
+                <select id="filter-edit-emp" class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                  <option value="">جميع الموظفين</option>
+                </select>
+              </div>
+              <div class="pt-4 sm:pt-0">
+                <button onclick="ManagerUI.loadRecordsToEdit()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i> عرض السجلات
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="records-to-edit-table-container">
+            <div class="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+              اضغط "عرض السجلات" لتحميل قائمة الحضور والتعديل
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+    await this.populateAdjustmentDropdowns();
+  },
+
+  async verifyAdjustmentAccess() {
+    const pwdInput = document.getElementById('mgr-adjust-password');
+    const errEl = document.getElementById('mgr-adjust-pwd-error');
+    const btn = document.getElementById('mgr-adjust-submit-btn');
+
+    if (!pwdInput || !pwdInput.value) return;
+
+    if (errEl) errEl.classList.add('hidden');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.verifyPassword(pwdInput.value);
+      if (res && res.verified) {
+        sessionStorage.setItem('manager_att_adjust_unlocked', 'true');
+        showToast('تم تأكيد الهوية بنجاح، مرحباً بك في وضع التعديل الإداري 🔓', 'success');
+        await this.renderAttendanceAdjustmentSection();
+      } else {
+        throw new Error(res.error || 'فشل التحقق من كلمة المرور');
+      }
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'كلمة المرور غير صحيحة، يرجى المحاولة مجدداً';
+        errEl.classList.remove('hidden');
+      }
+      showToast(err.message || 'كلمة المرور غير صحيحة', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  lockAdjustmentAccess() {
+    sessionStorage.removeItem('manager_att_adjust_unlocked');
+    showToast('تم قفل صفحة التعديل الإداري بنجاح 🔒', 'info');
+    this.renderAttendanceAdjustmentSection();
+  },
+
+  switchAdjustmentTab(tab) {
+    const btnRetro = document.getElementById('tab-btn-retroactive');
+    const btnExist = document.getElementById('tab-btn-existing');
+    const panelRetro = document.getElementById('panel-retroactive');
+    const panelExist = document.getElementById('panel-existing');
+
+    if (tab === 'retroactive') {
+      btnRetro?.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+      btnRetro?.classList.remove('text-slate-600', 'dark:text-slate-400');
+      btnExist?.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+      btnExist?.classList.add('text-slate-600', 'dark:text-slate-400');
+      panelRetro?.classList.remove('hidden');
+      panelExist?.classList.add('hidden');
+    } else {
+      btnExist?.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+      btnExist?.classList.remove('text-slate-600', 'dark:text-slate-400');
+      btnRetro?.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+      btnRetro?.classList.add('text-slate-600', 'dark:text-slate-400');
+      panelExist?.classList.remove('hidden');
+      panelRetro?.classList.add('hidden');
+      this.loadRecordsToEdit();
+    }
+  },
+
+  async populateAdjustmentDropdowns() {
+    try {
+      const empsRes = await API.getEmployees({ limit: 100 });
+      const employees = empsRes.employees || [];
+
+      const empSelect1 = document.getElementById('manual-att-emp');
+      const empSelect2 = document.getElementById('filter-edit-emp');
+
+      const options = employees.map(e => `
+        <option value="${e.id}">${e.full_name} (${e.employee_code || e.job_title || 'موظف'})</option>
+      `).join('');
+
+      if (empSelect1) empSelect1.innerHTML = `<option value="">-- اختر الموظف --</option>${options}`;
+      if (empSelect2) empSelect2.innerHTML = `<option value="">جميع الموظفين</option>${options}`;
+
+      const today = new Date().toISOString().split('T')[0];
+      const date1 = document.getElementById('manual-att-date');
+      const date2 = document.getElementById('filter-edit-date');
+      if (date1 && !date1.value) date1.value = today;
+      if (date2 && !date2.value) date2.value = today;
+    } catch (e) {
+      console.warn('Error populating adjustment dropdowns:', e);
+    }
+  },
+
+  async submitManualAttendance() {
+    const empId = document.getElementById('manual-att-emp')?.value;
+    const date = document.getElementById('manual-att-date')?.value;
+    const status = document.getElementById('manual-att-status')?.value;
+    const checkin = document.getElementById('manual-att-checkin')?.value;
+    const checkout = document.getElementById('manual-att-checkout')?.value;
+    const waive = document.getElementById('manual-att-waive')?.checked;
+    const reason = document.getElementById('manual-att-reason')?.value;
+
+    if (!empId || !date) {
+      showToast('يرجى اختيار الموظف والتاريخ', 'warning');
+      return;
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      showToast('سبب الإضافة إلزامي للتوثيق في سجل العمليات الرقابي', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('manual-att-submit-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.createManualAttendanceRecord({
+        employee_id: parseInt(empId, 10),
+        date,
+        check_in_time: checkin || null,
+        check_out_time: checkout || null,
+        status,
+        waive_deductions: waive,
+        reason: reason.trim()
+      });
+
+      showToast(res.message || 'تم حفظ وتوثيق سجل الحضور بنجاح ✓', 'success');
+      const reasonInput = document.getElementById('manual-att-reason');
+      if (reasonInput) reasonInput.value = '';
+    } catch (err) {
+      showToast(err.message || 'فشل في حفظ سجل الحضور', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  async loadRecordsToEdit() {
+    const container = document.getElementById('records-to-edit-table-container');
+    if (!container) return;
+
+    const dateVal = document.getElementById('filter-edit-date')?.value;
+    const empVal = document.getElementById('filter-edit-emp')?.value;
+
+    container.innerHTML = `<div class="p-8 text-center text-slate-400">جاري تحميل السجلات...</div>`;
+
+    try {
+      const params = {};
+      if (dateVal) {
+        params.date_from = dateVal;
+        params.date_to = dateVal;
+      }
+      if (empVal) {
+        params.employee_id = empVal;
+      }
+
+      const res = await API.getHistory(params);
+      const records = res.records || [];
+      this.currentEditableRecords = records;
+
+      if (records.length === 0) {
+        container.innerHTML = `
+          <div class="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+            لا توجد سجلات حضور مسجلة لهذا التاريخ أو الموظف المحدد. يمكنك استخدام تبويب "إضافة حضور بأثر رجعي" لإضافة سجل جديد.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200 dark:border-slate-800">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
+                <tr>
+                  <th class="py-3 px-3">الموظف</th>
+                  <th class="py-3 px-3 text-center">التاريخ</th>
+                  <th class="py-3 px-3 text-center">وقت الحضور</th>
+                  <th class="py-3 px-3 text-center">وقت الانصراف</th>
+                  <th class="py-3 px-3 text-center">الحالة</th>
+                  <th class="py-3 px-3 text-center">التأخير والخصم</th>
+                  <th class="py-3 px-3 text-center">إجراء</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
+                ${records.map(r => {
+                  const lateText = r.late_minutes > 0 ? `${r.late_minutes} دقيقة (${r.estimated_deduction || 0} ج.م)` : 'لا يوجد';
+                  return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td class="py-3 px-3">
+                        <div class="flex items-center gap-2.5">
+                          <div class="w-8 h-8 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500">
+                            ${r.profile_photo ? `<img src="${r.profile_photo}" class="w-full h-full object-cover" />` : (r.full_name || 'م').charAt(0)}
+                          </div>
+                          <div>
+                            <span class="font-bold text-slate-900 dark:text-white block">${r.full_name}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${r.employee_code || ''}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3 px-3 text-center font-mono font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                        ${r.date}
+                      </td>
+                      <td class="py-3 px-3 text-center font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                        ${r.check_in_time ? formatTime12(r.check_in_time) : '<span class="text-slate-400 font-normal">—</span>'}
+                      </td>
+                      <td class="py-3 px-3 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                        ${r.check_out_time ? formatTime12(r.check_out_time) : '<span class="text-slate-400 font-normal">—</span>'}
+                      </td>
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        ${getStatusBadge(r.status)}
+                      </td>
+                      <td class="py-3 px-3 text-center font-mono text-[11px] whitespace-nowrap ${r.late_minutes > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400'}">
+                        ${lateText}
+                      </td>
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        <button onclick="ManagerUI.openEditAttendanceModal(${r.id})"
+                          class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all">
+                          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                          <span>تعديل الموعد ✏️</span>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      console.error('Error loading records to edit:', err);
+      container.innerHTML = `<div class="p-8 text-center text-rose-500 font-bold">فشل في تحميل السجلات: ${err.message}</div>`;
+    }
+  },
+
+  openEditAttendanceModal(recordId) {
+    const record = (this.currentEditableRecords || []).find(r => r.id === recordId);
+    if (!record) {
+      showToast('لم يتم العثور على السجل', 'danger');
+      return;
+    }
+
+    const modal = document.getElementById('manual-edit-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تعديل سجل حضور الموظف</h3>
+                <p class="text-[11px] text-slate-400 font-semibold">${record.full_name} • يوم ${record.date}</p>
+              </div>
+            </div>
+            <button onclick="document.getElementById('manual-edit-modal').innerHTML=''" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <form onsubmit="event.preventDefault(); ManagerUI.saveEditedAttendance(${recordId});" class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الحضور الفعلي</label>
+                <input type="time" id="edit-rec-checkin" value="${record.check_in_time || '09:00'}" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الانصراف الفعلي</label>
+                <input type="time" id="edit-rec-checkout" value="${record.check_out_time || '17:00'}" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الحالة المعتمدة</label>
+              <select id="edit-rec-status" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                <option value="On Time" ${record.status === 'On Time' ? 'selected' : ''}>حاضر في الموعد (On Time)</option>
+                <option value="Late" ${record.status === 'Late' ? 'selected' : ''}>متأخر (Late)</option>
+                <option value="On Leave" ${record.status === 'On Leave' ? 'selected' : ''}>إجازة معتمدة (On Leave)</option>
+                <option value="Absent" ${record.status === 'Absent' ? 'selected' : ''}>غائب (Absent)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="edit-rec-waive" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
+                <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إلغاء الخصم والتأخير (اعتماد حضور منضبط 0 دقيقة تأخير)</span>
+              </label>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                سبب التعديل (إلزامي للتوثيق في سجل الرقابة) *
+              </label>
+              <input type="text" id="edit-rec-reason" required placeholder="مثال: تصحيح وقت تسجيل الحضور بناء على مراجعة المدير"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+              <button type="button" onclick="document.getElementById('manual-edit-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                إلغاء
+              </button>
+              <button type="submit" id="edit-rec-save-btn" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all">
+                حفظ التعديل وتحديث السجل
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async saveEditedAttendance(recordId) {
+    const checkin = document.getElementById('edit-rec-checkin')?.value;
+    const checkout = document.getElementById('edit-rec-checkout')?.value;
+    const status = document.getElementById('edit-rec-status')?.value;
+    const waive = document.getElementById('edit-rec-waive')?.checked;
+    const reason = document.getElementById('edit-rec-reason')?.value;
+
+    if (!reason || reason.trim().length < 3) {
+      showToast('يرجى إدخال سبب التعديل للتوثيق الرقابي', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('edit-rec-save-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.updateAttendance(recordId, {
+        check_in_time: checkin || null,
+        check_out_time: checkout || null,
+        status,
+        waive_deductions: waive,
+        reason: reason.trim()
+      });
+
+      showToast(res.message || 'تم تحديث سجل الحضور بنجاح ✓', 'success');
+      document.getElementById('manual-edit-modal').innerHTML = '';
+      await this.loadRecordsToEdit();
+    } catch (err) {
+      showToast(err.message || 'فشل في تحديث سجل الحضور', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   },
 
   // ========================================================

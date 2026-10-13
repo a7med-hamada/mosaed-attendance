@@ -49,7 +49,7 @@ const EmployeeUI = {
     // Subnavigation: Attendance, Leaderboard, History, Leaves, Finances, Profile
     const tabs = [
       { id: 'attendance', icon: 'clock', label: 'الحضور (Attendance)' },
-      { id: 'leaderboard', icon: 'trophy', label: 'لوحة الشرف والتقييم (Score 🏆)' },
+      { id: 'leaderboard', icon: 'award', label: 'مؤشر الالتزام (Score)' },
       { id: 'history', icon: 'calendar', label: 'سجل الحضور (History)' },
       { id: 'leaves', icon: 'calendar-check', label: 'الإجازات والأذونات (Leaves)' },
       { id: 'finances', icon: 'wallet-cards', label: 'المرتب والسلف (Payroll)' },
@@ -854,11 +854,8 @@ const EmployeeUI = {
 
     try {
       const res = await API.getMyScore();
-      const score = res.score !== undefined ? res.score : 100;
-      const streak = res.streak || 0;
-      const tier = res.tier || { name: 'ملتزم ومتميز 🟢', color: 'blue' };
-      const rank = res.rank || 1;
-      const isTop = res.isEmployeeOfMonth;
+      const score = Math.round(res.score !== undefined ? res.score : 100);
+      const tier = res.tier || { name: 'ملتزم ومتميز', color: 'blue' };
       const metrics = res.metrics || { onTimeDays: 0, lateDays: 0, absentDays: 0, totalLateMinutes: 0 };
 
       const tierBadgeBg = tier.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
@@ -866,37 +863,39 @@ const EmployeeUI = {
                           tier.color === 'amber' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
                           'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
 
-      const scoreColor = score >= 95 ? 'text-emerald-600 dark:text-emerald-400' :
-                         score >= 85 ? 'text-blue-600 dark:text-blue-400' :
-                         score >= 70 ? 'text-amber-600 dark:text-amber-400' :
+      const circleStroke = score >= 90 ? '#10b981' : score >= 75 ? '#3b82f6' : score >= 60 ? '#f59e0b' : '#ef4444';
+      const circleText = score >= 90 ? 'text-emerald-600 dark:text-emerald-400' :
+                         score >= 75 ? 'text-blue-600 dark:text-blue-400' :
+                         score >= 60 ? 'text-amber-600 dark:text-amber-400' :
                          'text-rose-600 dark:text-rose-400';
 
       cardEl.innerHTML = `
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200 dark:border-slate-800 transition-all">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
             <div class="flex items-center gap-3.5">
-              <div class="relative flex-shrink-0">
-                <div class="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center font-black">
-                  <span class="text-[10px] text-slate-400 font-bold block">مؤشرك</span>
-                  <span class="text-lg font-mono font-black ${scoreColor} leading-tight">${score}%</span>
-                </div>
-                ${isTop ? `<span class="absolute -top-2 -right-2 text-xl" title="موظف الشهر الأكثر التزاماً">👑</span>` : ''}
+              <!-- Circular Commitment Indicator -->
+              <div class="relative inline-flex items-center justify-center w-14 h-14 flex-shrink-0">
+                <svg class="transform -rotate-90 w-14 h-14" viewBox="0 0 36 36">
+                  <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path stroke="${circleStroke}" stroke-dasharray="${score}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <span class="absolute font-mono font-bold text-xs ${circleText}">${score}%</span>
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${tierBadgeBg}">
                     ${tier.name}
                   </span>
-                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${isTop ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-                    ${isTop ? '🏆 موظف الشهر' : `المركز #${rank} في الشركة`}
-                  </span>
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold">مؤشر التزامك للشهر الحالي</span>
                 </div>
                 <div class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap">
                   <span>في الموعد: <strong class="text-emerald-600 dark:text-emerald-400">${metrics.onTimeDays} يوم</strong></span>
                   <span>•</span>
                   <span>تأخير: <strong class="${metrics.lateDays > 0 ? 'text-amber-500' : 'text-slate-700 dark:text-slate-300'}">${metrics.lateDays} يوم</strong></span>
                   <span>•</span>
-                  <span class="text-amber-500 font-bold">سلسلة: ${streak} يوم 🔥</span>
+                  <span>غياب: <strong class="${metrics.absentDays > 0 ? 'text-rose-500' : 'text-slate-700 dark:text-slate-300'}">${metrics.absentDays} يوم</strong></span>
                 </div>
               </div>
             </div>
@@ -904,8 +903,8 @@ const EmployeeUI = {
             <div class="flex items-center justify-end sm:justify-start">
               <button onclick="EmployeeUI.switchTab('leaderboard')"
                 class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all">
-                <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i>
-                <span>لوحة الشرف 🏆</span>
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-500"></i>
+                <span>مؤشر الالتزام</span>
               </button>
             </div>
           </div>
@@ -926,17 +925,17 @@ const EmployeeUI = {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i> لوحة شرف الشركة وموظف الشهر
+              <i data-lucide="award" class="w-5 h-5 text-emerald-500"></i> مؤشر التزام الزملاء بالشركة
             </h2>
-            <p class="text-xs text-slate-500">ترتيب الالتزام والانضباط بين جميع الزملاء - تحفيز ومنافسة إيجابية بدون تأخير</p>
+            <p class="text-xs text-slate-500">مؤشر هادئ ومحفز لقياس التزام وانضباط زملاء العمل بمواعيد الحضور</p>
           </div>
           <div class="flex items-center gap-2 flex-wrap" id="emp-leaderboard-actions-bar">
-            <div class="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         </div>
 
         <div id="emp-leaderboard-main-container" class="space-y-6">
-          <div class="p-12 text-center text-slate-400">جاري تحميل لوحة الشرف...</div>
+          <div class="p-12 text-center text-slate-400">جاري تحميل مؤشر الالتزام...</div>
         </div>
       </div>
     `;
@@ -955,7 +954,7 @@ const EmployeeUI = {
           <div class="flex items-center gap-2">
             <label class="text-xs font-bold text-slate-600 dark:text-slate-300">الشهر:</label>
             <select id="emp-leaderboard-month-select" onchange="EmployeeUI.renderLeaderboardTab(this.value)"
-              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500">
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
                   📅 ${m.label}
@@ -982,91 +981,12 @@ const EmployeeUI = {
         return;
       }
 
-      const first = list[0] || null;
-      const second = list[1] || null;
-      const third = list[2] || null;
-
       mainContainer.innerHTML = `
-        <!-- Top 3 Podium -->
-        ${first ? `
-          <div class="bg-gradient-to-b from-slate-900/5 to-slate-900/0 dark:from-slate-900/60 dark:to-slate-950/40 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
-            <div class="text-center mb-6">
-              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
-                <span>🏆</span> فرسان التميز والالتزام لشهر ${targetMonth} <span>🏆</span>
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">الموظفون الأكثر التزاماً بمواعيد العمل في الشركة</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end max-w-4xl mx-auto">
-              <!-- Second Place (Silver) -->
-              ${second ? `
-                <div class="order-2 md:order-1 p-5 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 shadow-sm text-center relative transform md:-translate-y-2 ${second.employee.id === currentUserId ? 'ring-2 ring-blue-500' : ''}">
-                  <span class="text-2xl absolute -top-3.5 right-1/2 translate-x-1/2">🥈</span>
-                  <div class="w-16 h-16 mx-auto rounded-2xl overflow-hidden ring-4 ring-slate-300 dark:ring-slate-700 mt-2">
-                    ${second.employee.profile_photo ? `<img src="${second.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center font-bold text-xl text-slate-700 dark:text-slate-200">${second.employee.full_name.charAt(0)}</div>`}
-                  </div>
-                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white mt-3">${second.employee.full_name}</h4>
-                  <span class="text-[11px] text-slate-400 block">${second.employee.job_title || 'موظف'}</span>
-                  <div class="mt-3 py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono font-black text-slate-800 dark:text-slate-200 text-lg">
-                    ${second.score}%
-                  </div>
-                  <div class="text-[11px] text-slate-400 mt-2 space-y-0.5">
-                    <div>في الموعد: <strong>${second.onTimeDays} يوم</strong></div>
-                    <div>سلسلة: <strong>${second.streak} يوم 🔥</strong></div>
-                  </div>
-                  ${second.employee.id === currentUserId ? `<span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">أنت 👤</span>` : ''}
-                </div>
-              ` : '<div></div>'}
-
-              <!-- First Place (Gold - Employee of the Month) -->
-              <div class="order-1 md:order-2 p-6 rounded-3xl bg-gradient-to-b from-amber-500/15 via-yellow-500/10 to-amber-500/5 dark:from-amber-500/20 dark:via-yellow-500/10 dark:to-slate-900 border-2 border-amber-400 dark:border-amber-400/80 shadow-xl text-center relative transform md:-translate-y-6 ${first.employee.id === currentUserId ? 'ring-2 ring-amber-500' : ''}">
-                <span class="text-3xl absolute -top-4 right-1/2 translate-x-1/2">👑</span>
-                <div class="w-20 h-20 mx-auto rounded-2xl overflow-hidden ring-4 ring-amber-400 shadow-lg mt-2">
-                  ${first.employee.profile_photo ? `<img src="${first.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center font-black text-2xl text-white">${first.employee.full_name.charAt(0)}</div>`}
-                </div>
-                <div class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-[11px] mt-3 border border-amber-500/30">
-                  <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-500"></i> موظف الشهر 🏆
-                </div>
-                <h4 class="font-black text-base text-slate-900 dark:text-white mt-1">${first.employee.full_name}</h4>
-                <span class="text-xs text-slate-500 block">${first.employee.job_title || 'موظف'} • ${first.employee.department_name || 'الشركة'}</span>
-                <div class="mt-3 py-2 px-4 rounded-2xl bg-amber-500/20 dark:bg-amber-500/30 font-mono font-black text-amber-700 dark:text-amber-300 text-2xl border border-amber-500/30">
-                  ${first.score}%
-                </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-2 space-y-0.5">
-                  <div>في الموعد: <strong class="text-emerald-600 dark:text-emerald-400">${first.onTimeDays} يوم</strong></div>
-                  <div>سلسلة الالتزام: <strong class="text-amber-500 font-bold">${first.streak} يوم 🔥</strong></div>
-                </div>
-                ${first.employee.id === currentUserId ? `<span class="mt-3 inline-block px-3 py-1 rounded-full bg-amber-500 text-slate-900 text-xs font-black shadow-md">أنت موظف الشهر! مبارك 🌟</span>` : ''}
-              </div>
-
-              <!-- Third Place (Bronze) -->
-              ${third ? `
-                <div class="order-3 p-5 rounded-3xl bg-white dark:bg-slate-900 border-2 border-amber-700/40 dark:border-amber-700/50 shadow-sm text-center relative transform md:-translate-y-1 ${third.employee.id === currentUserId ? 'ring-2 ring-blue-500' : ''}">
-                  <span class="text-2xl absolute -top-3.5 right-1/2 translate-x-1/2">🥉</span>
-                  <div class="w-16 h-16 mx-auto rounded-2xl overflow-hidden ring-4 ring-amber-700/40 mt-2">
-                    ${third.employee.profile_photo ? `<img src="${third.employee.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full bg-amber-800/40 flex items-center justify-center font-bold text-xl text-amber-300">${third.employee.full_name.charAt(0)}</div>`}
-                  </div>
-                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white mt-3">${third.employee.full_name}</h4>
-                  <span class="text-[11px] text-slate-400 block">${third.employee.job_title || 'موظف'}</span>
-                  <div class="mt-3 py-1.5 px-3 rounded-xl bg-amber-700/10 font-mono font-black text-amber-800 dark:text-amber-300 text-lg">
-                    ${third.score}%
-                  </div>
-                  <div class="text-[11px] text-slate-400 mt-2 space-y-0.5">
-                    <div>في الموعد: <strong>${third.onTimeDays} يوم</strong></div>
-                    <div>سلسلة: <strong>${third.streak} يوم 🔥</strong></div>
-                  </div>
-                  ${third.employee.id === currentUserId ? `<span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-bold">أنت 👤</span>` : ''}
-                </div>
-              ` : '<div></div>'}
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Full List of Colleagues -->
+        <!-- Full List of Colleagues (Calm & Professional) -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="users" class="w-4 h-4 text-blue-500"></i> ترتيب جميع زملاء العمل
+              <i data-lucide="users" class="w-4 h-4 text-emerald-500"></i> مؤشرات التزام الزملاء لشهر ${targetMonth}
             </h3>
             <span class="text-xs font-bold text-slate-400 font-mono">${list.length} زميل</span>
           </div>
@@ -1075,71 +995,58 @@ const EmployeeUI = {
             <table class="w-full text-right text-xs">
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
                 <tr>
-                  <th class="py-3 px-3 text-center">الترتيب</th>
-                  <th class="py-3 px-3">الموظف</th>
-                  <th class="py-3 px-3 text-center">مؤشر الالتزام</th>
+                  <th class="py-3 px-3">الزميل</th>
+                  <th class="py-3 px-3 text-center">نسبة الالتزام</th>
                   <th class="py-3 px-3 text-center">الحالة</th>
                   <th class="py-3 px-3 text-center">في الموعد</th>
-                  <th class="py-3 px-3 text-center">سلسلة الانضباط</th>
+                  <th class="py-3 px-3 text-center">التأخير</th>
+                  <th class="py-3 px-3 text-center">الغياب</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
                 ${list.map(item => {
                   const emp = item.employee;
                   const tier = item.tier || {};
-                  const isTop = item.rank === 1;
                   const isMe = emp.id === currentUserId;
-                  const rankBadgeClass = item.rank === 1 ? 'bg-amber-400 text-slate-900 font-black' :
-                                         item.rank === 2 ? 'bg-slate-300 dark:bg-slate-600 text-slate-900 dark:text-white font-bold' :
-                                         item.rank === 3 ? 'bg-amber-700/60 text-white font-bold' :
-                                         'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold';
-
-                  const scoreColor = item.score >= 95 ? 'text-emerald-600 dark:text-emerald-400' :
-                                     item.score >= 85 ? 'text-blue-600 dark:text-blue-400' :
-                                     item.score >= 70 ? 'text-amber-600 dark:text-amber-400' :
-                                     'text-rose-600 dark:text-rose-400';
-
-                  const progressColor = item.score >= 95 ? 'bg-emerald-500' :
-                                        item.score >= 85 ? 'bg-blue-500' :
-                                        item.score >= 70 ? 'bg-amber-500' :
-                                        'bg-rose-500';
+                  const s = Math.round(item.score || 0);
+                  const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
+                  const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
 
                   return `
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isMe ? 'bg-blue-500/10 font-bold' : isTop ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''}">
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <span class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-xs ${rankBadgeClass}">
-                          ${item.rankBadge}
-                        </span>
-                      </td>
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isMe ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}">
                       <td class="py-3 px-3">
-                        <div class="flex items-center gap-2.5">
+                        <div class="flex items-center gap-3">
                           <div class="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
                             ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500">${emp.full_name.charAt(0)}</div>`}
                           </div>
                           <div class="min-w-0">
-                            <span class="font-bold text-slate-900 dark:text-white block truncate flex items-center gap-1">
+                            <span class="font-bold text-slate-900 dark:text-white block truncate flex items-center gap-1.5">
                               ${emp.full_name}
                               ${isMe ? '<span class="px-1.5 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold">أنت</span>' : ''}
-                              ${isTop ? '<span title="موظف الشهر">👑</span>' : ''}
                             </span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${emp.job_title || 'موظف'} • ${emp.department_name || 'الشركة'}</span>
+                            <span class="text-[10px] text-slate-400 font-mono block">${emp.job_title || 'موظف'} • ${emp.department_name || ''}</span>
                           </div>
                         </div>
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <div class="inline-flex flex-col items-center">
-                          <span class="font-mono font-black text-sm ${scoreColor}">${item.score}%</span>
-                          <div class="w-20 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div class="${progressColor} h-full rounded-full" style="width: ${item.score}%"></div>
+                        <div class="inline-flex items-center justify-center">
+                          <div class="relative inline-flex items-center justify-center w-11 h-11 flex-shrink-0">
+                            <svg class="transform -rotate-90 w-11 h-11" viewBox="0 0 36 36">
+                              <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span class="absolute font-mono font-bold text-[11px] ${circleText}">${s}%</span>
                           </div>
                         </div>
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          tier.color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' :
-                          tier.color === 'blue' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300' :
-                          tier.color === 'amber' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' :
-                          'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                          tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
+                          tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
+                          tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
+                          'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
                         }">
                           ${tier.name || 'ملتزم'}
                         </span>
@@ -1147,12 +1054,15 @@ const EmployeeUI = {
                       <td class="py-3 px-3 text-center font-bold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                         ${item.onTimeDays} يوم
                       </td>
-                      <td class="py-3 px-3 text-center font-mono font-bold whitespace-nowrap">
-                        ${item.streak > 0 ? `
-                          <span class="text-amber-500 flex items-center justify-center gap-1">
-                            <span>🔥</span> <span>${item.streak}</span>
-                          </span>
-                        ` : '<span class="text-slate-400">-</span>'}
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        ${item.lateDays > 0 ? `
+                          <span class="font-bold text-amber-600 dark:text-amber-400 font-mono text-[11px]">${item.lateDays} يوم (${item.totalLateMinutes}د)</span>
+                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
+                      </td>
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        ${item.absentDays > 0 ? `
+                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold font-mono text-[11px]">${item.absentDays} يوم</span>
+                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
                       </td>
                     </tr>
                   `;
@@ -1166,7 +1076,7 @@ const EmployeeUI = {
       if (window.lucide) lucide.createIcons();
     } catch (err) {
       console.error('Error rendering employee leaderboard tab:', err);
-      showToast(err.message || 'فشل في تحميل لوحة الشرف', 'danger');
+      showToast(err.message || 'فشل في تحميل مؤشر الالتزام', 'danger');
     }
   },
 

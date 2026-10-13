@@ -54,7 +54,7 @@ const API = {
       });
       clearTimeout(timeoutId);
 
-      if (response.status === 401) {
+      if (response.status === 401 && !endpoint.includes('verify-password') && !endpoint.includes('login')) {
         this.setToken(null);
         this.setCurrentUser(null);
         if (!window.location.pathname.includes('login')) {
@@ -107,6 +107,13 @@ const API = {
     });
   },
 
+  verifyPassword(password) {
+    return this.request('/auth/verify-password', {
+      method: 'POST',
+      body: { password }
+    });
+  },
+
   // Attendance
   checkIn(latitude, longitude, accuracy, photo) {
     return this.request('/attendance/check-in', {
@@ -138,6 +145,13 @@ const API = {
   updateAttendance(id, data) {
     return this.request(`/attendance/${id}`, {
       method: 'PUT',
+      body: data
+    });
+  },
+
+  createManualAttendanceRecord(data) {
+    return this.request('/attendance/manual-record', {
+      method: 'POST',
       body: data
     });
   },

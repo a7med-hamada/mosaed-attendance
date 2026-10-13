@@ -315,6 +315,35 @@ router.put('/profile', authenticateToken, (req, res) => {
   }
 });
 
+// POST /api/auth/verify-password (Manager verification before sensitive admin actions)
+router.post('/verify-password', authenticateToken, (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور' });
+    }
+
+    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+    }
+
+    const isValid = bcrypt.compareSync(password, user.password_hash);
+    if (!isValid) {
+      return res.status(400).json({ success: false, error: 'كلمة المرور غير صحيحة، يرجى المحاولة مجدداً' });
+    }
+
+    res.json({
+      success: true,
+      verified: true,
+      message: 'تم تأكيد الهوية بنجاح'
+    });
+  } catch (error) {
+    console.error('Verify password error:', error);
+    res.status(500).json({ success: false, error: 'فشل في التحقق من كلمة المرور' });
+  }
+});
+
 module.exports = {
   router,
   authenticateToken,

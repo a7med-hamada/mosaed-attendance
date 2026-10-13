@@ -794,7 +794,7 @@ router.get('/history', authenticateToken, (req, res) => {
 router.put('/:id', authenticateToken, requireManager, (req, res) => {
   try {
     const recordId = req.params.id;
-    const { check_in_time, check_out_time, status, notes, reason } = req.body;
+    const { check_in_time, check_out_time, status, notes, reason, waive_deductions } = req.body;
 
     if (!reason || reason.trim().length < 3) {
       return res.status(400).json({ success: false, error: 'سبب التعديل اليدوي إلزامي للتوثيق في سجل العمليات الرقابي (Audit Log)' });
@@ -813,11 +813,33 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
     }
 
+    // Determine late minutes & deductions
+    let lateMinutes = oldRecord.late_minutes;
+    let deduction = oldRecord.estimated_deduction;
+    const finalStatus = status || oldRecord.status;
+
+    if (waive_deductions || finalStatus === 'On Time' || finalStatus === 'On Leave') {
+      lateMinutes = 0;
+      deduction = 0;
+    } else if (check_in_time && oldRecord.scheduled_start) {
+      const schedStartM = timeToMinutes(oldRecord.scheduled_start);
+      const inM = timeToMinutes(check_in_time);
+      const diff = inM - schedStartM;
+      if (diff <= 15) {
+        lateMinutes = 0;
+        deduction = 0;
+      } else {
+        lateMinutes = diff;
+      }
+    }
+
     const newValues = {
       check_in_time: check_in_time !== undefined ? check_in_time : oldRecord.check_in_time,
       check_out_time: check_out_time !== undefined ? check_out_time : oldRecord.check_out_time,
-      status: status || oldRecord.status,
+      status: finalStatus,
       worked_hours: workedHours,
+      late_minutes: lateMinutes,
+      estimated_deduction: deduction,
       notes: notes !== undefined ? notes : oldRecord.notes,
       verification_status: 'manual_override'
     };
@@ -825,11 +847,13 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
     db.prepare(`
       UPDATE attendance_records SET
         check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
+        late_minutes = ?, estimated_deduction = ?,
         notes = ?, verification_status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
       newValues.check_in_time, newValues.check_out_time, newValues.status,
-      newValues.worked_hours, newValues.notes, newValues.verification_status, recordId
+      newValues.worked_hours, newValues.late_minutes, newValues.estimated_deduction,
+      newValues.notes, newValues.verification_status, recordId
     );
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -857,6 +881,134 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
   } catch (error) {
     console.error('Manual edit error:', error);
     res.status(500).json({ success: false, error: 'فشل في تعديل سجل الحضور' });
+  }
+});
+
+// ==========================================
+// 7. Manual Add Past Attendance Record (POST /api/attendance/manual-record) - Manager Only
+// ==========================================
+router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
+  try {
+    const { employee_id, date, check_in_time, check_out_time, status, reason, waive_deductions } = req.body;
+
+    if (!employee_id || !date) {
+      return res.status(400).json({ success: false, error: 'يرجى اختيار الموظف والتاريخ' });
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      return res.status(400).json({ success: false, error: 'سبب الإضافة/التعديل اليدوي إلزامي للتوثيق في سجل العمليات الرقابي' });
+    }
+
+    const emp = db.prepare(`
+      SELECT u.id, u.full_name, u.schedule_id,
+             COALESCE(s.start_time, '09:00') as start_time,
+             COALESCE(s.end_time, '17:00') as end_time,
+             COALESCE(s.grace_period_minutes, 15) as grace_period_minutes
+      FROM users u
+      LEFT JOIN schedules s ON u.schedule_id = s.id
+      WHERE u.id = ?
+    `).get(employee_id);
+
+    if (!emp) {
+      return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+    }
+
+    // Compute worked hours
+    let workedHours = 0;
+    if (check_in_time && check_out_time) {
+      const inM = timeToMinutes(check_in_time);
+      const outM = timeToMinutes(check_out_time);
+      workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
+    } else if (check_in_time) {
+      workedHours = 8.0;
+    }
+
+    // Determine status & late minutes
+    let finalStatus = status || 'On Time';
+    let lateMinutes = 0;
+    let deduction = 0;
+
+    if (waive_deductions || finalStatus === 'On Time' || finalStatus === 'On Leave') {
+      lateMinutes = 0;
+      deduction = 0;
+      if (finalStatus !== 'On Leave') finalStatus = 'On Time';
+    } else if (check_in_time) {
+      const schedStartM = timeToMinutes(emp.start_time);
+      const inM = timeToMinutes(check_in_time);
+      const diff = inM - schedStartM;
+      if (diff > emp.grace_period_minutes) {
+        lateMinutes = diff;
+        finalStatus = finalStatus || 'Late';
+        const lateRate = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_late_rate'`).get();
+        deduction = lateRate ? parseFloat(lateRate.value) : 50;
+      } else {
+        lateMinutes = 0;
+        finalStatus = 'On Time';
+        deduction = 0;
+      }
+    } else if (finalStatus === 'Absent') {
+      const absenceRate = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_absence_rate'`).get();
+      deduction = absenceRate ? parseFloat(absenceRate.value) : 250;
+    }
+
+    // Check if record exists for this date and employee
+    const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(employee_id, date);
+
+    let recordId;
+    if (existing) {
+      recordId = existing.id;
+      db.prepare(`
+        UPDATE attendance_records SET
+          check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
+          late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
+          notes = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        check_in_time || null, check_out_time || null, finalStatus, workedHours,
+        lateMinutes, deduction, reason, recordId
+      );
+    } else {
+      const info = db.prepare(`
+        INSERT INTO attendance_records (
+          employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
+          status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
+          verification_status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
+      `).run(
+        employee_id, date, check_in_time || null, check_out_time || null, emp.start_time, emp.end_time,
+        finalStatus, workedHours, lateMinutes, deduction, reason
+      );
+      recordId = info.lastInsertRowid;
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'MANUAL_RECORD_ATTENDANCE',
+      'attendance_records',
+      recordId,
+      existing || null,
+      { employee_id, date, check_in_time, check_out_time, status: finalStatus, workedHours, lateMinutes, deduction },
+      `تسجيل/تعديل حضور يدوي بأثر رجعي: ${reason}`,
+      clientIp
+    );
+
+    createNotification(
+      employee_id,
+      'تسجيل/تعديل حضور يدوي بأثر رجعي',
+      `قام مدير النظام بتوثيق حضورك ليوم ${date} بموعد ${check_in_time || 'معتمد'}. المبرر: ${reason}`,
+      'info'
+    );
+
+    res.json({
+      success: true,
+      message: 'تم حفظ وتوثيق سجل الحضور بنجاح',
+      recordId
+    });
+  } catch (error) {
+    console.error('Manual record error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حفظ سجل الحضور' });
   }
 });
 

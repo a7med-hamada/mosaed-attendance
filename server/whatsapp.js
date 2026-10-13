@@ -220,8 +220,8 @@ function buildMorningBriefingMessage(companyName, date, stats, lateList, absentL
   msg += `❌ لم يحضروا بعد / غياب: ${absentList.length}\n\n`;
 
   if (topEmployee && topEmployee.score >= 70) {
-    msg += `🏆 *نجم وموظف الشهر الأكثر التزاماً حتى الآن:*\n`;
-    msg += `• *${topEmployee.name}* (نسبة الالتزام: ${topEmployee.score}% • سلسلة في الموعد: ${topEmployee.streak || 0} يوم 🔥)\n\n`;
+    msg += `🌟 *الموظف الأكثر التزاماً لهذا الشهر:*\n`;
+    msg += `• *${topEmployee.name}* (نسبة الالتزام: ${topEmployee.score}% - الحضور في الموعد: ${topEmployee.onTimeDays || topEmployee.streak || 0} يوم)\n\n`;
   }
 
   if (lateList.length > 0) {

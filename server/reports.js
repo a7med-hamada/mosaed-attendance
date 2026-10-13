@@ -499,4 +499,301 @@ router.post('/reset-archive', authenticateToken, requireManager, (req, res) => {
   }
 });
 
+// ==========================================
+// 8. Gamification & Attendance Score (مؤشر أداء الالتزام ولوحة شرف موظف الشهر)
+// ==========================================
+
+function calculateEmployeeScore(employeeId, month) {
+  const records = db.prepare(`
+    SELECT * FROM attendance_records
+    WHERE employee_id = ? AND date LIKE ?
+    ORDER BY date ASC
+  `).all(employeeId, `${month}%`);
+
+  const permissions = db.prepare(`
+    SELECT * FROM permission_requests
+    WHERE employee_id = ? AND date LIKE ? AND status = 'approved'
+  `).all(employeeId, `${month}%`);
+
+  const permMap = {};
+  permissions.forEach(p => {
+    permMap[p.date] = permMap[p.date] || [];
+    permMap[p.date].push(p);
+  });
+
+  let totalLoggedDays = records.length;
+  let onTimeDays = 0;
+  let lateDays = 0;
+  let absentDays = 0;
+  let halfDays = 0;
+  let approvedLeaveDays = 0;
+  let totalLateMinutes = 0;
+  let earlyLeaveDays = 0;
+  let totalPoints = 0;
+
+  const dailyScores = [];
+
+  records.forEach(r => {
+    let dayPoints = 100;
+    const perms = permMap[r.date] || [];
+    const hasLatePerm = perms.some(p => p.permission_type === 'late_arrival' || p.permission_type === 'during_day');
+    const hasEarlyPerm = perms.some(p => p.permission_type === 'early_departure' || p.permission_type === 'during_day');
+
+    if (r.status === 'On Time' || (r.check_in_time && (r.late_minutes || 0) === 0 && r.status !== 'Absent' && r.status !== 'Half Day')) {
+      onTimeDays++;
+      dayPoints = 100;
+    } else if (r.status === 'On Leave') {
+      approvedLeaveDays++;
+      dayPoints = 100;
+    } else if (r.status === 'Late' || (r.check_in_time && (r.late_minutes || 0) > 0)) {
+      lateDays++;
+      totalLateMinutes += (r.late_minutes || 0);
+      if (hasLatePerm) {
+        dayPoints = 100;
+      } else {
+        const lateMins = r.late_minutes || 0;
+        if (lateMins <= 15) dayPoints = 85;
+        else if (lateMins <= 30) dayPoints = 70;
+        else if (lateMins <= 60) dayPoints = 55;
+        else dayPoints = 40;
+      }
+    } else if (r.status === 'Half Day') {
+      halfDays++;
+      dayPoints = 50;
+    } else if (r.status === 'Absent') {
+      absentDays++;
+      dayPoints = 0;
+    }
+
+    if ((r.early_leave_minutes || 0) > 0 || r.status === 'Early Leave') {
+      earlyLeaveDays++;
+      if (!hasEarlyPerm) {
+        const earlyPenalty = Math.min(25, Math.round((r.early_leave_minutes || 0) / 2));
+        dayPoints = Math.max(0, dayPoints - earlyPenalty);
+      }
+    }
+
+    dayPoints = Math.max(0, Math.min(100, dayPoints));
+    totalPoints += dayPoints;
+
+    dailyScores.push({
+      date: r.date,
+      status: r.status,
+      lateMinutes: r.late_minutes || 0,
+      earlyMinutes: r.early_leave_minutes || 0,
+      dayPoints,
+      checkInTime: r.check_in_time,
+      checkOutTime: r.check_out_time
+    });
+  });
+
+  const finalScore = totalLoggedDays > 0 ? Math.round(totalPoints / totalLoggedDays) : 100;
+
+  // Calculate consecutive on-time streak
+  let streak = 0;
+  for (let i = records.length - 1; i >= 0; i--) {
+    const rec = records[i];
+    const isGoodDay = rec.status === 'On Time' || rec.status === 'On Leave' ||
+      ((rec.late_minutes || 0) === 0 && rec.status !== 'Absent' && rec.status !== 'Half Day');
+    if (isGoodDay) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  let tierKey = 'legendary';
+  let tierName = 'فائق الالتزام 💎';
+  let tierColor = 'emerald';
+  let tierDesc = 'انضباط والتزام استثنائي في المواعيد';
+
+  if (finalScore >= 95) {
+    tierKey = 'legendary';
+    tierName = 'فائق الالتزام 💎';
+    tierColor = 'emerald';
+    tierDesc = 'انضباط والتزام استثنائي في المواعيد';
+  } else if (finalScore >= 85) {
+    tierKey = 'committed';
+    tierName = 'ملتزم ومتميز 🟢';
+    tierColor = 'blue';
+    tierDesc = 'أداء ممتاز ونسبة حضور عالية في الموعد';
+  } else if (finalScore >= 70) {
+    tierKey = 'good';
+    tierName = 'متوسط 🟡';
+    tierColor = 'amber';
+    tierDesc = 'أداء مقبول مع وجود تأخيرات تحتاج تحسين';
+  } else {
+    tierKey = 'needs_improvement';
+    tierName = 'إنذار عدم التزام 🔴';
+    tierColor = 'rose';
+    tierDesc = 'تكرار التأخير والغياب - يحتاج مراجعة فورية';
+  }
+
+  return {
+    score: finalScore,
+    streak,
+    totalLoggedDays,
+    onTimeDays,
+    lateDays,
+    absentDays,
+    halfDays,
+    approvedLeaveDays,
+    earlyLeaveDays,
+    totalLateMinutes,
+    tier: {
+      key: tierKey,
+      name: tierName,
+      color: tierColor,
+      desc: tierDesc
+    },
+    dailyScores
+  };
+}
+
+function getLeaderboardData(month, managerId = null) {
+  let query = `
+    SELECT u.id, u.employee_code, u.full_name, u.email, u.phone, u.job_title, u.profile_photo,
+           d.name as department_name
+    FROM users u
+    LEFT JOIN departments d ON u.department_id = d.id
+    WHERE u.role = 'employee' AND u.is_active = 1
+    AND u.full_name NOT LIKE '%طارق النجار%'
+  `;
+  const params = [];
+  if (managerId) {
+    query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+    params.push(managerId, managerId);
+  }
+  query += ` ORDER BY u.full_name ASC `;
+
+  const employees = db.prepare(query).all(...params);
+
+  const list = employees.map(emp => {
+    const scoreData = calculateEmployeeScore(emp.id, month);
+    return {
+      employee: emp,
+      score: scoreData.score,
+      streak: scoreData.streak,
+      tier: scoreData.tier,
+      totalLoggedDays: scoreData.totalLoggedDays,
+      onTimeDays: scoreData.onTimeDays,
+      lateDays: scoreData.lateDays,
+      absentDays: scoreData.absentDays,
+      halfDays: scoreData.halfDays,
+      approvedLeaveDays: scoreData.approvedLeaveDays,
+      totalLateMinutes: scoreData.totalLateMinutes
+    };
+  });
+
+  list.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.totalLateMinutes !== b.totalLateMinutes) return a.totalLateMinutes - b.totalLateMinutes;
+    if (b.onTimeDays !== a.onTimeDays) return b.onTimeDays - a.onTimeDays;
+    return b.streak - a.streak;
+  });
+
+  list.forEach((item, index) => {
+    const rank = index + 1;
+    item.rank = rank;
+    if (rank === 1) {
+      item.isEmployeeOfMonth = true;
+      item.rankBadge = '🥇';
+      item.trophyTitle = 'موظف الشهر الأكثر التزاماً 🏆';
+    } else if (rank === 2) {
+      item.isEmployeeOfMonth = false;
+      item.rankBadge = '🥈';
+      item.trophyTitle = 'المركز الثاني 🥈';
+    } else if (rank === 3) {
+      item.isEmployeeOfMonth = false;
+      item.rankBadge = '🥉';
+      item.trophyTitle = 'المركز الثالث 🥉';
+    } else {
+      item.isEmployeeOfMonth = false;
+      item.rankBadge = `#${rank}`;
+      item.trophyTitle = `المركز #${rank}`;
+    }
+  });
+
+  const employeeOfTheMonth = list.length > 0 ? list[0] : null;
+  const totalEmployees = list.length;
+  const avgScore = totalEmployees > 0 ? Math.round(list.reduce((acc, curr) => acc + curr.score, 0) / totalEmployees) : 100;
+  const legendaryCount = list.filter(item => item.score >= 95).length;
+
+  return {
+    month,
+    employeeOfTheMonth,
+    leaderboard: list,
+    summary: {
+      totalEmployees,
+      avgScore,
+      topScore: employeeOfTheMonth ? employeeOfTheMonth.score : 100,
+      legendaryCount
+    }
+  };
+}
+
+// GET /api/reports/leaderboard
+router.get('/leaderboard', authenticateToken, (req, res) => {
+  try {
+    const month = req.query.month || getCurrentMonthString();
+    const managerId = req.user.role === 'manager' ? req.user.id : null;
+    const data = getLeaderboardData(month, managerId);
+
+    let myRank = null;
+    if (req.user.role === 'employee') {
+      myRank = data.leaderboard.find(item => item.employee.id === req.user.id) || null;
+    }
+
+    res.json({
+      success: true,
+      ...data,
+      myRank
+    });
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استخراج لوحة شرف الالتزام' });
+  }
+});
+
+// GET /api/reports/my-score
+router.get('/my-score', authenticateToken, (req, res) => {
+  try {
+    const month = req.query.month || getCurrentMonthString();
+    const employeeId = req.user.role === 'manager' && req.query.employee_id ? parseInt(req.query.employee_id, 10) : req.user.id;
+    const scoreData = calculateEmployeeScore(employeeId, month);
+    const leaderboardData = getLeaderboardData(month, null);
+    const rankedItem = leaderboardData.leaderboard.find(item => item.employee.id === employeeId);
+
+    res.json({
+      success: true,
+      month,
+      employeeId,
+      score: scoreData.score,
+      streak: scoreData.streak,
+      tier: scoreData.tier,
+      rank: rankedItem ? rankedItem.rank : 1,
+      totalEmployees: leaderboardData.leaderboard.length,
+      isEmployeeOfMonth: rankedItem ? rankedItem.isEmployeeOfMonth : false,
+      rankBadge: rankedItem ? rankedItem.rankBadge : '🥇',
+      trophyTitle: rankedItem ? rankedItem.trophyTitle : 'موظف متميز',
+      metrics: {
+        totalLoggedDays: scoreData.totalLoggedDays,
+        onTimeDays: scoreData.onTimeDays,
+        lateDays: scoreData.lateDays,
+        absentDays: scoreData.absentDays,
+        halfDays: scoreData.halfDays,
+        approvedLeaveDays: scoreData.approvedLeaveDays,
+        totalLateMinutes: scoreData.totalLateMinutes
+      },
+      dailyScores: scoreData.dailyScores
+    });
+  } catch (error) {
+    console.error('My score error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استخراج نقاط التقييم' });
+  }
+});
+
+router.calculateEmployeeScore = calculateEmployeeScore;
+router.getLeaderboardData = getLeaderboardData;
+
 module.exports = router;

@@ -209,7 +209,7 @@ function buildLateAlertMessage(employeeName, lateMinutes, deduction, checkInTime
     `نتمنى لك يوماً موفقاً ومثمراً في العمل! 💼`;
 }
 
-function buildMorningBriefingMessage(companyName, date, stats, lateList, absentList, onLeaveList = []) {
+function buildMorningBriefingMessage(companyName, date, stats, lateList, absentList, onLeaveList = [], topEmployee = null) {
   let msg = `🏢 *تقرير الصباح اليومي - ${companyName || 'حضور وانصراف الشركة'}*\n`;
   msg += `📅 *التاريخ:* ${date}\n\n`;
   msg += `📊 *ملخص حضور اليوم:*\n`;
@@ -218,6 +218,11 @@ function buildMorningBriefingMessage(companyName, date, stats, lateList, absentL
   msg += `⏰ المتأخرين: ${lateList.length}\n`;
   msg += `🌴 إجازات معتمدة: ${onLeaveList.length}\n`;
   msg += `❌ لم يحضروا بعد / غياب: ${absentList.length}\n\n`;
+
+  if (topEmployee && topEmployee.score >= 70) {
+    msg += `🏆 *نجم وموظف الشهر الأكثر التزاماً حتى الآن:*\n`;
+    msg += `• *${topEmployee.name}* (نسبة الالتزام: ${topEmployee.score}% • سلسلة في الموعد: ${topEmployee.streak || 0} يوم 🔥)\n\n`;
+  }
 
   if (lateList.length > 0) {
     msg += `⏰ *تفاصيل المتأخرين:*\n`;
@@ -397,7 +402,24 @@ router.get('/morning-briefing', authenticateToken, requireManager, (req, res) =>
       absent: absentList.length
     };
 
-    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList);
+    let topEmployee = null;
+    try {
+      const reportsModule = require('./reports');
+      if (reportsModule.getLeaderboardData) {
+        const lb = reportsModule.getLeaderboardData(today.substring(0, 7), req.user.id);
+        if (lb && lb.employeeOfTheMonth && lb.employeeOfTheMonth.score >= 70) {
+          topEmployee = {
+            name: lb.employeeOfTheMonth.employee.full_name,
+            score: lb.employeeOfTheMonth.score,
+            streak: lb.employeeOfTheMonth.streak
+          };
+        }
+      }
+    } catch (lbErr) {
+      // Non-fatal
+    }
+
+    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList, topEmployee);
     const managerPhone = settings.whatsapp_manager_phone || req.user.phone || '01227580963';
     const waLink = generateWhatsAppLink(managerPhone, messageText);
 
@@ -408,6 +430,7 @@ router.get('/morning-briefing', authenticateToken, requireManager, (req, res) =>
       stats,
       lateList,
       absentList,
+      topEmployee,
       messageText,
       waLink
     });
@@ -475,7 +498,24 @@ router.post('/morning-briefing/send', authenticateToken, requireManager, async (
       absent: absentList.length
     };
 
-    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList);
+    let topEmployee = null;
+    try {
+      const reportsModule = require('./reports');
+      if (reportsModule.getLeaderboardData) {
+        const lb = reportsModule.getLeaderboardData(today.substring(0, 7), req.user.id);
+        if (lb && lb.employeeOfTheMonth && lb.employeeOfTheMonth.score >= 70) {
+          topEmployee = {
+            name: lb.employeeOfTheMonth.employee.full_name,
+            score: lb.employeeOfTheMonth.score,
+            streak: lb.employeeOfTheMonth.streak
+          };
+        }
+      }
+    } catch (lbErr) {
+      // Non-fatal
+    }
+
+    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList, topEmployee);
     const targetPhone = req.body.phone || settings.whatsapp_manager_phone || req.user.phone || '01227580963';
 
     const dispatchResult = await sendWhatsAppMessage({

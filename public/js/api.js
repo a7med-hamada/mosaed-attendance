@@ -291,6 +291,20 @@ const API = {
     return this.request('/reports/reset-archive', { method: 'POST' });
   },
 
+  // Gamification & Attendance Score (لوحة الشرف وموظف الشهر ومؤشر الالتزام)
+  getLeaderboard(month) {
+    const qs = month ? `?month=${month}` : '';
+    return this.request(`/reports/leaderboard${qs}`);
+  },
+
+  getMyScore(month, employeeId) {
+    const params = {};
+    if (month) params.month = month;
+    if (employeeId) params.employee_id = employeeId;
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/reports/my-score${qs ? `?${qs}` : ''}`);
+  },
+
   // Salary Advances (السلف والمسحوبات)
   getAdvances(params = {}) {
     const qs = new URLSearchParams(params).toString();

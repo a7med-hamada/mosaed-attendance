@@ -3554,7 +3554,7 @@ const ManagerUI = {
           </button>
           <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
             class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
-            <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة ومراجعة السلف
+            <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة وحذف ومراجعة السلف
           </button>
           <button onclick="window.open('/api/reports/export/csv?date_from=${targetMonth}-01&date_to=${targetMonth}-31', '_blank')"
             class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
@@ -3720,12 +3720,18 @@ const ManagerUI = {
                       </td>
                       <td class="py-3 px-2 text-center whitespace-nowrap">
                         ${(s.totalBonuses || 0) > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold font-mono text-[11px]">+${s.totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+                          <button type="button" onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
+                            class="px-2 py-0.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف مكافآت الموظفين">
+                            +${s.totalBonuses.toLocaleString('ar-EG')} ج.م
+                          </button>
                         ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
                       </td>
                       <td class="py-3 px-2 text-center whitespace-nowrap">
                         ${(s.totalAdvances || 0) > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold font-mono text-[11px]">-${s.totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+                          <button type="button" onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
+                            class="px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف سلف الموظفين">
+                            -${s.totalAdvances.toLocaleString('ar-EG')} ج.م
+                          </button>
                         ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
                       </td>
                       <td class="py-3 px-2 text-center whitespace-nowrap">
@@ -3913,8 +3919,10 @@ const ManagerUI = {
                       </div>
                       <div class="flex items-center gap-3">
                         <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
-                        <button onclick="ManagerUI.deleteBonus(${b.id}, ${emp.id}, '${month}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف المكافأة">
+                        <button onclick="ManagerUI.deleteBonus(${b.id}, ${emp.id}, '${month}')"
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف المكافأة بالكامل">
                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف المكافأة</span>
                         </button>
                       </div>
                     </div>
@@ -3954,8 +3962,10 @@ const ManagerUI = {
                         </div>
                         <div class="flex items-center gap-3">
                           <span class="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">-${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م</span>
-                          <button onclick="ManagerUI.deleteAdvance(${a.id}, ${emp.id}, '${month}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف السلفة">
+                          <button onclick="ManagerUI.deleteAdvance(${a.id}, ${emp.id}, '${month}')"
+                            class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة بالكامل">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>حذف السلفة</span>
                           </button>
                         </div>
                       </div>
@@ -4402,9 +4412,9 @@ const ManagerUI = {
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> إدارة ومراجعة سلف الموظفين
+                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> إدارة ومراجعة وحذف سلف الموظفين
               </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">مراجعة طلبات السلف المقدمة من الموظفين والموافقة عليها أو تسجيل سلف مباشرة</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">مراجعة واعتماد أو رفض طلبات السلف، وحذف أي سلفة أُضيفت بالخطأ فوراً</p>
             </div>
             <div class="flex items-center gap-2">
               <button onclick="ManagerUI.openAddAdvanceModal(null, '${targetMonth}')"
@@ -4496,7 +4506,7 @@ const ManagerUI = {
                   </td>
                   <td class="py-3 px-3 text-center font-sans">
                     ${a.status === 'pending' ? `
-                      <div class="flex items-center justify-center gap-1.5">
+                      <div class="flex items-center justify-center gap-1.5 flex-wrap">
                         <button onclick="ManagerUI.reviewAdvanceRequest(${a.id}, 'approved', '${targetMonth}')"
                           class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs" title="موافقة على السلفة وخصمها من الراتب">
                           موافقة ✓
@@ -4506,17 +4516,18 @@ const ManagerUI = {
                           رفض ✗
                         </button>
                         <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
-                          class="p-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-colors" title="حذف السلفة نهائياً">
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">
                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف السلفة</span>
                         </button>
                       </div>
                     ` : `
                       <div class="flex items-center justify-center gap-2">
                         <span class="text-[10px] text-slate-400 font-mono">${a.approver_name ? 'بواسطة: ' + a.approver_name : 'تمت المعالجة'}</span>
                         <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
-                          class="px-2 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">
                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                          <span>حذف</span>
+                          <span>حذف السلفة</span>
                         </button>
                       </div>
                     `}

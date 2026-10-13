@@ -7,14 +7,15 @@
 
   <!-- PWA & Mobile Web App Meta Tags -->
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0b1329" />
+  <meta name="theme-color" content="#080f20" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="وقتي | WAQTY" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
   <!-- Cairo Font & Arabic Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -91,6 +92,19 @@
 <body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
   <!-- ========================================== -->
+  <!-- App Native Splash / Loading Screen -->
+  <!-- ========================================== -->
+  <div id="app-splash-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#080f20] transition-opacity duration-300 pointer-events-auto">
+    <div class="flex flex-col items-center gap-4 text-center select-none">
+      <img src="/icons/icon-192.png" alt="وقتي - WAQTY" class="w-24 h-24 rounded-3xl object-contain drop-shadow-2xl shadow-emerald-500/25 animate-pulse" />
+      <div class="flex items-center justify-center gap-2 mt-1">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="text-sm font-black tracking-wider text-slate-100">وقتي | WAQTY</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- Toast Container -->
   <!-- ========================================== -->
   <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -111,7 +125,7 @@
           <span>نظام حضور ذكي • أمان وموقع جغرافي</span>
         </div>
         <div class="mb-5 flex justify-center">
-          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-28 sm:h-36 w-auto max-w-[280px] object-contain drop-shadow-lg" />
+          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-24 sm:h-28 w-auto max-w-[280px] object-contain drop-shadow-lg" />
         </div>
 
         <!-- Install PWA Button -->

@@ -6,7 +6,22 @@ const App = {
     this.setupTheme();
     this.setupLanguage();
     this.setupListeners();
-    await this.checkAuth();
+    try {
+      await this.checkAuth();
+    } finally {
+      this.hideSplashScreen();
+    }
+  },
+
+  hideSplashScreen() {
+    const splash = document.getElementById('app-splash-screen');
+    if (splash) {
+      splash.style.opacity = '0';
+      splash.style.pointerEvents = 'none';
+      setTimeout(() => {
+        if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+      }, 400);
+    }
   },
 
   setupTheme() {

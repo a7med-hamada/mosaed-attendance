@@ -194,7 +194,7 @@
                 <!-- Company Logo & Title -->
                 <div class="text-right">
                   <div class="flex items-center gap-2 mb-1">
-                    <img src="/waqty-logo.png" alt="وقتي" class="w-8 h-8 rounded-lg object-contain bg-[#0b1329] p-0.5" />
+                    <img src="/icons/icon-192.png" alt="وقتي" class="w-8 h-8 rounded-lg object-contain bg-[#080f20] p-0.5 shadow-xs" />
                     <h2 class="text-xl font-black text-slate-900 tracking-tight">وقتي <span class="text-emerald-600 font-mono text-sm">WAQTY</span></h2>
                   </div>
                   <span class="text-[11px] font-bold text-slate-500 block">إدارة الموارد البشرية والرواتب (HR & Payroll)</span>

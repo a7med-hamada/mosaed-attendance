@@ -1,5 +1,5 @@
-// Service Worker for Mosaed Attendance System PWA
-const CACHE_NAME = 'mosaed-pwa-v1';
+// Service Worker for WAQTY Attendance System PWA
+const CACHE_NAME = 'waqty-pwa-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

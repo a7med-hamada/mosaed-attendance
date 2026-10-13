@@ -1,6 +1,92 @@
 const express = require('express');
-const { db, logAudit } = require('./database');
+const { db, logAudit, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
+const { evaluateAttendanceStatusAndDeduction } = require('./attendance');
+
+function getWorkdaysFromWeekendDays(weekendDaysStr) {
+  const weekends = (weekendDaysStr !== undefined && weekendDaysStr !== null ? String(weekendDaysStr) : '5').split(',').map(s => s.trim());
+  const allDays = ['0', '1', '2', '3', '4', '5', '6'];
+  return allDays.filter(d => !weekends.includes(d)).join(',');
+}
+
+function getWeekendDaysFromWorkdays(workingDaysStr) {
+  const workdays = (workingDaysStr || '0,1,2,3,4').split(',').map(s => s.trim());
+  const allDays = ['0', '1', '2', '3', '4', '5', '6'];
+  return allDays.filter(d => !workdays.includes(d)).join(',');
+}
+
+// Recalculates current month attendance records when scope is 'from_month_start'
+function recalculateMonthAttendance(managerId) {
+  try {
+    const currentMonth = getCurrentMonthString();
+    const monthStart = `${currentMonth}-01`;
+
+    let schedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? LIMIT 1`).get(managerId);
+    if (!schedule && managerId === 1) {
+      schedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 LIMIT 1`).get();
+    }
+    const settingsRows = db.prepare(`SELECT key, value FROM company_settings`).all();
+    const settings = {};
+    settingsRows.forEach(r => settings[r.key] = r.value);
+
+    const weekendDaysStr = settings['weekend_days'] || (schedule && schedule.working_days ? getWeekendDaysFromWorkdays(schedule.working_days) : '5');
+    const weekendDays = weekendDaysStr.split(',').map(s => s.trim());
+
+    const records = db.prepare(`
+      SELECT ar.*, u.schedule_id,
+             COALESCE(s.start_time, '09:00') as sched_start,
+             COALESCE(s.end_time, '17:00') as sched_end,
+             COALESCE(s.grace_period_minutes, 15) as sched_grace
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      LEFT JOIN schedules s ON u.schedule_id = s.id
+      WHERE ar.date >= ? AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+    `).all(monthStart, managerId, managerId);
+
+    for (const r of records) {
+      if (r.status === 'On Leave') continue;
+
+      const dayOfWeek = String(new Date(r.date + 'T12:00:00').getDay());
+      const isWeekend = weekendDays.includes(dayOfWeek);
+
+      // If weekend day: never penalize
+      if (isWeekend) {
+        if (r.status === 'Absent') {
+          db.prepare(`DELETE FROM attendance_records WHERE id = ?`).run(r.id);
+          continue;
+        }
+      }
+
+      if (r.check_in_time) {
+        const evalResult = evaluateAttendanceStatusAndDeduction(
+          r.check_in_time,
+          r.sched_start,
+          r.sched_grace,
+          false
+        );
+
+        db.prepare(`
+          UPDATE attendance_records SET
+            status = ?,
+            late_minutes = ?,
+            estimated_deduction = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(evalResult.status, evalResult.lateMinutes, evalResult.deduction, r.id);
+      } else if (r.status === 'Absent') {
+        const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');
+        db.prepare(`
+          UPDATE attendance_records SET
+            estimated_deduction = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(absenceRate, r.id);
+      }
+    }
+  } catch (err) {
+    console.error('Error recalculating month attendance:', err);
+  }
+}
 
 const router = express.Router();
 
@@ -27,6 +113,14 @@ router.get('/', authenticateToken, (req, res) => {
     settingsRows.forEach(row => {
       settingsMap[row.key] = row.value;
     });
+
+    if (!settingsMap['weekend_days']) {
+      if (schedule && schedule.working_days) {
+        settingsMap['weekend_days'] = getWeekendDaysFromWorkdays(schedule.working_days);
+      } else {
+        settingsMap['weekend_days'] = '5';
+      }
+    }
 
     // Employee count for this manager
     const empCount = db.prepare(`
@@ -136,6 +230,8 @@ router.put('/working-hours', authenticateToken, requireManager, (req, res) => {
     const late_threshold = req.body.late_threshold || req.body.late_threshold_time;
     const half_day_threshold = req.body.half_day_threshold || req.body.half_day_threshold_time;
     const absence_threshold = req.body.absence_threshold || req.body.absence_threshold_time;
+    const weekend_days = req.body.weekend_days;
+    const apply_scope = req.body.apply_scope || 'from_today';
 
     if (!start_time || !end_time) {
       return res.status(400).json({ success: false, error: 'وقت بدء وانتهاء الدوام حقول إلزامية' });
@@ -149,20 +245,34 @@ router.put('/working-hours', authenticateToken, requireManager, (req, res) => {
 
     const early_leave_grace_minutes = req.body.early_leave_grace_minutes !== undefined ? parseInt(req.body.early_leave_grace_minutes, 10) : (schedule && schedule.early_leave_grace_minutes !== undefined ? schedule.early_leave_grace_minutes : 0);
 
+    let working_days = schedule ? schedule.working_days : '0,1,2,3,4';
+    if (weekend_days !== undefined && weekend_days !== null) {
+      working_days = getWorkdaysFromWeekendDays(weekend_days);
+      db.prepare(`
+        INSERT INTO company_settings (key, value) VALUES ('weekend_days', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `).run(String(weekend_days));
+    }
+
     if (schedule) {
       db.prepare(`
         UPDATE schedules SET
           start_time = ?, end_time = ?, grace_period_minutes = ?, early_leave_grace_minutes = ?,
-          half_day_threshold = ?, absence_threshold = ?, is_configured = 1
+          half_day_threshold = ?, absence_threshold = ?, working_days = ?, is_configured = 1
         WHERE id = ?
-      `).run(start_time, end_time, graceMins, early_leave_grace_minutes, halfDay, absence, schedule.id);
+      `).run(start_time, end_time, graceMins, early_leave_grace_minutes, halfDay, absence, working_days, schedule.id);
     } else {
       db.prepare(`
         INSERT INTO schedules (
           name, start_time, end_time, grace_period_minutes, early_leave_grace_minutes,
           half_day_threshold, absence_threshold, working_days, manager_id, is_configured, is_default
-        ) VALUES ('الدوام الرسمي العام', ?, ?, ?, ?, ?, ?, '0,1,2,3,4', ?, 1, 1)
-      `).run(start_time, end_time, graceMins, early_leave_grace_minutes, halfDay, absence, managerId);
+        ) VALUES ('الدوام الرسمي العام', ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+      `).run(start_time, end_time, graceMins, early_leave_grace_minutes, halfDay, absence, working_days, managerId);
+    }
+
+    // Apply Scope: If manager chose retroactive from start of current month
+    if (apply_scope === 'from_month_start') {
+      recalculateMonthAttendance(managerId);
     }
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -174,13 +284,15 @@ router.put('/working-hours', authenticateToken, requireManager, (req, res) => {
       schedule ? schedule.id : null,
       schedule,
       req.body,
-      'تحديد مواعيد العمل وقواعد الحضور والانصراف',
+      `تحديد مواعيد العمل وقواعد الحضور (${apply_scope === 'from_month_start' ? 'تطبيق بأثر رجعي من أول الشهر' : 'تطبيق من اليوم فصاعداً'})`,
       clientIp
     );
 
     res.json({
       success: true,
-      message: 'تم حفظ وتفعيل مواعيد العمل وقواعد الحضور بنجاح'
+      message: apply_scope === 'from_month_start'
+        ? 'تم حفظ مواعيد العمل وإعادة احتساب سجلات وخصومات الحضور للشهر الحالي بنجاح 🗓️'
+        : 'تم حفظ وتفعيل مواعيد العمل وقواعد الحضور بنجاح ⏱️'
     });
   } catch (error) {
     console.error('Update working hours error:', error);
@@ -191,9 +303,19 @@ router.put('/working-hours', authenticateToken, requireManager, (req, res) => {
 // PUT /api/settings/company (Manager updates general company rules & deductions)
 router.put('/company', authenticateToken, requireManager, (req, res) => {
   try {
-    const settings = req.body;
+    const managerId = req.user.id;
+    const settings = { ...req.body };
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({ success: false, error: 'بيانات غير صالحة' });
+    }
+
+    const apply_scope = settings.apply_scope || 'from_today';
+    delete settings.apply_scope;
+
+    // Handle weekend days if present
+    if (settings.weekend_days !== undefined && settings.weekend_days !== null) {
+      const working_days = getWorkdaysFromWeekendDays(settings.weekend_days);
+      db.prepare(`UPDATE schedules SET working_days = ? WHERE manager_id = ? OR (manager_id IS NULL AND ? = 1)`).run(working_days, managerId, managerId);
     }
 
     const upsertStmt = db.prepare(`
@@ -206,6 +328,10 @@ router.put('/company', authenticateToken, requireManager, (req, res) => {
       upsertStmt.run(key, String(value));
     }
 
+    if (apply_scope === 'from_month_start') {
+      recalculateMonthAttendance(managerId);
+    }
+
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
       req.user.id,
@@ -215,11 +341,16 @@ router.put('/company', authenticateToken, requireManager, (req, res) => {
       null,
       null,
       settings,
-      'تحديث القواعد الإضافية والخصومات',
+      `تحديث القواعد الإضافية والخصومات (${apply_scope === 'from_month_start' ? 'تطبيق بأثر رجعي من أول الشهر' : 'تطبيق من اليوم فصاعداً'})`,
       clientIp
     );
 
-    res.json({ success: true, message: 'تم حفظ وتحديث قواعد وإعدادات المنظومة بنجاح' });
+    res.json({
+      success: true,
+      message: apply_scope === 'from_month_start'
+        ? 'تم حفظ الإعدادات وقواعد الخصم وإعادة احتساب سجلات الشهر الحالي بنجاح 🗓️'
+        : 'تم حفظ وتحديث قواعد وإعدادات المنظومة بنجاح ⏱️'
+    });
   } catch (error) {
     console.error('Update company settings error:', error);
     res.status(500).json({ success: false, error: 'فشل في تحديث الإعدادات' });

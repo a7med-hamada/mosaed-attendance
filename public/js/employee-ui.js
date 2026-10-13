@@ -965,9 +965,32 @@ const EmployeeUI = {
         `;
       }
 
-      const res = await API.getLeaderboard(targetMonth);
+      const [res, myScoreRes] = await Promise.all([
+        API.getLeaderboard(targetMonth).catch(() => ({ leaderboard: [] })),
+        API.getMyScore(targetMonth).catch(() => ({}))
+      ]);
       const list = res.leaderboard || [];
       const currentUserId = API.getCurrentUser()?.id;
+
+      const myScore = Math.round(myScoreRes.score !== undefined ? myScoreRes.score : 100);
+      const myTier = myScoreRes.tier || { name: 'ملتزم ومتميز', color: 'blue' };
+      const myMetrics = myScoreRes.metrics || {
+        onTimeDays: 0,
+        lateDays: 0,
+        absentDays: 0,
+        totalLateMinutes: 0,
+        totalAbsenceDeductions: 0,
+        totalLateDeductions: 0,
+        absentDaysList: [],
+        lateDaysList: [],
+        onTimeDaysList: []
+      };
+
+      const myCircleStroke = myScore >= 90 ? '#10b981' : myScore >= 75 ? '#3b82f6' : myScore >= 60 ? '#f59e0b' : '#ef4444';
+      const myCircleText = myScore >= 90 ? 'text-emerald-600 dark:text-emerald-400' :
+                           myScore >= 75 ? 'text-blue-600 dark:text-blue-400' :
+                           myScore >= 60 ? 'text-amber-600 dark:text-amber-400' :
+                           'text-rose-600 dark:text-rose-400';
 
       const mainContainer = document.getElementById('emp-leaderboard-main-container');
       if (!mainContainer) return;
@@ -982,6 +1005,125 @@ const EmployeeUI = {
       }
 
       mainContainer.innerHTML = `
+        <!-- Personal Monthly Commitment & Deductions Breakdown Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-4">
+              <div class="relative inline-flex items-center justify-center w-16 h-16 flex-shrink-0">
+                <svg class="transform -rotate-90 w-16 h-16" viewBox="0 0 36 36">
+                  <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path stroke="${myCircleStroke}" stroke-dasharray="${myScore}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <span class="absolute font-mono font-bold text-sm ${myCircleText}">${myScore}%</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-base font-black text-slate-900 dark:text-white">إحصائيات وسجل التزامي لشهر ${targetMonth}</h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    myTier.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                    myTier.color === 'blue' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                    myTier.color === 'amber' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                  }">
+                    ${myTier.name}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">يُحسب التقييم من بداية الشهر حتى اليوم، ويبدأ بنسبة 100% ويقل مع الغياب والتأخير</p>
+              </div>
+            </div>
+
+            <div class="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 w-fit">
+              <i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0"></i>
+              <span>🌴 أيام العطلة الأسبوعية معفاة تماماً ولا تُسجل كغياب</span>
+            </div>
+          </div>
+
+          <!-- 3 Detailed Breakdown Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- 1. Absence Card -->
+            <div class="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                  <i data-lucide="user-x" class="w-4 h-4"></i> خصم الغياب
+                </span>
+                <span class="font-mono font-black text-rose-600 dark:text-rose-400 text-sm">
+                  ${myMetrics.totalAbsenceDeductions > 0 ? `-${myMetrics.totalAbsenceDeductions} ج.م` : '0 ج.م'}
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold">
+                عدد أيام الغياب: <strong class="text-rose-600 dark:text-rose-400 font-mono">${myMetrics.absentDays}</strong> يوم
+              </span>
+
+              ${myMetrics.absentDaysList && myMetrics.absentDaysList.length > 0 ? `
+                <div class="pt-2 border-t border-rose-200/50 dark:border-rose-900/30 space-y-1 max-h-32 overflow-y-auto">
+                  <span class="text-[10px] text-slate-400 block font-bold">الأيام التي تم تسجيل غياب فيها:</span>
+                  ${myMetrics.absentDaysList.map(a => `
+                    <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-[11px] font-mono">
+                      <span class="text-slate-700 dark:text-slate-300 font-semibold">📅 ${a.date}</span>
+                      <span class="text-rose-600 font-bold">-${a.deduction} ج.م</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold pt-1">
+                  ✓ سجل ناصع بدون أي غياب مسجل 🎉
+                </div>
+              `}
+            </div>
+
+            <!-- 2. Delay Card -->
+            <div class="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                  <i data-lucide="clock" class="w-4 h-4"></i> خصم التأخير
+                </span>
+                <span class="font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
+                  ${myMetrics.totalLateDeductions > 0 ? `-${myMetrics.totalLateDeductions} ج.م` : '0 ج.م'}
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold">
+                عدد الأيام: <strong class="text-amber-600 dark:text-amber-400 font-mono">${myMetrics.lateDays}</strong> يوم (${myMetrics.totalLateMinutes} دقيقة)
+              </span>
+
+              ${myMetrics.lateDaysList && myMetrics.lateDaysList.length > 0 ? `
+                <div class="pt-2 border-t border-amber-200/50 dark:border-amber-900/30 space-y-1 max-h-32 overflow-y-auto">
+                  <span class="text-[10px] text-slate-400 block font-bold">الأيام التي سُجل فيها تأخير:</span>
+                  ${myMetrics.lateDaysList.map(l => `
+                    <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-[11px] font-mono">
+                      <span class="text-slate-700 dark:text-slate-300">📅 ${l.date} (${l.lateMinutes}د)</span>
+                      <span class="text-amber-600 font-bold">-${l.deduction} ج.م</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold pt-1">
+                  ✓ حضور كامل في الموعد بدون أي تأخير ✨
+                </div>
+              `}
+            </div>
+
+            <!-- 3. On-Time Card -->
+            <div class="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-4 h-4"></i> الحضور في الموعد
+                </span>
+                <span class="font-mono font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                  ${myMetrics.onTimeDays} يوم
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold">
+                حضور منضبط بالكامل خلال فترة السماح
+              </span>
+              <div class="pt-2 text-[11px] text-emerald-700 dark:text-emerald-300/80 font-medium leading-relaxed">
+                الانضباط اليومي يحافظ على مؤشر التقييم عند 100% ويؤهلك للحصول على مكافأة تميز شهرية 🎁
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Full List of Colleagues (Calm & Professional) -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

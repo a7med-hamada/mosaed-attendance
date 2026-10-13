@@ -9,6 +9,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
   try {
     const isManager = req.user.role === 'manager';
     const month = req.query.month || getCurrentMonthString(); // YYYY-MM
+    syncMissingAbsencesForMonth(month, isManager ? req.user.id : null);
     const requestedEmpId = req.query.employee_id;
 
     let targetEmployeeId = null;
@@ -185,6 +186,8 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'يرجى تحديد الموظف' });
     }
 
+    syncMissingAbsencesForMonth(month);
+
     const employee = db.prepare(`
       SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.phone, u.hire_date, u.profile_photo, u.base_salary,
              d.name as department_name
@@ -215,23 +218,52 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     let totalLateDeductions = 0;
     let totalAbsenceDeductions = 0;
 
+    const absentDaysList = [];
+    const lateDaysList = [];
+    const onTimeDaysList = [];
+
     records.forEach(r => {
       const ded = parseFloat(r.estimated_deduction || 0);
       if (r.check_in_time) {
         presentDays++;
-        if (r.status === 'On Time') onTimeDays++;
+        if (r.status === 'On Time') {
+          onTimeDays++;
+          onTimeDaysList.push({
+            date: r.date,
+            checkInTime: r.check_in_time,
+            checkOutTime: r.check_out_time
+          });
+        }
         if (r.status === 'Late' || r.late_minutes > 0) {
           lateDays++;
           totalLateMinutes += (r.late_minutes || 0);
           totalLateDeductions += ded;
+          lateDaysList.push({
+            date: r.date,
+            checkInTime: r.check_in_time,
+            lateMinutes: r.late_minutes || 0,
+            deduction: ded
+          });
         }
         if (r.status === 'Half Day') {
           totalLateDeductions += ded;
+          lateDaysList.push({
+            date: r.date,
+            checkInTime: r.check_in_time,
+            lateMinutes: r.late_minutes || 0,
+            deduction: ded,
+            isHalfDay: true
+          });
         }
       }
       if (r.status === 'Absent') {
         absentDays++;
         totalAbsenceDeductions += ded;
+        absentDaysList.push({
+          date: r.date,
+          deduction: ded,
+          notes: r.notes || 'غياب غير مسجل'
+        });
       }
       if (r.early_leave_minutes > 0 || r.status === 'Early Leave') {
         earlyLeaveDays++;
@@ -294,7 +326,10 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
         totalDeductions: parseFloat(totalDeductions.toFixed(2)),
         totalBonuses: parseFloat(totalBonuses.toFixed(2)),
         totalAdvances: parseFloat(totalAdvances.toFixed(2)),
-        netSalary
+        netSalary,
+        absentDaysList,
+        lateDaysList,
+        onTimeDaysList
       },
       records,
       advances,
@@ -499,11 +534,98 @@ router.post('/reset-archive', authenticateToken, requireManager, (req, res) => {
   }
 });
 
+// Helper: Sync missing absences for a given month while skipping official weekends
+function syncMissingAbsencesForMonth(month, managerId = null) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr, 10);
+    const mNum = parseInt(monthStr, 10);
+    const daysInMonth = new Date(year, mNum, 0).getDate();
+
+    // Get company settings
+    const settingsRows = db.prepare(`SELECT key, value FROM company_settings`).all();
+    const settings = {};
+    settingsRows.forEach(r => settings[r.key] = r.value);
+
+    const weekendDaysStr = settings['weekend_days'] || '5';
+    const weekendDays = weekendDaysStr.split(',').map(s => s.trim());
+    const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');
+
+    // Get active employees
+    let empQuery = `SELECT id, full_name, hire_date FROM users WHERE role = 'employee' AND is_active = 1`;
+    const empParams = [];
+    if (managerId) {
+      empQuery += ` AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))`;
+      empParams.push(managerId, managerId);
+    }
+    const employees = db.prepare(empQuery).all(...empParams);
+
+    const now = new Date();
+    const currentHours = String(now.getHours()).padStart(2, '0');
+    const currentMins = String(now.getMinutes()).padStart(2, '0');
+    const currentTimeStr = `${currentHours}:${currentMins}`;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${yearStr}-${monthStr}-${String(day).padStart(2, '0')}`;
+      if (dateStr > today) break;
+
+      // If today, only mark absent if passed threshold
+      if (dateStr === today && currentTimeStr < '13:00') {
+        continue;
+      }
+
+      // Check day of week
+      const dayOfWeek = String(new Date(dateStr + 'T12:00:00').getDay());
+      if (weekendDays.includes(dayOfWeek)) {
+        continue; // Weekend is exempt!
+      }
+
+      for (const emp of employees) {
+        if (emp.hire_date && emp.hire_date > dateStr) continue;
+
+        // Check if employee has an approved leave
+        const leave = db.prepare(`
+          SELECT id, leave_type FROM leave_requests
+          WHERE employee_id = ? AND status = 'approved' AND ? BETWEEN start_date AND end_date
+        `).get(emp.id, dateStr);
+
+        const existing = db.prepare(`SELECT id, status FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, dateStr);
+
+        if (!existing) {
+          if (leave) {
+            const leaveLabel = leave.leave_type === 'sick' ? 'إجازة مرضية معتمدة' :
+                               leave.leave_type === 'annual' ? 'إجازة سنوية معتمدة' :
+                               leave.leave_type === 'casual' ? 'إجازة عارضة معتمدة' : 'إجازة رسمية معتمدة';
+            db.prepare(`
+              INSERT INTO attendance_records (
+                employee_id, date, status, scheduled_start, scheduled_end,
+                worked_hours, estimated_deduction, verification_status, notes
+              ) VALUES (?, ?, 'On Leave', '09:00', '17:00', 0, 0, 'approved_leave', ?)
+            `).run(emp.id, dateStr, leaveLabel);
+          } else {
+            db.prepare(`
+              INSERT INTO attendance_records (
+                employee_id, date, status, scheduled_start, scheduled_end,
+                worked_hours, estimated_deduction, verification_status, notes
+              ) VALUES (?, ?, 'Absent', '09:00', '17:00', 0, ?, 'system_auto', 'تسجيل غياب آلي - تخلف عن تسجيل الحضور')
+            `).run(emp.id, dateStr, absenceRate);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing missing absences:', err);
+  }
+}
+
 // ==========================================
 // 8. Gamification & Attendance Score (مؤشر أداء الالتزام ولوحة شرف موظف الشهر)
 // ==========================================
 
 function calculateEmployeeScore(employeeId, month) {
+  syncMissingAbsencesForMonth(month);
+
   const records = db.prepare(`
     SELECT * FROM attendance_records
     WHERE employee_id = ? AND date LIKE ?
@@ -529,11 +651,17 @@ function calculateEmployeeScore(employeeId, month) {
   let approvedLeaveDays = 0;
   let totalLateMinutes = 0;
   let earlyLeaveDays = 0;
+  let totalAbsenceDeductions = 0;
+  let totalLateDeductions = 0;
   let totalPoints = 0;
 
+  const absentDaysList = [];
+  const lateDaysList = [];
+  const onTimeDaysList = [];
   const dailyScores = [];
 
   records.forEach(r => {
+    const ded = parseFloat(r.estimated_deduction || 0);
     let dayPoints = 100;
     const perms = permMap[r.date] || [];
     const hasLatePerm = perms.some(p => p.permission_type === 'late_arrival' || p.permission_type === 'during_day');
@@ -542,27 +670,56 @@ function calculateEmployeeScore(employeeId, month) {
     if (r.status === 'On Time' || (r.check_in_time && (r.late_minutes || 0) === 0 && r.status !== 'Absent' && r.status !== 'Half Day')) {
       onTimeDays++;
       dayPoints = 100;
+      onTimeDaysList.push({
+        date: r.date,
+        checkInTime: r.check_in_time || '09:00',
+        checkOutTime: r.check_out_time || null
+      });
     } else if (r.status === 'On Leave') {
       approvedLeaveDays++;
       dayPoints = 100;
     } else if (r.status === 'Late' || (r.check_in_time && (r.late_minutes || 0) > 0)) {
       lateDays++;
-      totalLateMinutes += (r.late_minutes || 0);
+      const lateMins = r.late_minutes || 0;
+      totalLateMinutes += lateMins;
+      totalLateDeductions += ded;
+
       if (hasLatePerm) {
         dayPoints = 100;
       } else {
-        const lateMins = r.late_minutes || 0;
         if (lateMins <= 15) dayPoints = 85;
         else if (lateMins <= 30) dayPoints = 70;
         else if (lateMins <= 60) dayPoints = 55;
         else dayPoints = 40;
       }
+
+      lateDaysList.push({
+        date: r.date,
+        checkInTime: r.check_in_time,
+        lateMinutes: lateMins,
+        deduction: ded,
+        hasPermission: hasLatePerm
+      });
     } else if (r.status === 'Half Day') {
       halfDays++;
       dayPoints = 50;
+      totalLateDeductions += ded;
+      lateDaysList.push({
+        date: r.date,
+        checkInTime: r.check_in_time,
+        lateMinutes: r.late_minutes || 0,
+        deduction: ded,
+        isHalfDay: true
+      });
     } else if (r.status === 'Absent') {
       absentDays++;
       dayPoints = 0;
+      totalAbsenceDeductions += ded;
+      absentDaysList.push({
+        date: r.date,
+        deduction: ded,
+        notes: r.notes || 'غياب غير مسجل'
+      });
     }
 
     if ((r.early_leave_minutes || 0) > 0 || r.status === 'Early Leave') {
@@ -581,13 +738,22 @@ function calculateEmployeeScore(employeeId, month) {
       status: r.status,
       lateMinutes: r.late_minutes || 0,
       earlyMinutes: r.early_leave_minutes || 0,
+      deduction: ded,
       dayPoints,
       checkInTime: r.check_in_time,
       checkOutTime: r.check_out_time
     });
   });
 
-  const finalScore = totalLoggedDays > 0 ? Math.round(totalPoints / totalLoggedDays) : 100;
+  // Commitment Score resets on new month and starts at 100%
+  let finalScore = 100;
+  if (totalLoggedDays > 0) {
+    if (absentDays === 0 && lateDays === 0 && halfDays === 0) {
+      finalScore = 100;
+    } else {
+      finalScore = Math.max(0, Math.min(100, Math.round(totalPoints / totalLoggedDays)));
+    }
+  }
 
   // Calculate consecutive on-time streak
   let streak = 0;
@@ -640,6 +806,11 @@ function calculateEmployeeScore(employeeId, month) {
     approvedLeaveDays,
     earlyLeaveDays,
     totalLateMinutes,
+    totalAbsenceDeductions: parseFloat(totalAbsenceDeductions.toFixed(2)),
+    totalLateDeductions: parseFloat(totalLateDeductions.toFixed(2)),
+    absentDaysList,
+    lateDaysList,
+    onTimeDaysList,
     tier: {
       key: tierKey,
       name: tierName,
@@ -783,7 +954,12 @@ router.get('/my-score', authenticateToken, (req, res) => {
         absentDays: scoreData.absentDays,
         halfDays: scoreData.halfDays,
         approvedLeaveDays: scoreData.approvedLeaveDays,
-        totalLateMinutes: scoreData.totalLateMinutes
+        totalLateMinutes: scoreData.totalLateMinutes,
+        totalAbsenceDeductions: scoreData.totalAbsenceDeductions,
+        totalLateDeductions: scoreData.totalLateDeductions,
+        absentDaysList: scoreData.absentDaysList,
+        lateDaysList: scoreData.lateDaysList,
+        onTimeDaysList: scoreData.onTimeDaysList
       },
       dailyScores: scoreData.dailyScores
     });

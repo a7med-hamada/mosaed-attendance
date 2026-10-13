@@ -110,15 +110,9 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>نظام حضور ذكي • أمان وموقع جغرافي</span>
         </div>
-        <div class="w-20 h-20 rounded-2xl bg-[#0b1329] border border-slate-700/60 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20 mb-3 p-1.5 overflow-hidden">
-          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="w-full h-full object-contain" />
+        <div class="mb-4 flex justify-center">
+          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md" />
         </div>
-        <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight" data-i18n="login_title">
-          وقتي <span class="text-emerald-500 font-mono text-xl">WAQTY</span>
-        </h1>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" data-i18n="login_subtitle">
-          نظام إدارة الحضور والانصراف وتتبع الوقت الذكي
-        </p>
 
         <!-- Install PWA Button -->
         <button type="button" onclick="installPwa()" class="pwa-install-btn hidden w-full mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold transition-all shadow-sm">
@@ -178,17 +172,9 @@
     <!-- Top Global Header -->
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
       <div class="w-full max-w-[96%] xl:max-w-[85%] 2xl:max-w-[80%] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-        <!-- Logo & Title -->
-        <div class="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-[#0b1329] border border-slate-700/60 p-0.5 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-            <img src="/waqty-logo.png" alt="وقتي" class="w-full h-full object-contain" />
-          </div>
-          <div class="min-w-0">
-            <h1 class="text-xs sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate" data-i18n="system_title">
-              وقتي <span class="text-emerald-500 font-mono text-xs sm:text-sm font-bold">WAQTY</span>
-            </h1>
-            <span class="hidden md:block text-[11px] text-slate-500 dark:text-slate-400">نظام إدارة الحضور والانصراف • Attendance & Time Tracking</span>
-          </div>
+        <!-- Logo -->
+        <div class="flex items-center min-w-0">
+          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-10 sm:h-12 w-auto max-h-12 object-contain cursor-pointer transition-transform hover:scale-102" />
         </div>
 
         <!-- Controls: Language, Theme, Notifications, User Profile -->

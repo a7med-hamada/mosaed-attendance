@@ -169,6 +169,13 @@ const API = {
     });
   },
 
+  batchManualAttendance(items) {
+    return this.request('/attendance/batch-manual-records', {
+      method: 'POST',
+      body: { items }
+    });
+  },
+
   // Corrections
   getCorrections(params = {}) {
     const qs = new URLSearchParams(params).toString();

@@ -1698,6 +1698,24 @@ const ManagerUI = {
             </div>
           </div>
 
+          <!-- Weekend Days Configuration -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex items-center gap-2">
+              <i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i>
+              <label class="block text-slate-800 dark:text-white font-bold text-xs">أيام العطلة الأسبوعية الرسمية (Weekend Days) *</label>
+            </div>
+            <select id="sched-weekend-days" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+              <option value="5">الجمعة فقط (الدوام: السبت إلى الخميس)</option>
+              <option value="5,6">الجمعة والسبت (الدوام: الأحد إلى الخميس)</option>
+              <option value="6,0">السبت والأحد (الدوام: الاثنين إلى الجمعة)</option>
+              <option value="4,5">الخميس والجمعة (الدوام: السبت إلى الأربعاء)</option>
+            </select>
+            <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5 pt-1">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+              <span>أيام العطلة الأسبوعية المحددة معفاة تماماً ولا يتم احتسابها كغياب للموظفين ولا يُطبق عليها أي خصم.</span>
+            </p>
+          </div>
+
           <!-- Live Rule Explanation Card -->
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
             <h4 class="font-bold text-slate-800 dark:text-white">طريقة احتساب النظام تلقائياً للحضور والانصراف:</h4>
@@ -1731,15 +1749,91 @@ const ManagerUI = {
     try {
       const res = await API.getSettings();
       const sched = res.schedule || {};
+      const s = res.settings || {};
       document.getElementById('sched-start-time').value = sched.start_time || '09:00';
       document.getElementById('sched-end-time').value = sched.end_time || '17:00';
       document.getElementById('sched-grace-period').value = sched.grace_period_minutes || 15;
       document.getElementById('sched-early-leave-grace').value = sched.early_leave_grace_minutes || 15;
       document.getElementById('sched-half-day').value = sched.half_day_threshold || '12:00';
       document.getElementById('sched-absence').value = sched.absence_threshold || '13:00';
+      const weekendEl = document.getElementById('sched-weekend-days');
+      if (weekendEl) weekendEl.value = s.weekend_days || '5';
     } catch (err) {
       showToast(err.message, 'danger');
     }
+  },
+
+  showApplyScopeModal({ title, onConfirm }) {
+    let modalEl = document.getElementById('apply-scope-modal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'apply-scope-modal';
+      document.body.appendChild(modalEl);
+    }
+
+    modalEl.innerHTML = `
+      <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <i data-lucide="help-circle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">${title || 'تطبيق التعديلات الجديدة'}</h3>
+                <p class="text-[11px] text-slate-400">اختر نطاق سريان المواعيد وفترات السماح الجديدة</p>
+              </div>
+            </div>
+            <button onclick="document.getElementById('apply-scope-modal').innerHTML=''" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3 pt-1">
+            <label class="flex items-start gap-3 p-3.5 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 cursor-pointer hover:border-emerald-500 transition-all">
+              <input type="radio" name="apply-scope-choice" value="from_month_start" checked class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+              <div class="space-y-1">
+                <div class="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                  <span>الخيار الأول: تطبيق بأثر رجعي من أول الشهر الحالي 🗓️</span>
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">موصى به</span>
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  إعادة احتساب سجلات وخصومات الحضور لجميع الموظفين من يوم 1 في الشهر الحالي بناءً على المواعيد وفترات السماح الجديدة (إذا كان موظف قد خُصم منه تأخير وأصبح الآن ضمن فترة السماح الجديدة، يُلغى الخصم وتعود مستحقاته تلقائياً).
+                </p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3.5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 cursor-pointer hover:border-blue-500 transition-all">
+              <input type="radio" name="apply-scope-choice" value="from_today" class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              <div class="space-y-1">
+                <div class="font-bold text-slate-900 dark:text-white text-xs">
+                  الخيار الثاني: تطبيق من اليوم فصاعداً فقط ⏱️
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  تطبيق المواعيد والقواعد الجديدة على تسجيلات اليوم والأيام القادمة فقط، مع إبقاء سجلات وخصومات الأيام السابقة كما هي دون أي تغيير.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+            <button type="button" onclick="document.getElementById('apply-scope-modal').innerHTML=''" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
+              إلغاء
+            </button>
+            <button type="button" id="confirm-scope-btn" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="check" class="w-4 h-4"></i> تأكيد وحفظ الإعدادات 💾
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    document.getElementById('confirm-scope-btn').onclick = () => {
+      const selectedScope = document.querySelector('input[name="apply-scope-choice"]:checked')?.value || 'from_today';
+      document.getElementById('apply-scope-modal').innerHTML = '';
+      if (typeof onConfirm === 'function') onConfirm(selectedScope);
+    };
   },
 
   async saveWorkingHours(e) {
@@ -1750,15 +1844,22 @@ const ManagerUI = {
       grace_period_minutes: parseInt(document.getElementById('sched-grace-period').value, 10),
       early_leave_grace_minutes: parseInt(document.getElementById('sched-early-leave-grace').value, 10) || 0,
       half_day_threshold: document.getElementById('sched-half-day').value,
-      absence_threshold: document.getElementById('sched-absence').value
+      absence_threshold: document.getElementById('sched-absence').value,
+      weekend_days: document.getElementById('sched-weekend-days')?.value || '5'
     };
 
-    try {
-      const res = await API.updateWorkingHours(data);
-      showToast(res.message, 'success');
-    } catch (err) {
-      showToast(err.message, 'danger');
-    }
+    this.showApplyScopeModal({
+      title: 'تطبيق مواعيد وقواعد العمل الجديدة',
+      onConfirm: async (selectedScope) => {
+        data.apply_scope = selectedScope;
+        try {
+          const res = await API.updateWorkingHours(data);
+          showToast(res.message, 'success');
+        } catch (err) {
+          showToast(err.message, 'danger');
+        }
+      }
+    });
   },
 
   // ========================================================
@@ -2013,110 +2114,60 @@ const ManagerUI = {
           </button>
         </div>
 
-        <!-- Panel 1: Retroactive Entry -->
+        <!-- Panel 1: Multi-Row Attendance Entry -->
         <div id="panel-retroactive" class="space-y-6">
-          <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <i data-lucide="user-plus" class="w-4 h-4 text-blue-500"></i> إضافة وتوثيق حضور بأثر رجعي
+                  <i data-lucide="layers" class="w-4 h-4 text-blue-500"></i> إضافة وتوثيق سجلات الحضور (صفوف متعددة بتوقيتات مختلفة)
                 </h3>
-                <p class="text-xs text-slate-400 mt-0.5">استخدم هذا النموذج لمن حضروا من أول الشهر أو أي فترة سابقة ولم تكن لديهم بصمة بالسيستم</p>
+                <p class="text-xs text-slate-400 mt-0.5">أضف صفوف الحضور لموظفين وتواريخ متعددة دفعة واحدة، وتُحدد الحالة والتأخير والخصم تلقائياً</p>
               </div>
 
-              <!-- Mode Switch: Single Day vs Bulk Multi-Day -->
-              <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
-                <button type="button" id="btn-mode-single" onclick="ManagerUI.switchManualEntryMode('single')"
-                  class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs">
-                  📅 يوم واحد
-                </button>
-                <button type="button" id="btn-mode-bulk" onclick="ManagerUI.switchManualEntryMode('bulk')"
-                  class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900">
-                  🚀 فترة / أيام متعددة (Bulk)
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="ManagerUI.addBatchAttRow()"
+                  class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all">
+                  <i data-lucide="plus" class="w-4 h-4"></i> ➕ إضافة صف حضور آخر
                 </button>
               </div>
             </div>
 
-            <form onsubmit="event.preventDefault(); ManagerUI.submitManualAttendance();" class="space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <!-- Employee -->
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الموظف *</label>
-                  <select id="manual-att-emp" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
-                    <option value="">-- اختر الموظف --</option>
-                  </select>
-                </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
+                  <tr>
+                    <th class="py-2.5 px-3 min-w-[180px]">الموظف *</th>
+                    <th class="py-2.5 px-3 min-w-[140px]">التاريخ *</th>
+                    <th class="py-2.5 px-3 min-w-[110px]">وقت الحضور *</th>
+                    <th class="py-2.5 px-3 min-w-[110px]">وقت الانصراف</th>
+                    <th class="py-2.5 px-3 min-w-[160px]">السبب / المبرر (اختياري)</th>
+                    <th class="py-2.5 px-2 text-center min-w-[60px]">حذف</th>
+                  </tr>
+                </thead>
+                <tbody id="batch-att-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                  <!-- Dynamic rows rendered here -->
+                </tbody>
+              </table>
+            </div>
 
-                <!-- Single Date Box -->
-                <div id="manual-single-date-box">
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">تاريخ الحضور *</label>
-                  <input type="date" id="manual-att-date" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
-                </div>
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="batch-att-waive-all" class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
+                <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إعفاء كافة الصفوف المدخلة من الخصومات والتأخير (اعتماد حضور منضبط 0 دقيقة)</span>
+              </label>
 
-                <!-- Bulk Date Box (Hidden by default) -->
-                <div id="manual-bulk-date-box" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">من تاريخ (بداية الفترة) *</label>
-                    <input type="date" id="manual-bulk-date-from" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">إلى تاريخ (نهاية الفترة) *</label>
-                    <input type="date" id="manual-bulk-date-to" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
-                  </div>
-                </div>
-
-                <!-- Status -->
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">حالة الحضور *</label>
-                  <select id="manual-att-status" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
-                    <option value="On Time">حاضر في الموعد (منضبط)</option>
-                    <option value="Late">متأخر</option>
-                    <option value="On Leave">إجازة معتمدة</option>
-                    <option value="Absent">غائب</option>
-                  </select>
-                </div>
-
-                <!-- Check-in Time -->
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الحضور</label>
-                  <input type="time" id="manual-att-checkin" value="09:00" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
-                </div>
-
-                <!-- Check-out Time -->
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الانصراف</label>
-                  <input type="time" id="manual-att-checkout" value="17:00" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
-                </div>
-
-                <!-- Options: Waive Deduction & Exclude Weekends -->
-                <div class="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-6 pt-2">
-                  <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" id="manual-att-waive" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
-                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إعفاء من الخصومات والتأخير (حضور منضبط 0 دقيقة تأخير)</span>
-                  </label>
-                  <label id="lbl-exclude-weekends" class="hidden flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" id="manual-bulk-exclude-weekends" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
-                    <span class="text-xs font-bold text-blue-700 dark:text-blue-400">استثناء عطلات نهاية الأسبوع (الجمعة والسبت) تلقائياً</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Mandatory Reason -->
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  المبرر / سبب الإضافة اليدوية (مطلوب لسجل الرقابة) *
-                </label>
-                <input type="text" id="manual-att-reason" required placeholder="مثال: حضور فعلي من أول الشهر قبل تفعيل حساب الموظف في النظام"
-                  class="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
-              </div>
-
-              <div class="flex justify-end pt-2">
-                <button type="submit" id="manual-att-submit-btn"
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="ManagerUI.addBatchAttRow()"
+                  class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <i data-lucide="plus" class="w-4 h-4"></i> صف آخر ➕
+                </button>
+                <button type="button" id="batch-att-submit-btn" onclick="ManagerUI.submitBatchManualAttendance()"
                   class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
-                  <i data-lucide="check" class="w-4 h-4"></i> حفظ وتوثيق سجل الحضور
+                  <i data-lucide="check-check" class="w-4 h-4"></i> حفظ وتوثيق كافة السجلات دفعة واحدة 🚀
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
@@ -2221,65 +2272,22 @@ const ManagerUI = {
     }
   },
 
-  switchManualEntryMode(mode) {
-    const btnSingle = document.getElementById('btn-mode-single');
-    const btnBulk = document.getElementById('btn-mode-bulk');
-    const singleBox = document.getElementById('manual-single-date-box');
-    const bulkBox = document.getElementById('manual-bulk-date-box');
-    const excludeLabel = document.getElementById('lbl-exclude-weekends');
-    const submitBtn = document.getElementById('manual-att-submit-btn');
-
-    if (mode === 'bulk') {
-      btnBulk?.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
-      btnBulk?.classList.remove('text-slate-600', 'dark:text-slate-400');
-      btnSingle?.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
-      btnSingle?.classList.add('text-slate-600', 'dark:text-slate-400');
-      singleBox?.classList.add('hidden');
-      bulkBox?.classList.remove('hidden');
-      excludeLabel?.classList.remove('hidden');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i data-lucide="calendar-plus" class="w-4 h-4"></i> توثيق الحضور للفترة المحددة دفعة واحدة 🚀';
-      }
-    } else {
-      btnSingle?.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
-      btnSingle?.classList.remove('text-slate-600', 'dark:text-slate-400');
-      btnBulk?.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
-      btnBulk?.classList.add('text-slate-600', 'dark:text-slate-400');
-      singleBox?.classList.remove('hidden');
-      bulkBox?.classList.add('hidden');
-      excludeLabel?.classList.add('hidden');
-      if (submitBtn) {
-        submitBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> حفظ وتوثيق سجل الحضور';
-      }
-    }
-    if (window.lucide) lucide.createIcons();
-  },
-
   async populateAdjustmentDropdowns() {
     try {
       const empsRes = await API.getEmployees({ limit: 100 });
       const employees = empsRes.employees || [];
+      this.cachedEmployees = employees;
 
-      const empSelect1 = document.getElementById('manual-att-emp');
       const empSelect2 = document.getElementById('filter-edit-emp');
 
       const options = employees.map(e => `
         <option value="${e.id}">${e.full_name} (${e.employee_code || e.job_title || 'موظف'})</option>
       `).join('');
 
-      if (empSelect1) empSelect1.innerHTML = `<option value="">-- اختر الموظف --</option><option value="all">👥 جميع الموظفين (للحضور الجماعي)</option>${options}`;
       if (empSelect2) empSelect2.innerHTML = `<option value="">جميع الموظفين</option>${options}`;
 
-      const today = new Date().toISOString().split('T')[0];
-      const date1 = document.getElementById('manual-att-date');
-      const bulkFrom = document.getElementById('manual-bulk-date-from');
-      const bulkTo = document.getElementById('manual-bulk-date-to');
-      if (date1 && !date1.value) date1.value = today;
-      if (bulkFrom && !bulkFrom.value) {
-        const d = new Date();
-        bulkFrom.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-      }
-      if (bulkTo && !bulkTo.value) bulkTo.value = today;
+      // Initialize batch multi-rows
+      this.initBatchAttendanceRows();
 
       // Notice: filter-edit-date is intentionally left empty so ALL days are queried by default
       const date2 = document.getElementById('filter-edit-date');
@@ -2292,125 +2300,98 @@ const ManagerUI = {
     }
   },
 
-  showAllRecordsToEdit() {
-    const dateInput = document.getElementById('filter-edit-date');
-    if (dateInput) dateInput.value = '';
-    this.loadRecordsToEdit();
+  initBatchAttendanceRows() {
+    const tbody = document.getElementById('batch-att-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    // Start with 2 initial clean rows
+    this.addBatchAttRow();
+    this.addBatchAttRow();
   },
 
-  setFilterTodayToEdit() {
-    const dateInput = document.getElementById('filter-edit-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-    this.loadRecordsToEdit();
+  addBatchAttRow() {
+    const tbody = document.getElementById('batch-att-tbody');
+    if (!tbody) return;
+
+    const rowId = 'batch-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const today = new Date().toISOString().split('T')[0];
+    const employees = this.cachedEmployees || [];
+
+    const options = employees.map(e => `
+      <option value="${e.id}">${e.full_name} (${e.employee_code || 'موظف'})</option>
+    `).join('');
+
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.className = 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors batch-att-row';
+    tr.innerHTML = `
+      <td class="py-2.5 px-3">
+        <select class="batch-emp w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+          <option value="">-- اختر الموظف --</option>
+          ${options}
+        </select>
+      </td>
+      <td class="py-2.5 px-3">
+        <input type="date" value="${today}" class="batch-date w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+      </td>
+      <td class="py-2.5 px-3">
+        <input type="time" value="09:00" class="batch-in w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+      </td>
+      <td class="py-2.5 px-3">
+        <input type="time" value="17:00" class="batch-out w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+      </td>
+      <td class="py-2.5 px-3">
+        <input type="text" placeholder="اختياري" class="batch-reason w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white" />
+      </td>
+      <td class="py-2.5 px-2 text-center">
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" title="حذف الصف">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    if (window.lucide) lucide.createIcons();
   },
 
-  async submitManualAttendance() {
-    const isBulk = !document.getElementById('manual-bulk-date-box')?.classList.contains('hidden');
-    if (isBulk) {
-      return this.submitBulkAttendance();
-    }
+  async submitBatchManualAttendance() {
+    const rows = document.querySelectorAll('#batch-att-tbody .batch-att-row');
+    const items = [];
+    const waiveAll = document.getElementById('batch-att-waive-all')?.checked;
 
-    const empId = document.getElementById('manual-att-emp')?.value;
-    const date = document.getElementById('manual-att-date')?.value;
-    const status = document.getElementById('manual-att-status')?.value;
-    const checkin = document.getElementById('manual-att-checkin')?.value;
-    const checkout = document.getElementById('manual-att-checkout')?.value;
-    const waive = document.getElementById('manual-att-waive')?.checked;
-    const reason = document.getElementById('manual-att-reason')?.value;
+    rows.forEach(r => {
+      const empId = r.querySelector('.batch-emp')?.value;
+      const date = r.querySelector('.batch-date')?.value;
+      const checkin = r.querySelector('.batch-in')?.value;
+      const checkout = r.querySelector('.batch-out')?.value;
+      const reason = r.querySelector('.batch-reason')?.value;
 
-    if (!empId || empId === 'all') {
-      showToast('يرجى اختيار الموظف المطلوب', 'warning');
+      if (empId && date) {
+        items.push({
+          employee_id: parseInt(empId, 10),
+          date,
+          check_in_time: checkin || null,
+          check_out_time: checkout || null,
+          reason: reason ? reason.trim() : 'توثيق حضور إداري',
+          waive_deductions: waiveAll
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      showToast('يرجى اختيار الموظف والتاريخ لصف حضور واحد على الأقل', 'warning');
       return;
     }
 
-    if (!date) {
-      showToast('يرجى اختيار التاريخ', 'warning');
-      return;
-    }
-
-    if (!reason || reason.trim().length < 3) {
-      showToast('سبب الإضافة إلزامي للتوثيق في سجل العمليات الرقابي', 'warning');
-      return;
-    }
-
-    const btn = document.getElementById('manual-att-submit-btn');
+    const btn = document.getElementById('batch-att-submit-btn');
     if (btn) btn.disabled = true;
 
     try {
-      const res = await API.createManualAttendanceRecord({
-        employee_id: parseInt(empId, 10),
-        date,
-        check_in_time: checkin || null,
-        check_out_time: checkout || null,
-        status,
-        waive_deductions: waive,
-        reason: reason.trim()
-      });
-
-      showToast(res.message || 'تم حفظ وتوثيق سجل الحضور بنجاح ✓', 'success');
-      const reasonInput = document.getElementById('manual-att-reason');
-      if (reasonInput) reasonInput.value = '';
+      const res = await API.batchManualAttendance(items);
+      showToast(res.message || `تم بنجاح حفظ وتوثيق (${items.length}) سجلات حضور واحتساب الحالة تلقائياً ✓`, 'success');
+      this.initBatchAttendanceRows();
       await this.loadRecordsToEdit();
     } catch (err) {
-      showToast(err.message || 'فشل في حفظ سجل الحضور', 'danger');
-    } finally {
-      if (btn) btn.disabled = false;
-    }
-  },
-
-  async submitBulkAttendance() {
-    const empId = document.getElementById('manual-att-emp')?.value;
-    const dateFrom = document.getElementById('manual-bulk-date-from')?.value;
-    const dateTo = document.getElementById('manual-bulk-date-to')?.value;
-    const excludeWeekends = document.getElementById('manual-bulk-exclude-weekends')?.checked;
-    const status = document.getElementById('manual-att-status')?.value;
-    const checkin = document.getElementById('manual-att-checkin')?.value;
-    const checkout = document.getElementById('manual-att-checkout')?.value;
-    const waive = document.getElementById('manual-att-waive')?.checked;
-    const reason = document.getElementById('manual-att-reason')?.value;
-
-    if (!empId) {
-      showToast('يرجى اختيار الموظف أو تحديد جميع الموظفين', 'warning');
-      return;
-    }
-
-    if (!dateFrom || !dateTo) {
-      showToast('يرجى تحديد تاريخ البداية وتاريخ النهاية', 'warning');
-      return;
-    }
-
-    if (new Date(dateFrom) > new Date(dateTo)) {
-      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'warning');
-      return;
-    }
-
-    if (!reason || reason.trim().length < 3) {
-      showToast('سبب الإضافة الجماعية إلزامي للتوثيق في سجل الرقابة', 'warning');
-      return;
-    }
-
-    const btn = document.getElementById('manual-att-submit-btn');
-    if (btn) btn.disabled = true;
-
-    try {
-      const res = await API.bulkManualAttendance({
-        employee_id: empId === 'all' ? 'all' : parseInt(empId, 10),
-        date_from: dateFrom,
-        date_to: dateTo,
-        exclude_weekends: excludeWeekends,
-        check_in_time: checkin || null,
-        check_out_time: checkout || null,
-        status,
-        waive_deductions: waive,
-        reason: reason.trim()
-      });
-
-      showToast(res.message || 'تم توثيق الحضور الجماعي بنجاح 🚀', 'success');
-      const reasonInput = document.getElementById('manual-att-reason');
-      if (reasonInput) reasonInput.value = '';
-      await this.loadRecordsToEdit();
-    } catch (err) {
-      showToast(err.message || 'فشل في حفظ الحضور الجماعي', 'danger');
+      showToast(err.message || 'فشل في حفظ سجلات الحضور', 'danger');
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -2592,14 +2573,9 @@ const ManagerUI = {
               </div>
             </div>
 
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الحالة المعتمدة</label>
-              <select id="edit-rec-status" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
-                <option value="On Time" ${record.status === 'On Time' ? 'selected' : ''}>حاضر في الموعد (On Time)</option>
-                <option value="Late" ${record.status === 'Late' ? 'selected' : ''}>متأخر (Late)</option>
-                <option value="On Leave" ${record.status === 'On Leave' ? 'selected' : ''}>إجازة معتمدة (On Leave)</option>
-                <option value="Absent" ${record.status === 'Absent' ? 'selected' : ''}>غائب (Absent)</option>
-              </select>
+            <div class="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <i data-lucide="calculator" class="w-4 h-4 flex-shrink-0"></i>
+              <span>يتم احتساب حالة الحضور (منضبط / متأخر) وقيمة الخصم تلقائياً بواسطة المنظومة حسب وقت الحضور وفترة السماح المعتمدة.</span>
             </div>
 
             <div>
@@ -2611,9 +2587,9 @@ const ManagerUI = {
 
             <div>
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                سبب التعديل (إلزامي للتوثيق في سجل الرقابة) *
+                سبب التعديل (اختياري)
               </label>
-              <input type="text" id="edit-rec-reason" required placeholder="مثال: تصحيح وقت تسجيل الحضور بناء على مراجعة المدير"
+              <input type="text" id="edit-rec-reason" placeholder="مثال: تصحيح وقت تسجيل الحضور بناء على مراجعة المدير (اختياري)"
                 class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
             </div>
 
@@ -2643,14 +2619,9 @@ const ManagerUI = {
   async saveEditedAttendance(recordId) {
     const checkin = document.getElementById('edit-rec-checkin')?.value;
     const checkout = document.getElementById('edit-rec-checkout')?.value;
-    const status = document.getElementById('edit-rec-status')?.value;
     const waive = document.getElementById('edit-rec-waive')?.checked;
-    const reason = document.getElementById('edit-rec-reason')?.value;
-
-    if (!reason || reason.trim().length < 3) {
-      showToast('يرجى إدخال سبب التعديل للتوثيق الرقابي', 'warning');
-      return;
-    }
+    const rawReason = document.getElementById('edit-rec-reason')?.value;
+    const reason = (rawReason && rawReason.trim()) || 'تصحيح موعد الحضور بواسطة المدير';
 
     const btn = document.getElementById('edit-rec-save-btn');
     if (btn) btn.disabled = true;
@@ -2659,9 +2630,8 @@ const ManagerUI = {
       const res = await API.updateAttendance(recordId, {
         check_in_time: checkin || null,
         check_out_time: checkout || null,
-        status,
         waive_deductions: waive,
-        reason: reason.trim()
+        reason: reason
       });
 
       showToast(res.message || 'تم تحديث سجل الحضور بنجاح ✓', 'success');
@@ -3094,12 +3064,18 @@ const ManagerUI = {
       currency_symbol: 'ج.م'
     };
 
-    try {
-      const res = await API.updateCompanySettings(data);
-      showToast(res.message || 'تم حفظ قواعد وشرائح الخصومات بنجاح', 'success');
-    } catch (err) {
-      showToast(err.message, 'danger');
-    }
+    this.showApplyScopeModal({
+      title: 'تطبيق شرائح وقواعد الخصومات الجديدة',
+      onConfirm: async (selectedScope) => {
+        data.apply_scope = selectedScope;
+        try {
+          const res = await API.updateCompanySettings(data);
+          showToast(res.message || 'تم حفظ وتحديث قواعد وإعدادات المنظومة بنجاح', 'success');
+        } catch (err) {
+          showToast(err.message, 'danger');
+        }
+      }
+    });
   },
 
   // Inspection Modal

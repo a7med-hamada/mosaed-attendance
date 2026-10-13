@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir } = require('./database');
+const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 const {
   sendWhatsAppMessage,
@@ -17,24 +17,6 @@ function timeToMinutes(timeStr) {
   if (!timeStr) return 0;
   const parts = timeStr.split(':').map(Number);
   return parts[0] * 60 + (parts[1] || 0);
-}
-
-// Helper to format Date to YYYY-MM-DD
-function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-// Helper to format Date to HH:MM:SS
-function getCurrentTimeString() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  const s = String(now.getSeconds()).padStart(2, '0');
-  return `${h}:${m}:${s}`;
 }
 
 // Save base64 photo (returns data URI for cloud persistence and optionally saves to disk locally)
@@ -80,7 +62,7 @@ function checkAndMarkAutoAbsences() {
       WHERE u.is_active = 1 AND u.role = 'employee'
     `).all();
 
-    const dayOfWeek = String(new Date().getDay());
+    const dayOfWeek = String(new Date(today + 'T12:00:00').getDay());
     const absenceRateSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_absence_rate'`).get();
     const absenceDeduction = absenceRateSetting ? parseFloat(absenceRateSetting.value) : 250;
 

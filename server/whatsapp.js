@@ -1,5 +1,5 @@
 const express = require('express');
-const { db } = require('./database');
+const { db, getTodayString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 
 const router = express.Router();
@@ -315,8 +315,7 @@ router.put('/settings', authenticateToken, requireManager, (req, res) => {
 // GET /api/whatsapp/morning-briefing (Preview & generate data)
 router.get('/morning-briefing', authenticateToken, requireManager, (req, res) => {
   try {
-    const now = new Date();
-    const today = req.query.date || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = req.query.date || getTodayString();
     const settings = getWhatsAppSettings();
 
     // Active employees for this manager
@@ -396,8 +395,7 @@ router.get('/morning-briefing', authenticateToken, requireManager, (req, res) =>
 // POST /api/whatsapp/morning-briefing/send
 router.post('/morning-briefing/send', authenticateToken, requireManager, async (req, res) => {
   try {
-    const now = new Date();
-    const today = req.body.date || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = req.body.date || getTodayString();
     const settings = getWhatsAppSettings();
 
     const employees = db.prepare(`SELECT id, employee_code, full_name, phone FROM users WHERE role = 'employee' AND is_active = 1`).all();

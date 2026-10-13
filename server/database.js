@@ -1,3 +1,4 @@
+process.env.TZ = 'Africa/Cairo';
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
@@ -366,10 +367,56 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return Math.round(R * c);
 }
 
+// Cairo Timezone (Africa/Cairo, UTC+2/UTC+3) Date & Time Helpers
+function getCairoNowParts(date = new Date()) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const parts = {};
+  for (const p of fmt.formatToParts(date)) {
+    parts[p.type] = p.value;
+  }
+  const hour = parts.hour === '24' ? '00' : parts.hour;
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour,
+    minute: parts.minute,
+    second: parts.second,
+    dateStr: `${parts.year}-${parts.month}-${parts.day}`,
+    monthStr: `${parts.year}-${parts.month}`,
+    timeStr: `${hour}:${parts.minute}:${parts.second}`
+  };
+}
+
+function getTodayString() {
+  return getCairoNowParts().dateStr;
+}
+
+function getCurrentTimeString() {
+  return getCairoNowParts().timeStr;
+}
+
+function getCurrentMonthString() {
+  return getCairoNowParts().monthStr;
+}
+
 module.exports = {
   db,
   logAudit,
   createNotification,
   calculateHaversineDistance,
-  uploadsDir
+  uploadsDir,
+  getCairoNowParts,
+  getTodayString,
+  getCurrentTimeString,
+  getCurrentMonthString
 };

@@ -18,9 +18,11 @@ const notificationsRouter = require('./notifications');
 const auditRouter = require('./audit');
 const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
 const whatsappModule = require('./whatsapp');
+const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
 // Auto seed on boot
 seedDatabase();
+loadFromCloud(true).catch(() => {});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +36,9 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 app.use('/uploads', express.static(path.join(publicDir, 'uploads')));
+
+// Cloud Persistence Sync Middleware (preserves all settings, attendance check-in/out, and user data across deployments)
+app.use(cloudSyncMiddleware);
 
 // API Routes
 app.use('/api/auth', authModule.router);

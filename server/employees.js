@@ -1,20 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, logAudit, uploadsDir } = require('./database');
+const { db, logAudit, uploadsDir, getTodayString, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 const fs = require('fs');
 const path = require('path');
 
 const router = express.Router();
-
-// Helper to format Date to YYYY-MM-DD
-function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 // GET /api/employees (List all employees belonging to the logged-in manager)
 router.get('/', authenticateToken, requireManager, (req, res) => {
@@ -121,8 +112,7 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
 
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonth = getCurrentMonthString();
     const filterMonth = req.query.month || currentMonth;
 
     // Attendance records for this employee (filtered by month or all-time)

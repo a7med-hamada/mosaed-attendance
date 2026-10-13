@@ -1,19 +1,11 @@
 const express = require('express');
-const { db, logAudit, createNotification } = require('./database');
+const { db, logAudit, createNotification, getTodayString, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 
 const advancesRouter = express.Router();
 const bonusesRouter = express.Router();
 
-function getCurrentMonthString() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function getCurrentDateString() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+const getCurrentDateString = getTodayString;
 
 // ==========================================
 // 1. SALARY ADVANCES ROUTER (/api/advances)

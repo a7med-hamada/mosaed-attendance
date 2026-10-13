@@ -1,14 +1,8 @@
 const express = require('express');
-const { db } = require('./database');
+const { db, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 
 const router = express.Router();
-
-// Helper to get current month YYYY-MM
-function getCurrentMonthString() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 
 // GET /api/reports/monthly-summary
 router.get('/monthly-summary', authenticateToken, (req, res) => {

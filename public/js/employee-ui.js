@@ -430,21 +430,21 @@ const EmployeeUI = {
     container.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <!-- Greeting Card -->
-        <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-500/10 relative overflow-hidden">
+        <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-3xl p-5 sm:p-6 md:p-8 text-white shadow-xl shadow-blue-500/10 relative overflow-hidden">
           <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
-          <div class="relative z-10 flex items-center justify-between">
-            <div>
+          <div class="relative z-10 flex items-center justify-between gap-3">
+            <div class="min-w-0">
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-md mb-2">
                 <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i> مرحباً بك
               </span>
-              <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+              <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
                 ${t('greeting_morning')}، ${user.full_name || 'زميلنا العزيز'} 👋
               </h2>
-              <p id="emp-current-date" class="text-blue-100 text-sm mt-1"></p>
+              <p id="emp-current-date" class="text-blue-100 text-xs sm:text-sm mt-1"></p>
             </div>
-            <div class="text-left bg-white/15 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20">
-              <span class="text-[11px] text-blue-200 block uppercase tracking-wider">${t('current_time')}</span>
-              <span id="emp-digital-clock" class="text-xl md:text-2xl font-mono font-bold tracking-tight">--:--:--</span>
+            <div class="text-center sm:text-left bg-white/15 backdrop-blur-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl border border-white/20 flex-shrink-0">
+              <span class="text-[10px] sm:text-[11px] text-blue-200 block uppercase tracking-wider">${t('current_time')}</span>
+              <span id="emp-digital-clock" class="text-base sm:text-xl md:text-2xl font-mono font-bold tracking-tight whitespace-nowrap block">--:--:--</span>
             </div>
           </div>
 
@@ -452,7 +452,7 @@ const EmployeeUI = {
           <div class="mt-6 pt-5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs md:text-sm text-blue-100">
             <div class="flex items-center gap-2">
               <i data-lucide="calendar" class="w-4 h-4 text-amber-300"></i>
-              <span>${t('work_schedule')}: <strong class="text-white">${startTime} — ${endTime}</strong></span>
+              <span>${t('work_schedule')}: <strong class="text-white">${formatTime12(startTime)} — ${formatTime12(endTime)}</strong></span>
             </div>
             <div class="flex items-center gap-2">
               <i data-lucide="map-pin" class="w-4 h-4 text-emerald-300"></i>

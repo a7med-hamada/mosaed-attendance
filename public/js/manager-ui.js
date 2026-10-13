@@ -105,6 +105,9 @@ const ManagerUI = {
             <p id="mgr-today-label" class="text-xs text-slate-500 mt-0.5"></p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="ManagerUI.openMorningBriefingModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i> تقرير الصباح للواتساب 📲
+            </button>
             <button onclick="ManagerUI.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5 whitespace-nowrap">
               <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
             </button>
@@ -312,8 +315,8 @@ const ManagerUI = {
     }
 
     container.innerHTML = `
-      <div class="overflow-x-auto">
-        <table class="w-full text-right text-xs min-w-[640px]">
+      <div class="overflow-x-auto lg:overflow-x-visible">
+        <table class="w-full text-right text-xs min-w-[600px] lg:min-w-0">
           <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th class="py-3 px-4">الموظف</th>
@@ -338,7 +341,7 @@ const ManagerUI = {
                 <td class="py-3 px-4">
                   ${r.check_in_time ? `
                     <div>
-                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${r.check_in_time}</span>
+                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_in_time)}</span>
                       ${r.check_in_distance !== null && r.check_in_distance !== undefined ? `
                         <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                           📍 داخل المقر (${r.check_in_distance}م)
@@ -354,7 +357,7 @@ const ManagerUI = {
                 <td class="py-3 px-4">
                   ${r.check_out_time ? `
                     <div>
-                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${r.check_out_time}</span>
+                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_out_time)}</span>
                       ${r.check_out_distance !== null && r.check_out_distance !== undefined ? `
                         <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                           📍 من المقر (${r.check_out_distance}م)
@@ -470,8 +473,8 @@ const ManagerUI = {
       }
 
       container.innerHTML = `
-        <div class="overflow-x-auto">
-          <table class="w-full text-right text-xs min-w-[980px]">
+        <div class="overflow-x-auto lg:overflow-x-visible">
+          <table class="w-full text-right text-xs min-w-[700px] lg:min-w-0">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th class="py-3.5 px-4">اسم الموظف</th>
@@ -677,9 +680,54 @@ const ManagerUI = {
     }
   },
 
+  tempEditEmployeePhoto: null,
+
+  handleEmployeePhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('يرجى اختيار ملف صورة صالح', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 400;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        ManagerUI.tempEditEmployeePhoto = compressedBase64;
+        const preview = document.getElementById('edit-emp-avatar-preview');
+        if (preview) preview.src = compressedBase64;
+        showToast('تم اختيار وتجهيز الصورة بنجاح! اضغط حفظ التعديلات لتطبيقها', 'info');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
   async openEditEmployeeModal(target) {
     const modal = document.getElementById('employee-crud-modal');
     if (!modal) return;
+    this.tempEditEmployeePhoto = null;
 
     let emp = null;
     if (typeof target === 'object' && target !== null) {
@@ -725,6 +773,26 @@ const ManagerUI = {
           </div>
 
           <form onsubmit="ManagerUI.submitEditEmployee(event, ${emp.id})" class="space-y-3.5 pt-4 text-xs">
+            <!-- Employee Avatar Upload by Manager -->
+            <div class="flex items-center gap-4 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div class="relative group flex-shrink-0">
+                <img id="edit-emp-avatar-preview" src="${emp.profile_photo || '/uploads/avatar.svg'}" class="w-16 h-16 rounded-2xl object-cover bg-slate-100 dark:bg-slate-700 border-2 border-white dark:border-slate-600 shadow-sm" />
+                <label for="edit-emp-avatar-input" class="absolute inset-0 bg-slate-900/60 rounded-2xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer transition-opacity">
+                  <i data-lucide="camera" class="w-4 h-4 mb-0.5"></i>
+                  تغيير
+                </label>
+                <input type="file" id="edit-emp-avatar-input" accept="image/*" class="hidden" onchange="ManagerUI.handleEmployeePhotoUpload(event)" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">صورة الملف الشخصي للموظف</span>
+                <p class="text-[11px] text-slate-400 mt-0.5">يمكنك تغيير صورة الموظف أو رفع صورة شخصية رسمية له</p>
+                <label for="edit-emp-avatar-input" class="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
+                  <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-500"></i>
+                  <span>تغيير صورة الموظف</span>
+                </label>
+              </div>
+            </div>
+
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم الموظف الكامل *</label>
               <input type="text" name="full_name" value="${(emp.full_name || '').replace(/"/g, '&quot;')}" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500" />
@@ -837,9 +905,14 @@ const ManagerUI = {
       payload.confirm_password = confirmPwd;
     }
 
+    if (this.tempEditEmployeePhoto) {
+      payload.profile_photo = this.tempEditEmployeePhoto;
+    }
+
     try {
       const res = await API.updateEmployee(empId, payload);
-      showToast(res.message || 'تم تحديث بيانات الموظف بنجاح', 'success');
+      showToast(res.message || 'تم تحديث بيانات وصورة الموظف بنجاح', 'success');
+      this.tempEditEmployeePhoto = null;
       document.getElementById('employee-crud-modal').innerHTML = '';
       if (this.activeSection === 'employees') {
         await this.loadEmployeesTable();
@@ -859,15 +932,15 @@ const ManagerUI = {
     if (!container) return;
 
     container.innerHTML = `
-      <div class="space-y-6 max-w-4xl">
+      <div class="space-y-6 w-full">
         <div>
           <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i data-lucide="calendar-clock" class="w-5 h-5 text-blue-600"></i> تحديد مواعيد وقواعد الدوام
+            <i data-lucide="calendar-clock" class="w-5 h-5 text-emerald-500"></i> تحديد مواعيد وقواعد الدوام
           </h2>
           <p class="text-xs text-slate-500">ضبط وقت بدء وانتهاء العمل، فترة السماح، وحدود التأخير والغياب ونصف اليوم</p>
         </div>
 
-        <form onsubmit="ManagerUI.saveWorkingHours(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs">
+        <form onsubmit="ManagerUI.saveWorkingHours(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">موعد بدء العمل الرسمي (Start Time) *</label>
@@ -925,7 +998,7 @@ const ManagerUI = {
           </div>
 
           <div class="flex justify-end pt-2">
-            <button type="submit" class="py-3 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/25 flex items-center gap-2">
+            <button type="submit" class="py-3 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/25 flex items-center gap-2 text-sm transition-all">
               <i data-lucide="check" class="w-4 h-4"></i> حفظ مواعيد وقواعد العمل
             </button>
           </div>
@@ -1193,8 +1266,8 @@ const ManagerUI = {
                     <span class="font-bold text-slate-800 dark:text-slate-200 block">${r.full_name}</span>
                     <span class="text-[10px] text-slate-400 font-mono">${r.employee_code}</span>
                   </td>
-                  <td class="py-3 px-4 font-mono">${r.check_in_time || '—'}</td>
-                  <td class="py-3 px-4 font-mono">${r.check_out_time || '—'}</td>
+                  <td class="py-3 px-4 font-mono">${formatTime12(r.check_in_time)}</td>
+                  <td class="py-3 px-4 font-mono">${formatTime12(r.check_out_time)}</td>
                   <td class="py-3 px-4">
                     ${getStatusBadge(r.status)}
                     ${r.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
@@ -1234,15 +1307,15 @@ const ManagerUI = {
     if (!container) return;
 
     container.innerHTML = `
-      <div class="space-y-6 max-w-4xl">
+      <div class="space-y-6 w-full">
         <div>
           <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i data-lucide="sliders" class="w-5 h-5 text-blue-600"></i> الإعدادات والقواعد العامة
+            <i data-lucide="sliders" class="w-5 h-5 text-emerald-500"></i> الإعدادات والقواعد العامة
           </h2>
           <p class="text-xs text-slate-500">إدارة القواعد الأمنية، الخصومات التقديرية، والرقابة</p>
         </div>
 
-        <form onsubmit="ManagerUI.saveCompanyRules(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs">
+        <form onsubmit="ManagerUI.saveCompanyRules(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
           <div>
             <h3 class="font-bold text-sm text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800">
               قواعد التحقق والأمان
@@ -1328,6 +1401,93 @@ const ManagerUI = {
             </button>
           </div>
         </form>
+
+        <!-- WhatsApp Notifications Settings Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="message-circle" class="w-5 h-5 text-emerald-500"></i> إعدادات إشعارات الواتساب (WhatsApp Notifications)
+              </h3>
+              <p class="text-[11px] text-slate-500 mt-0.5">الربط الآلي لإرسال رسائل التأخير للموظفين، تقرير الصباح اليومي للمدير، وكشوف الرواتب الشهرية</p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer font-normal text-xs text-emerald-600">
+              <input type="checkbox" id="rule-whatsapp-enabled" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4" />
+              <span class="font-bold">تفعيل الواتساب</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 cursor-pointer">
+              <input type="checkbox" id="rule-whatsapp-auto-late" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4" />
+              <div>
+                <span class="font-bold text-slate-800 dark:text-slate-200 block">إرسال تنبيه واتساب فوري عند التأخير</span>
+                <span class="text-[11px] text-slate-500">إشعار الموظف بعدد دقائق التأخير وقيمة الخصم تلقائياً عند تسجيل الحضور</span>
+              </div>
+            </label>
+
+            <div>
+              <label class="block text-slate-500 mb-1 font-semibold">رقم واتساب المدير لتقرير الصباح:</label>
+              <div class="relative">
+                <input type="text" id="rule-whatsapp-mgr-phone" placeholder="01227580963" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs" />
+              </div>
+              <span class="text-[10px] text-slate-400 mt-1 block">يستلم عليه تقرير الحضور والغائبين والمتأخرين كل صباح</span>
+            </div>
+          </div>
+
+          <!-- Provider Selection -->
+          <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-4">
+            <div>
+              <label class="block text-slate-700 dark:text-slate-200 font-bold mb-2">طريقة الإرسال والربط (Gateway Provider):</label>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <label class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="wa-provider" value="direct" id="wa-prov-direct" checked onchange="ManagerUI.toggleWaApiFields()" class="text-emerald-600" />
+                  <div>
+                    <span class="font-bold block text-slate-800 dark:text-slate-200">روابط مباشرة (مجاناً)</span>
+                    <span class="text-[10px] text-slate-400">فتح الواتساب بضغطة زر وبدون أي اشتراكات</span>
+                  </div>
+                </label>
+                <label class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="wa-provider" value="ultramsg" id="wa-prov-ultramsg" onchange="ManagerUI.toggleWaApiFields()" class="text-emerald-600" />
+                  <div>
+                    <span class="font-bold block text-slate-800 dark:text-slate-200">UltraMsg API</span>
+                    <span class="text-[10px] text-slate-400">إرسال خلفي تلقائي</span>
+                  </div>
+                </label>
+                <label class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="wa-provider" value="custom" id="wa-prov-custom" onchange="ManagerUI.toggleWaApiFields()" class="text-emerald-600" />
+                  <div>
+                    <span class="font-bold block text-slate-800 dark:text-slate-200">بوابة مخصصة / Webhook</span>
+                    <span class="text-[10px] text-slate-400">GreenAPI أو خادم خارجي</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Optional API Fields -->
+            <div id="wa-api-fields-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-emerald-500/20">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Instance ID / المعرف:</label>
+                <input type="text" id="rule-wa-instance-id" placeholder="instanceXXXX" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">API Token / رمز المصادقة:</label>
+                <input type="password" id="rule-wa-token" placeholder="رمز التوكن الخاص بالبوابة" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs" />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+            <button type="button" onclick="ManagerUI.testWhatsAppConnection()" class="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors">
+              <i data-lucide="send" class="w-4 h-4 text-emerald-500"></i>
+              <span>إرسال رسالة تجريبية للاختبار 📲</span>
+            </button>
+            <button type="button" onclick="ManagerUI.saveWhatsAppSettings()" class="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>حفظ إعدادات الواتساب</span>
+            </button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -1341,6 +1501,25 @@ const ManagerUI = {
       document.getElementById('rule-enable-deductions').checked = s.enable_salary_deductions === '1';
       document.getElementById('rule-absence-rate').value = s.deduction_absence_rate || '100';
       document.getElementById('rule-half-day-rate').value = s.deduction_half_day_rate || '50';
+
+      // Load WhatsApp Settings
+      const waRes = await API.getWhatsAppSettings().catch(() => ({ settings: {} }));
+      const wa = waRes.settings || {};
+      const waEnabledEl = document.getElementById('rule-whatsapp-enabled');
+      if (waEnabledEl) waEnabledEl.checked = wa.whatsapp_enabled === '1';
+      const waAutoLateEl = document.getElementById('rule-whatsapp-auto-late');
+      if (waAutoLateEl) waAutoLateEl.checked = wa.whatsapp_auto_late_alert === '1';
+      const waPhoneEl = document.getElementById('rule-whatsapp-mgr-phone');
+      if (waPhoneEl) waPhoneEl.value = wa.whatsapp_manager_phone || '';
+      const waInstanceEl = document.getElementById('rule-wa-instance-id');
+      if (waInstanceEl) waInstanceEl.value = wa.whatsapp_instance_id || '';
+      const waTokenEl = document.getElementById('rule-wa-token');
+      if (waTokenEl) waTokenEl.value = wa.whatsapp_api_token || '';
+
+      const prov = wa.whatsapp_provider || 'direct';
+      const radio = document.getElementById(`wa-prov-${prov}`);
+      if (radio) radio.checked = true;
+      this.toggleWaApiFields();
 
       // Load Delay Tiers
       const container = document.getElementById('delay-tiers-container');
@@ -1469,7 +1648,7 @@ const ManagerUI = {
                   <span class="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                     <i data-lucide="log-in" class="w-4 h-4"></i> تسجيل الحضور
                   </span>
-                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">${record.check_in_time || '—'}</span>
+                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">${formatTime12(record.check_in_time)}</span>
                 </div>
 
                 <div>
@@ -1510,7 +1689,7 @@ const ManagerUI = {
                   <span class="font-extrabold text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
                     <i data-lucide="log-out" class="w-4 h-4"></i> تسجيل الانصراف
                   </span>
-                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">${record.check_out_time || 'قيد العمل'}</span>
+                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">${record.check_out_time ? formatTime12(record.check_out_time) : 'قيد العمل'}</span>
                 </div>
 
                 <div>
@@ -1560,21 +1739,21 @@ const ManagerUI = {
     if (window.lucide) lucide.createIcons();
   },
 
-  // Modal: Employee Full Statistics & Attendance Track Record (With Month Picker)
+  // Modal: Employee Full Statistics & Attendance Track Record (With Month Picker, Advances & Bonuses)
   async openEmployeeStatsModal(employeeId, employeeName, selectedMonth = null) {
     const modal = document.getElementById('employee-stats-modal');
     if (!modal) return;
 
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[90vh] flex flex-col">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[92vh] flex flex-col">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-500"></i>
                 إحصائيات وسجل التزام: ${employeeName || 'الموظف'}
               </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل أيام الحضور والتأخير والخروج المبكر والغياب وساعات العمل</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل الحضور، التأخير، الخصومات، السلف المعتمدة، المكافآت، وصافي القبض</p>
             </div>
             <button onclick="document.getElementById('employee-stats-modal').innerHTML=''" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
               <i data-lucide="x" class="w-5 h-5"></i>
@@ -1583,7 +1762,7 @@ const ManagerUI = {
 
           <div class="py-12 text-center text-slate-400" id="emp-stats-content">
             <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            جاري تحليل وسحب سجلات الموظف...
+            جاري تحليل وسحب سجلات الموظف والبيانات المالية...
           </div>
         </div>
       </div>
@@ -1595,106 +1774,216 @@ const ManagerUI = {
       const s = res.stats || {};
       const emp = res.employee || {};
       const records = res.recentRecords || [];
+      const advances = res.advances || [];
+      const bonuses = res.bonuses || [];
       const availMonths = res.availableMonths || [];
       const activeMonth = res.selectedMonth || res.currentMonth;
 
       const content = document.getElementById('emp-stats-content');
       if (!content) return;
 
+      const baseSalary = parseFloat(s.baseSalary || emp.base_salary || 3000);
+      const totalBonuses = parseFloat(s.totalBonuses || 0);
+      const totalAdvances = parseFloat(s.totalAdvances || 0);
+      const totalLateDeductions = parseFloat(s.totalLateDeductions || 0);
+      const totalAbsenceDeductions = parseFloat(s.totalAbsenceDeductions || 0);
+      const totalDeductions = parseFloat(s.totalDeductions || (totalLateDeductions + totalAbsenceDeductions));
+      const netSalary = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances);
+
       content.innerHTML = `
-        <div class="space-y-5 overflow-y-auto pr-1 max-h-[75vh] text-right">
-          <!-- Quick Profile Bar & Month Filter -->
+        <div class="space-y-5 overflow-y-auto pr-1 max-h-[78vh] text-right">
+          <!-- Quick Profile Bar, Month Filter & Quick Financial Actions -->
           <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <img src="${emp.profile_photo || '/uploads/avatar.svg'}" class="w-11 h-11 rounded-2xl object-cover bg-slate-200 dark:bg-slate-700 shadow-sm" />
+              <img src="${emp.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-200 dark:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-600" />
               <div>
                 <span class="font-extrabold text-sm text-slate-900 dark:text-white block">${emp.full_name}</span>
                 <span class="text-[11px] text-slate-400 font-mono">${emp.employee_code} • ${emp.job_title || 'موظف'} (${emp.department_name || 'عام'})</span>
               </div>
             </div>
 
-            <!-- Month Switcher Dropdown inside Modal -->
-            <div class="flex items-center gap-2">
-              <label class="text-[11px] text-slate-400 font-bold whitespace-nowrap">شهر الإحصائية:</label>
-              <select onchange="ManagerUI.openEmployeeStatsModal(${employeeId}, '${(emp.full_name || '').replace(/'/g, "\\'")}', this.value)"
-                class="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                ${availMonths.map(m => `
-                  <option value="${m}" ${m === activeMonth ? 'selected' : ''}>
-                    📅 ${m === res.currentMonth ? `${m} (الشهر الحالي)` : m}
-                  </option>
+            <!-- Month Switcher & Direct Actions -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5 bg-white dark:bg-slate-900 px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <label class="text-[11px] text-slate-400 font-bold whitespace-nowrap">الشهر:</label>
+                <select onchange="ManagerUI.openEmployeeStatsModal(${employeeId}, '${(emp.full_name || '').replace(/'/g, "\\'")}', this.value)"
+                  class="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none">
+                  ${availMonths.map(m => `
+                    <option value="${m}" ${m === activeMonth ? 'selected' : ''}>
+                      📅 ${m === res.currentMonth ? `${m} (الشهر الحالي)` : m}
+                    </option>
+                  `).join('')}
+                  <option value="all" ${activeMonth === 'all' ? 'selected' : ''}>جميع الشهور (تراكمي)</option>
+                </select>
+              </div>
+
+              <button onclick="ManagerUI.openAddBonusModal(${employeeId}, '${activeMonth}')"
+                class="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="إضافة مكافأة للموظف">
+                <i data-lucide="gift" class="w-3.5 h-3.5"></i> + مكافأة
+              </button>
+              <button onclick="ManagerUI.openAddAdvanceModal(${employeeId}, '${activeMonth}')"
+                class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="تسجيل سلفة للموظف">
+                <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i> + سلفة
+              </button>
+              <button onclick="ManagerUI.printPayslip(${employeeId}, '${activeMonth}')"
+                class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="طباعة قسيمة الراتب">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i> قسيمة الراتب 📄
+              </button>
+            </div>
+          </div>
+
+          <!-- Attendance Commitment Metrics (4 Cards) -->
+          <div>
+            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-4 h-4 text-blue-500"></i> مؤشرات الانضباط والالتزام بالدوام:
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <!-- Late Days -->
+              <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-right">
+                <span class="text-[11px] font-bold text-amber-500 block">أيام التأخير</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-extrabold text-amber-500 font-mono">${s.lateDays || 0}</span>
+                  <span class="text-[11px] text-amber-500/80">يوم</span>
+                </div>
+                <span class="text-[10px] text-amber-600 dark:text-amber-400 block mt-1 font-semibold">إجمالي: ${formatMinutesArabic(s.totalLateMinutes)}</span>
+              </div>
+
+              <!-- Early Leave Days -->
+              <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-right">
+                <span class="text-[11px] font-bold text-purple-400 block">أيام الخروج المبكر</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-extrabold text-purple-400 font-mono">${s.earlyLeaveDays || 0}</span>
+                  <span class="text-[11px] text-purple-400/80">يوم</span>
+                </div>
+                <span class="text-[10px] text-purple-400 block mt-1 font-semibold">إجمالي: ${formatMinutesArabic(s.totalEarlyLeaveMinutes || s.totalEarlyMinutes)}</span>
+              </div>
+
+              <!-- Absent Days -->
+              <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-right">
+                <span class="text-[11px] font-bold text-rose-400 block">أيام الغياب</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-extrabold text-rose-400 font-mono">${s.absentDays || 0}</span>
+                  <span class="text-[11px] text-rose-400/80">يوم</span>
+                </div>
+                <span class="text-[10px] text-rose-400 block mt-1">غياب غير مسجل</span>
+              </div>
+
+              <!-- On-Time Days -->
+              <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right">
+                <span class="text-[11px] font-bold text-emerald-400 block">حضور في الموعد</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-extrabold text-emerald-400 font-mono">${s.onTimeDays || 0}</span>
+                  <span class="text-[11px] text-emerald-400/80">يوم</span>
+                </div>
+                <span class="text-[10px] text-emerald-400 block mt-1">حضور كلي: ${s.presentDays || 0} يوم</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comprehensive Financial & Payroll Breakdown Cards (5 Cards) -->
+          <div>
+            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+              <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i> الحساب المالي ومسير الراتب والسلف (${activeMonth}):
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-right">
+              <!-- Base Salary -->
+              <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
+                <span class="font-extrabold text-slate-900 dark:text-white font-mono text-base mt-1 block">${baseSalary.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-slate-400 block mt-0.5">الراتب المتفق عليه</span>
+              </div>
+
+              <!-- Bonuses (+) -->
+              <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                <span class="text-[11px] text-purple-600 dark:text-purple-400 font-bold block">المكافآت (+)</span>
+                <span class="font-extrabold text-purple-600 dark:text-purple-400 font-mono text-base mt-1 block">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-purple-500/80 block mt-0.5 font-semibold">${bonuses.length} مكافأة معتمدة 🎁</span>
+              </div>
+
+              <!-- Deductions (-) -->
+              <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <span class="text-[11px] text-rose-500 dark:text-rose-400 font-bold block">خصومات الدوام (-)</span>
+                <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-base mt-1 block">-${totalDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-rose-500/80 block mt-0.5 font-mono">تأخير: ${totalLateDeductions} • غياب: ${totalAbsenceDeductions}</span>
+              </div>
+
+              <!-- Advances (-) -->
+              <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                <span class="text-[11px] text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات (-)</span>
+                <span class="font-extrabold text-amber-600 dark:text-amber-400 font-mono text-base mt-1 block">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-amber-600/80 dark:text-amber-400/80 block mt-0.5 font-semibold">${advances.filter(a => a.status === 'approved').length} سلفة معتمدة 💸</span>
+              </div>
+
+              <!-- Net Salary (=) -->
+              <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 col-span-2 sm:col-span-1">
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق</span>
+                <span class="font-black text-emerald-600 dark:text-emerald-400 font-mono text-lg mt-1 block">${netSalary.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 block mt-0.5 font-semibold">المبلغ النهائي بعد التسوية</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bonuses Detail Section (If any) -->
+          ${bonuses.length > 0 ? `
+            <div class="border border-purple-200 dark:border-purple-900/40 rounded-2xl overflow-hidden bg-purple-50/20 dark:bg-purple-950/10">
+              <div class="p-2.5 bg-purple-50/80 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <i data-lucide="gift" class="w-4 h-4 text-purple-500"></i> تفاصيل المكافآت والحوافز (${bonuses.length}):
+                </span>
+                <span class="text-[11px] font-bold font-mono text-purple-600 dark:text-purple-400">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="divide-y divide-purple-100 dark:divide-purple-900/30 p-2 space-y-1">
+                ${bonuses.map(b => `
+                  <div class="flex items-center justify-between py-1.5 px-2 hover:bg-purple-100/30 rounded-xl transition-colors">
+                    <div>
+                      <span class="font-bold text-slate-800 dark:text-slate-200 text-xs block">🎁 ${b.reason}</span>
+                      <span class="text-[10px] text-slate-400 font-mono">${b.date} • شهر: ${b.month}</span>
+                    </div>
+                    <span class="font-mono font-bold text-purple-600 dark:text-purple-400 text-xs">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
+                  </div>
                 `).join('')}
-                <option value="all" ${activeMonth === 'all' ? 'selected' : ''}>جميع الشهور (تراكمي)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- The 4 Core User-Requested Metrics Cards -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <!-- Late Days -->
-            <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-right">
-              <span class="text-[11px] font-bold text-amber-500 block">أيام التأخير</span>
-              <div class="flex items-baseline gap-1 mt-1">
-                <span class="text-2xl font-extrabold text-amber-400 font-mono">${s.lateDays}</span>
-                <span class="text-[11px] text-amber-500/80">يوم</span>
               </div>
-              <span class="text-[10px] text-amber-400/80 block mt-1 font-semibold">إجمالي: ${formatMinutesArabic(s.totalLateMinutes)}</span>
             </div>
+          ` : ''}
 
-            <!-- Early Leave Days -->
-            <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-right">
-              <span class="text-[11px] font-bold text-purple-400 block">أيام الخروج المبكر</span>
-              <div class="flex items-baseline gap-1 mt-1">
-                <span class="text-2xl font-extrabold text-purple-400 font-mono">${s.earlyLeaveDays}</span>
-                <span class="text-[11px] text-purple-400/80">يوم</span>
+          <!-- Advances Detail Section (If any) -->
+          ${advances.length > 0 ? `
+            <div class="border border-amber-200 dark:border-amber-900/40 rounded-2xl overflow-hidden bg-amber-50/20 dark:bg-amber-950/10">
+              <div class="p-2.5 bg-amber-50/80 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <i data-lucide="hand-coins" class="w-4 h-4 text-amber-500"></i> تفاصيل السلف والمسحوبات (${advances.length}):
+                </span>
+                <span class="text-[11px] font-bold font-mono text-amber-600 dark:text-amber-400">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <span class="text-[10px] text-purple-400/80 block mt-1 font-semibold">إجمالي: ${formatMinutesArabic(s.totalEarlyLeaveMinutes || s.totalEarlyMinutes)}</span>
-            </div>
-
-            <!-- Absent Days -->
-            <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-right">
-              <span class="text-[11px] font-bold text-rose-400 block">أيام الغياب</span>
-              <div class="flex items-baseline gap-1 mt-1">
-                <span class="text-2xl font-extrabold text-rose-400 font-mono">${s.absentDays}</span>
-                <span class="text-[11px] text-rose-400/80">يوم</span>
+              <div class="divide-y divide-amber-100 dark:divide-amber-900/30 p-2 space-y-1">
+                ${advances.map(a => {
+                  const statusBadge = a.status === 'approved'
+                    ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة ومخصومة ✓</span>'
+                    : (a.status === 'rejected'
+                      ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة ✗</span>'
+                      : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة ⏳</span>');
+                  return `
+                    <div class="flex items-center justify-between py-1.5 px-2 hover:bg-amber-100/30 rounded-xl transition-colors">
+                      <div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">💸 ${a.reason || 'سلفة على الراتب'}</span>
+                          ${statusBadge}
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-mono">${a.date} (شهر: ${a.month})</span>
+                      </div>
+                      <span class="font-mono font-bold text-amber-600 dark:text-amber-400 text-xs">-${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م</span>
+                    </div>
+                  `;
+                }).join('')}
               </div>
-              <span class="text-[10px] text-rose-400/80 block mt-1">غياب غير مسجل</span>
             </div>
-
-            <!-- On-Time Days -->
-            <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right">
-              <span class="text-[11px] font-bold text-emerald-400 block">حضور في الموعد</span>
-              <div class="flex items-baseline gap-1 mt-1">
-                <span class="text-2xl font-extrabold text-emerald-400 font-mono">${s.onTimeDays}</span>
-                <span class="text-[11px] text-emerald-400/80">يوم</span>
-              </div>
-              <span class="text-[10px] text-emerald-400/80 block mt-1">نصف يوم: ${s.halfDays} يوم</span>
-            </div>
-          </div>
-
-          <!-- Secondary Summary Metrics & Payroll Details -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-right">
-            <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-              <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي للشهر:</span>
-              <span class="font-extrabold text-slate-900 dark:text-white font-mono text-base mt-0.5 block">${(s.baseSalary || 3000).toLocaleString('ar-EG')} ج.م</span>
-            </div>
-            <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-              <span class="text-[11px] text-rose-500 dark:text-rose-400 font-bold block">إجمالي الخصومات المطبقة:</span>
-              <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-base mt-0.5 block">-${(s.totalDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
-              <span class="text-[10px] text-rose-500/80 block mt-0.5 font-medium">
-                (تأخير: ${(s.totalLateDeductions || 0)} ج.م • غياب: ${(s.totalAbsenceDeductions || 0)} ج.م)
-              </span>
-            </div>
-            <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25">
-              <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق:</span>
-              <span class="font-black text-emerald-600 dark:text-emerald-400 font-mono text-lg mt-0.5 block">
-                ${(s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) - (s.totalDeductions || 0))).toLocaleString('ar-EG')} ج.م
-              </span>
-            </div>
-          </div>
+          ` : ''}
 
           <!-- Recent Attendance History Table -->
           <div>
-            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2">سجل أيام الحضور والانصراف والخصم (${activeMonth}):</h4>
+            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i> سجل أيام الحضور والانصراف والخصم (${activeMonth}):
+            </h4>
             ${records.length === 0 ? `
               <div class="p-6 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-2xl">
                 لا توجد سجلات حضور مسجلة لهذا الموظف في هذا الشهر.
@@ -1716,8 +2005,8 @@ const ManagerUI = {
                     ${records.map(rec => `
                       <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                         <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-sans font-bold">${rec.date}</td>
-                        <td class="py-2.5 px-3">${rec.check_in_time || '—'}</td>
-                        <td class="py-2.5 px-3">${rec.check_out_time || '—'}</td>
+                        <td class="py-2.5 px-3">${formatTime12(rec.check_in_time)}</td>
+                        <td class="py-2.5 px-3">${formatTime12(rec.check_out_time)}</td>
                         <td class="py-2.5 px-3 font-sans">
                           ${getStatusBadge(rec.status)}
                           ${rec.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(rec.late_minutes)}</span>` : ''}
@@ -1904,25 +2193,32 @@ const ManagerUI = {
               </h3>
               <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، المكافآت، الخصومات بالشرائح، السلف، وصافي القبض مع طباعة قسيمة الراتب</p>
             </div>
-            <span class="text-xs text-slate-400 font-mono">${summaries.length} موظف مسجل</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button onclick="ManagerUI.sendAllPayslipsWhatsApp('${targetMonth}')"
+                class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm shadow-emerald-500/20 transition-all">
+                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                <span>إرسال الرواتب للجميع عبر واتساب 📲</span>
+              </button>
+              <span class="text-xs text-slate-400 font-mono">${summaries.length} موظف مسجل</span>
+            </div>
           </div>
 
           ${summaries.length === 0 ? `
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
-            <div class="overflow-x-auto">
-              <table class="w-full text-right text-xs min-w-[980px]">
+            <div class="overflow-x-auto lg:overflow-x-visible">
+              <table class="w-full text-right text-xs min-w-[680px] lg:min-w-0">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th class="py-3.5 px-4">الموظف</th>
-                    <th class="py-3.5 px-3 text-center">المرتب الأساسي</th>
-                    <th class="py-3.5 px-3 text-center">الحضور</th>
-                    <th class="py-3.5 px-3">التأخير (الشرائح)</th>
-                    <th class="py-3.5 px-3 text-center">الغياب</th>
-                    <th class="py-3.5 px-3 text-center">المكافآت (+)</th>
-                    <th class="py-3.5 px-3 text-center">السلف (-)</th>
-                    <th class="py-3.5 px-3 text-center">صافي القبض</th>
-                    <th class="py-3.5 px-4 text-center">الإجراءات والطباعة</th>
+                    <th class="py-3 px-3">الموظف</th>
+                    <th class="py-3 px-2 text-center">المرتب الأساسي</th>
+                    <th class="py-3 px-2 text-center">الحضور</th>
+                    <th class="py-3 px-2.5">التأخير (الشرائح)</th>
+                    <th class="py-3 px-2 text-center">الغياب</th>
+                    <th class="py-3 px-2 text-center">المكافآت (+)</th>
+                    <th class="py-3 px-2 text-center">السلف (-)</th>
+                    <th class="py-3 px-2 text-center">صافي القبض</th>
+                    <th class="py-3 px-3 text-center">الإجراءات والطباعة</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1931,54 +2227,54 @@ const ManagerUI = {
                     const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0));
                     return `
                     <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <td class="py-3.5 px-4">
-                        <div class="flex items-center gap-3">
-                          <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800" />
-                          <div>
-                            <span class="font-bold text-slate-800 dark:text-slate-200 block">${s.employee.full_name}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
+                      <td class="py-3 px-3">
+                        <div class="flex items-center gap-2.5">
+                          <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
+                          <div class="min-w-0">
+                            <span class="font-bold text-slate-800 dark:text-slate-200 block truncate">${s.employee.full_name}</span>
+                            <span class="text-[10px] text-slate-400 font-mono block">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
                           </div>
                         </div>
                       </td>
-                      <td class="py-3.5 px-3 text-center font-bold text-slate-700 dark:text-slate-300 font-mono">
+                      <td class="py-3 px-2 text-center font-bold text-slate-700 dark:text-slate-300 font-mono whitespace-nowrap">
                         ${baseSal.toLocaleString('ar-EG')} ج.م
                       </td>
-                      <td class="py-3.5 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      <td class="py-3 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono whitespace-nowrap">
                         ${s.presentDays || s.onTimeDays} يوم
                       </td>
-                      <td class="py-3.5 px-3">
+                      <td class="py-3 px-2.5">
                         ${s.lateDays > 0 ? `
                           <div>
-                            <span class="font-bold text-amber-500 block">${s.lateDays} يوم (${formatMinutesArabic(s.totalLateMinutes)})</span>
+                            <span class="font-bold text-amber-500 block text-[11px]">${s.lateDays}ي (${formatMinutesArabic(s.totalLateMinutes)})</span>
                             <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
                           </div>
-                        ` : '<span class="text-emerald-500 font-bold">لا يوجد ✓</span>'}
+                        ` : '<span class="text-emerald-500 font-bold text-[11px]">لا يوجد ✓</span>'}
                       </td>
-                      <td class="py-3.5 px-3 text-center">
+                      <td class="py-3 px-2 text-center">
                         ${s.absentDays > 0 ? `
                           <div>
-                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono">${s.absentDays} يوم</span>
+                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono text-[11px]">${s.absentDays} يوم</span>
                             ${s.totalAbsenceDeductions > 0 ? `<span class="text-[10px] text-rose-400 block font-mono mt-0.5">-${(s.totalAbsenceDeductions).toLocaleString('ar-EG')} ج.م</span>` : ''}
                           </div>
-                        ` : '<span class="text-emerald-500 font-bold">0</span>'}
+                        ` : '<span class="text-emerald-500 font-bold text-[11px]">0</span>'}
                       </td>
-                      <td class="py-3.5 px-3 text-center">
+                      <td class="py-3 px-2 text-center whitespace-nowrap">
                         ${(s.totalBonuses || 0) > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold font-mono">+${s.totalBonuses.toLocaleString('ar-EG')} ج.م</span>
-                        ` : `<span class="text-slate-400 font-mono">0</span>`}
+                          <span class="px-2 py-0.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold font-mono text-[11px]">+${s.totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
                       </td>
-                      <td class="py-3.5 px-3 text-center">
+                      <td class="py-3 px-2 text-center whitespace-nowrap">
                         ${(s.totalAdvances || 0) > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold font-mono">-${s.totalAdvances.toLocaleString('ar-EG')} ج.م</span>
-                        ` : `<span class="text-slate-400 font-mono">0</span>`}
+                          <span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold font-mono text-[11px]">-${s.totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
                       </td>
-                      <td class="py-3.5 px-3 text-center">
-                        <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-sm border border-emerald-500/25 inline-block">
+                      <td class="py-3 px-2 text-center whitespace-nowrap">
+                        <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-xs sm:text-sm border border-emerald-500/25 inline-block">
                           ${netSal.toLocaleString('ar-EG')} ج.م
                         </span>
                       </td>
-                      <td class="py-3.5 px-4 text-center">
-                        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-1.5">
                           <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
                             class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold inline-flex items-center gap-1 transition-all" title="كشف الحساب وسجل الأيام">
                             <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-500"></i>
@@ -1988,6 +2284,11 @@ const ManagerUI = {
                             class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm shadow-emerald-500/20 transition-all" title="طباعة قسيمة الراتب ومفردات المرتب">
                             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                             <span>قسيمة الراتب 📄</span>
+                          </button>
+                          <button onclick="ManagerUI.sendPayslipWhatsApp(${s.employee.id}, '${targetMonth}')"
+                            class="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="إرسال كشف الراتب للموظف عبر واتساب">
+                            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                            <span>واتساب 📲</span>
                           </button>
                         </div>
                       </td>
@@ -2229,8 +2530,8 @@ const ManagerUI = {
                     ${records.map(r => `
                       <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                         <td class="py-2.5 px-3 font-sans text-slate-800 dark:text-slate-200 font-bold">${r.date}</td>
-                        <td class="py-2.5 px-3">${r.check_in_time || '—'}</td>
-                        <td class="py-2.5 px-3">${r.check_out_time || '—'}</td>
+                        <td class="py-2.5 px-3">${formatTime12(r.check_in_time)}</td>
+                        <td class="py-2.5 px-3">${formatTime12(r.check_out_time)}</td>
                         <td class="py-2.5 px-3 font-sans">
                           ${getStatusBadge(r.status)}
                           ${r.late_minutes > 0 ? `<span class="text-amber-500 text-[10px] block mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
@@ -2736,7 +3037,7 @@ const ManagerUI = {
     } catch (e) {}
 
     container.innerHTML = `
-      <div class="space-y-6 max-w-4xl">
+      <div class="space-y-6 w-full">
         <!-- Page Header -->
         <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
@@ -3099,6 +3400,258 @@ const ManagerUI = {
         btn.innerHTML = `<i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span>نعم، صفّر الحضور وابدأ من جديد</span>`;
         if (window.lucide) lucide.createIcons();
       }
+    }
+  },
+
+  // --------------------------------------------------------
+  // WhatsApp Notification Modals & Handlers
+  // --------------------------------------------------------
+  async openMorningBriefingModal() {
+    const modal = document.getElementById('employee-crud-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4">
+          <div class="flex items-center justify-center p-8">
+            <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="mr-3 font-bold text-slate-600 dark:text-slate-300">جاري إعداد تقرير الصباح لليوم...</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const data = await API.getMorningBriefing();
+      modal.innerHTML = `
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <i data-lucide="message-circle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تقرير الصباح اليومي للواتساب</h3>
+                  <p class="text-[11px] text-slate-400 mt-0.5">التاريخ: ${data.today} • إجمالي القوة: ${data.stats.total} موظف</p>
+                </div>
+              </div>
+              <button onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-4 gap-2 text-center">
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
+                <span class="text-[10px] text-slate-400 block font-semibold">إجمالي الموظفين</span>
+                <span class="text-lg font-black text-slate-800 dark:text-white font-mono mt-0.5 block">${data.stats.total}</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 block font-semibold">في الموعد</span>
+                <span class="text-lg font-black text-emerald-600 font-mono mt-0.5 block">${data.stats.onTime}</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                <span class="text-[10px] text-amber-600 dark:text-amber-400 block font-semibold">المتأخرين</span>
+                <span class="text-lg font-black text-amber-600 font-mono mt-0.5 block">${data.stats.late}</span>
+              </div>
+              <div class="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <span class="text-[10px] text-rose-600 dark:text-rose-400 block font-semibold">لم يحضروا بعد</span>
+                <span class="text-lg font-black text-rose-600 font-mono mt-0.5 block">${data.stats.absent}</span>
+              </div>
+            </div>
+
+            <!-- Message Preview -->
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1.5 flex items-center justify-between">
+                <span>نص رسالة الواتساب الجاهزة:</span>
+                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('morning-msg-preview').value); showToast('تم نسخ نص التقرير للحافظة 📋', 'success');" class="text-blue-500 hover:underline text-[11px] font-semibold flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> نسخ النص
+                </button>
+              </label>
+              <textarea id="morning-msg-preview" rows="8" readonly class="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-sans text-xs leading-relaxed focus:outline-none resize-none">${data.messageText}</textarea>
+            </div>
+
+            <!-- Recipient Phone Number -->
+            <div>
+              <label class="block text-slate-500 font-semibold mb-1">إرسال إلى رقم واتساب المدير:</label>
+              <input type="text" id="morning-mgr-phone" value="${data.managerPhone || ''}" placeholder="01227580963" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-2 flex items-center justify-between flex-wrap gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs">
+                إغلاق
+              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="ManagerUI.sendMorningBriefingViaApi()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+                  <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> إرسال عبر بوابة API
+                </button>
+                <a id="morning-wa-direct-link" href="${data.waLink}" target="_blank" onclick="setTimeout(() => { document.getElementById('employee-crud-modal').innerHTML=''; }, 800);" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-500/25 transition-all">
+                  <i data-lucide="message-circle" class="w-4 h-4"></i> فتح في واتساب الآن 📲
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async sendMorningBriefingViaApi() {
+    const phone = document.getElementById('morning-mgr-phone')?.value;
+    try {
+      const res = await API.sendMorningBriefing({ phone });
+      showToast(res.message, res.dispatchResult?.apiDelivered ? 'success' : 'info');
+      if (res.waLink && !res.dispatchResult?.apiDelivered) {
+        window.open(res.waLink, '_blank');
+      }
+      setTimeout(() => {
+        const m = document.getElementById('employee-crud-modal');
+        if (m) m.innerHTML = '';
+      }, 1000);
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async sendPayslipWhatsApp(employeeId, month) {
+    try {
+      showToast('جاري تجهيز كشف الراتب ورابط الواتساب...', 'info');
+      const res = await API.sendPayslipWhatsApp({ employee_id: employeeId, month });
+      showToast(res.message, 'success');
+      if (res.waLink) {
+        window.open(res.waLink, '_blank');
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async sendAllPayslipsWhatsApp(month) {
+    if (!confirm(`هل تريد تجهيز وإرسال كشوف الرواتب لشهر (${month}) لجميع الموظفين عبر الواتساب؟`)) {
+      return;
+    }
+
+    const modal = document.getElementById('employee-crud-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4">
+          <div class="flex items-center justify-center p-8">
+            <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="mr-3 font-bold text-slate-600 dark:text-slate-300">جاري معالجة وتجهيز كشوف رواتب الموظفين...</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const res = await API.sendAllPayslipsWhatsApp(month);
+      const results = res.results || [];
+      modal.innerHTML = `
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <i data-lucide="check-check" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">كشوف رواتب الواتساب لشهر ${month}</h3>
+                  <p class="text-[11px] text-slate-400 mt-0.5">تم تجهيز كشوف الرواتب لعدد ${results.length} موظف</p>
+                </div>
+              </div>
+              <button onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              ${results.map(r => `
+                <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+                  <div>
+                    <span class="font-bold text-slate-900 dark:text-white block">${r.name}</span>
+                    <span class="text-[11px] text-slate-400 font-mono">${r.phone || 'بدون رقم هاتف'}</span>
+                  </div>
+                  <div>
+                    ${r.waLink ? `
+                      <a href="${r.waLink}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1 transition-all">
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> إرسال عبر واتساب 📲
+                      </a>
+                    ` : `
+                      <span class="text-rose-500 font-semibold text-[11px]">لا يمكن الإرسال (بدون رقم)</span>
+                    `}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <button onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="px-5 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs">
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  toggleWaApiFields() {
+    const prov = document.querySelector('input[name="wa-provider"]:checked')?.value;
+    const container = document.getElementById('wa-api-fields-container');
+    if (!container) return;
+    if (prov === 'ultramsg' || prov === 'custom') {
+      container.classList.remove('hidden');
+    } else {
+      container.classList.add('hidden');
+    }
+  },
+
+  async saveWhatsAppSettings() {
+    const provider = document.querySelector('input[name="wa-provider"]:checked')?.value || 'direct';
+    const enabled = document.getElementById('rule-whatsapp-enabled')?.checked ? '1' : '0';
+    const autoLate = document.getElementById('rule-whatsapp-auto-late')?.checked ? '1' : '0';
+    const mgrPhone = document.getElementById('rule-whatsapp-mgr-phone')?.value || '';
+    const instanceId = document.getElementById('rule-wa-instance-id')?.value || '';
+    const token = document.getElementById('rule-wa-token')?.value || '';
+
+    const payload = {
+      whatsapp_enabled: enabled,
+      whatsapp_provider: provider,
+      whatsapp_auto_late_alert: autoLate,
+      whatsapp_manager_phone: mgrPhone,
+      whatsapp_instance_id: instanceId,
+      whatsapp_api_token: token
+    };
+
+    try {
+      const res = await API.saveWhatsAppSettings(payload);
+      showToast(res.message || 'تم حفظ إعدادات الواتساب بنجاح', 'success');
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async testWhatsAppConnection() {
+    const phone = document.getElementById('rule-whatsapp-mgr-phone')?.value || '01227580963';
+    try {
+      showToast('جاري اختبار إرسال رسالة واتساب...', 'info');
+      const res = await API.testWhatsApp({ phone });
+      showToast(res.message, res.dispatch?.apiDelivered ? 'success' : 'info');
+      if (res.waLink) {
+        window.open(res.waLink, '_blank');
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
     }
   }
 };

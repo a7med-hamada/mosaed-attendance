@@ -204,8 +204,41 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
     totalLateDeductions = parseFloat(totalLateDeductions.toFixed(2));
     totalAbsenceDeductions = parseFloat(totalAbsenceDeductions.toFixed(2));
 
+    // Fetch salary advances (approved) for this employee
+    let advQuery = `SELECT * FROM salary_advances WHERE employee_id = ?`;
+    const advParams = [targetId];
+    if (filterMonth !== 'all') {
+      advQuery += ` AND month = ?`;
+      advParams.push(filterMonth);
+    }
+    advQuery += ` ORDER BY date DESC, created_at DESC`;
+    const advances = db.prepare(advQuery).all(...advParams);
+
+    let totalAdvances = 0;
+    advances.forEach(a => {
+      if (a.status === 'approved') totalAdvances += parseFloat(a.amount || 0);
+    });
+
+    // Fetch bonuses for this employee
+    let bonQuery = `SELECT * FROM employee_bonuses WHERE employee_id = ?`;
+    const bonParams = [targetId];
+    if (filterMonth !== 'all') {
+      bonQuery += ` AND month = ?`;
+      bonParams.push(filterMonth);
+    }
+    bonQuery += ` ORDER BY date DESC, created_at DESC`;
+    const bonuses = db.prepare(bonQuery).all(...bonParams);
+
+    let totalBonuses = 0;
+    bonuses.forEach(b => {
+      totalBonuses += parseFloat(b.amount || 0);
+    });
+
+    totalAdvances = parseFloat(totalAdvances.toFixed(2));
+    totalBonuses = parseFloat(totalBonuses.toFixed(2));
+
     const baseSalary = parseFloat(employee.base_salary || 3000);
-    const netSalary = Math.max(0, parseFloat((baseSalary - totalDeductions).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
 
     const totalTrackedDays = records.length;
     const disciplineRate = presentDays > 0 ? Math.round((onTimeDays / presentDays) * 100) : 0;
@@ -218,6 +251,8 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
       availableMonths: availableMonthsRaw,
       stats: {
         baseSalary,
+        totalBonuses,
+        totalAdvances,
         netSalary,
         totalLateDeductions,
         totalAbsenceDeductions,
@@ -234,7 +269,9 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
         totalDeductions,
         disciplineRate
       },
-      recentRecords: records
+      recentRecords: records,
+      advances,
+      bonuses
     });
   } catch (error) {
     console.error('Get employee stats error:', error);
@@ -305,13 +342,8 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     let photoPath = profile_photo || null;
     if (!photoPath) {
       const initial = full_name.trim().charAt(0);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-        <rect width="200" height="200" fill="#3b82f6" rx="100"/>
-        <text x="100" y="115" font-family="Arial, Tajawal, sans-serif" font-size="64" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
-      </svg>`;
-      const fileName = `avatar_${Date.now()}_${Math.floor(Math.random()*1000)}.svg`;
-      fs.writeFileSync(path.join(uploadsDir, fileName), svg);
-      photoPath = `/uploads/${fileName}`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#3b82f6" rx="100"/><text x="100" y="115" font-family="Cairo, Arial, sans-serif" font-size="64" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+      photoPath = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
     }
 
     const activeStatus = is_active !== undefined ? parseInt(is_active, 10) : 1;
@@ -382,7 +414,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const {
       full_name, email, password, confirm_password, department_id,
-      job_title, phone, hire_date, base_salary, schedule_id, is_active
+      job_title, phone, hire_date, base_salary, schedule_id, is_active, profile_photo
     } = req.body;
 
     if (email && email.trim().toLowerCase() !== oldEmp.email.toLowerCase()) {
@@ -403,11 +435,35 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       passHash = bcrypt.hashSync(password.trim(), 10);
     }
 
+    let photoPath = oldEmp.profile_photo;
+    if (profile_photo && profile_photo.startsWith('data:image')) {
+      photoPath = profile_photo;
+      try {
+        if (!process.env.VERCEL) {
+          const matches = profile_photo.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          let buffer;
+          let ext = 'jpg';
+          if (matches && matches.length === 3) {
+            ext = matches[1].includes('png') ? 'png' : 'jpg';
+            buffer = Buffer.from(matches[2], 'base64');
+          } else {
+            buffer = Buffer.from(profile_photo, 'base64');
+          }
+          const fileName = `avatar_emp_${targetId}_${Date.now()}.${ext}`;
+          fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
+        }
+      } catch (imgErr) {
+        console.warn('Optional local employee photo write skipped:', imgErr.message);
+      }
+    } else if (profile_photo && (profile_photo.startsWith('/uploads/') || profile_photo.startsWith('http'))) {
+      photoPath = profile_photo;
+    }
+
     db.prepare(`
       UPDATE users SET
         full_name = ?, email = ?, password_hash = ?, department_id = ?,
         job_title = ?, phone = ?, hire_date = ?, base_salary = ?,
-        schedule_id = ?, is_active = ?
+        schedule_id = ?, is_active = ?, profile_photo = ?
       WHERE id = ?
     `).run(
       full_name !== undefined && full_name.trim().length > 0 ? full_name.trim() : oldEmp.full_name,
@@ -420,6 +476,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       base_salary !== undefined ? parseFloat(base_salary) : oldEmp.base_salary,
       schedule_id !== undefined ? (schedule_id ? parseInt(schedule_id, 10) : null) : oldEmp.schedule_id,
       is_active !== undefined ? parseInt(is_active, 10) : oldEmp.is_active,
+      photoPath,
       targetId
     );
 

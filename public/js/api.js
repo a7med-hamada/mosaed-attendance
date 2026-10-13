@@ -361,8 +361,106 @@ const API = {
   getAuditLogs(params = {}) {
     const qs = new URLSearchParams(params).toString();
     return this.request(`/audit?${qs}`);
+  },
+
+  // WhatsApp
+  getWhatsAppSettings() {
+    return this.request('/whatsapp/settings');
+  },
+  saveWhatsAppSettings(data) {
+    return this.request('/whatsapp/settings', {
+      method: 'PUT',
+      body: data
+    });
+  },
+  getMorningBriefing(date) {
+    const qs = date ? `?date=${date}` : '';
+    return this.request(`/whatsapp/morning-briefing${qs}`);
+  },
+  sendMorningBriefing(data = {}) {
+    return this.request('/whatsapp/morning-briefing/send', {
+      method: 'POST',
+      body: data
+    });
+  },
+  sendPayslipWhatsApp(data) {
+    return this.request('/whatsapp/send-payslip', {
+      method: 'POST',
+      body: data
+    });
+  },
+  sendAllPayslipsWhatsApp(month) {
+    return this.request('/whatsapp/send-all-payslips', {
+      method: 'POST',
+      body: { month }
+    });
+  },
+  testWhatsApp(data) {
+    return this.request('/whatsapp/test', {
+      method: 'POST',
+      body: data
+    });
+  },
+  getWhatsAppLogs() {
+    return this.request('/whatsapp/logs');
   }
 };
+
+// Universal 12-hour Time Formatter (ص / م)
+function formatTime12(timeStr) {
+  if (!timeStr || timeStr === '-' || timeStr === '—' || timeStr === 'null' || timeStr === 'undefined') return '—';
+  
+  // If it's a full ISO or date string
+  if (typeof timeStr === 'string' && (timeStr.includes('T') || (timeStr.includes('-') && timeStr.includes(':')))) {
+    const d = new Date(timeStr);
+    if (!isNaN(d.getTime())) {
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const period = hours >= 12 ? 'م' : 'ص';
+      hours = hours % 12 || 12;
+      return `${String(hours).padStart(2, '0')}:${minutes} ${period}`;
+    }
+  }
+
+  const parts = String(timeStr).trim().split(':');
+  if (parts.length >= 2) {
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1].padStart(2, '0');
+    if (!isNaN(hours)) {
+      const period = hours >= 12 ? 'م' : 'ص';
+      hours = hours % 12 || 12;
+      return `${String(hours).padStart(2, '0')}:${minutes} ${period}`;
+    }
+  }
+  return timeStr;
+}
+window.formatTime12 = formatTime12;
+
+function formatDateTime12(dateTimeStr) {
+  if (!dateTimeStr || dateTimeStr === '-' || dateTimeStr === '—') return '—';
+  const d = new Date(dateTimeStr);
+  if (isNaN(d.getTime())) return dateTimeStr;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  let hours = d.getHours();
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  const period = hours >= 12 ? 'م' : 'ص';
+  hours = hours % 12 || 12;
+  return `${y}-${m}-${day} ${String(hours).padStart(2, '0')}:${mins} ${period}`;
+}
+window.formatDateTime12 = formatDateTime12;
+
+// WhatsApp Link Generator
+function getWhatsAppLink(phone, message) {
+  if (!phone) return '#';
+  let cleaned = String(phone).replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('+')) cleaned = cleaned.substring(1);
+  if (/^01[0125][0-9]{8}$/.test(cleaned)) cleaned = '2' + cleaned;
+  else if (/^1[0125][0-9]{8}$/.test(cleaned)) cleaned = '20' + cleaned;
+  return `https://wa.me/${cleaned}?text=${encodeURIComponent(message || '')}`;
+}
+window.getWhatsAppLink = getWhatsAppLink;
 
 // UI Notification Toast
 function showToast(message, type = 'info', duration = 4000) {

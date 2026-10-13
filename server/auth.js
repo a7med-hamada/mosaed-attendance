@@ -238,22 +238,24 @@ router.put('/profile', authenticateToken, (req, res) => {
     // Handle avatar update if base64 provided
     let photoUrl = null;
     if (profile_photo && profile_photo.startsWith('data:image')) {
+      photoUrl = profile_photo;
       try {
-        const matches = profile_photo.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        let buffer;
-        let ext = 'jpg';
-        if (matches && matches.length === 3) {
-          ext = matches[1].includes('png') ? 'png' : 'jpg';
-          buffer = Buffer.from(matches[2], 'base64');
-        } else {
-          buffer = Buffer.from(profile_photo, 'base64');
+        if (!process.env.VERCEL) {
+          const matches = profile_photo.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          let buffer;
+          let ext = 'jpg';
+          if (matches && matches.length === 3) {
+            ext = matches[1].includes('png') ? 'png' : 'jpg';
+            buffer = Buffer.from(matches[2], 'base64');
+          } else {
+            buffer = Buffer.from(profile_photo, 'base64');
+          }
+          const fileName = `avatar_user${userId}_${Date.now()}.${ext}`;
+          const filePath = path.join(uploadsDir, fileName);
+          fs.writeFileSync(filePath, buffer);
         }
-        const fileName = `avatar_user${userId}_${Date.now()}.${ext}`;
-        const filePath = path.join(uploadsDir, fileName);
-        fs.writeFileSync(filePath, buffer);
-        photoUrl = `/uploads/${fileName}`;
       } catch (imgErr) {
-        console.error('Save profile photo error:', imgErr);
+        console.warn('Optional local avatar file write skipped:', imgErr.message);
       }
     }
 

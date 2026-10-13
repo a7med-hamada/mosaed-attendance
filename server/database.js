@@ -2,17 +2,37 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
-const DB_FILE = path.join(__dirname, '..', 'attendance.db');
-const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const SOURCE_DB_FILE = path.join(__dirname, '..', 'attendance.db');
+let DB_FILE = SOURCE_DB_FILE;
+let uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+
+if (process.env.VERCEL) {
+  const tmpDbFile = path.join('/tmp', 'attendance.db');
+  try {
+    if (!fs.existsSync(tmpDbFile) && fs.existsSync(SOURCE_DB_FILE)) {
+      fs.copyFileSync(SOURCE_DB_FILE, tmpDbFile);
+    }
+    DB_FILE = tmpDbFile;
+    uploadsDir = path.join('/tmp', 'uploads');
+  } catch (err) {
+    console.error('Vercel /tmp setup fallback error:', err);
+  }
+}
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (mkdirErr) {
+  console.warn('Uploads dir warning:', mkdirErr.message);
 }
 
 const db = new DatabaseSync(DB_FILE);
 
-// Enable WAL mode & foreign keys for performance and consistency
+// Enable WAL mode (or MEMORY on serverless) & foreign keys for performance and consistency
+const journalMode = process.env.VERCEL ? 'MEMORY' : 'WAL';
 db.exec(`
-  PRAGMA journal_mode = WAL;
+  PRAGMA journal_mode = ${journalMode};
   PRAGMA foreign_keys = ON;
 
   CREATE TABLE IF NOT EXISTS departments (
@@ -188,11 +208,24 @@ db.exec(`
     FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS whatsapp_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient_phone TEXT NOT NULL,
+    recipient_name TEXT,
+    recipient_role TEXT DEFAULT 'employee',
+    message_type TEXT NOT NULL, -- 'late_alert', 'morning_briefing', 'payslip', 'test'
+    message_text TEXT NOT NULL,
+    status TEXT DEFAULT 'sent', -- 'sent', 'pending', 'failed', 'direct_opened'
+    response_details TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_att_emp_date ON attendance_records(employee_id, date);
   CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
   CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
   CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
+  CREATE INDEX IF NOT EXISTS idx_wa_phone ON whatsapp_logs(recipient_phone);
 `);
 
 // Safe migrations for multi-manager workspace separation & setup states
@@ -253,6 +286,31 @@ try {
   }
 } catch (cleanErr) {
   console.error('Startup cleanup error:', cleanErr);
+}
+
+// Initialize default WhatsApp & 12-hour format settings
+try {
+  const defaultWhatsAppSettings = [
+    { key: 'whatsapp_enabled', value: '1', category: 'whatsapp', description: 'تفعيل نظام إشعارات الواتساب' },
+    { key: 'whatsapp_provider', value: 'direct', category: 'whatsapp', description: 'مزود خدمة واتساب (direct, ultramsg, greenapi, custom)' },
+    { key: 'whatsapp_api_url', value: '', category: 'whatsapp', description: 'رابط بوابة الـ API' },
+    { key: 'whatsapp_instance_id', value: '', category: 'whatsapp', description: 'معرف الـ Instance' },
+    { key: 'whatsapp_api_token', value: '', category: 'whatsapp', description: 'رمز المصادقة API Token' },
+    { key: 'whatsapp_manager_phone', value: '01227580963', category: 'whatsapp', description: 'رقم واتساب المدير لتقرير الصباح' },
+    { key: 'whatsapp_auto_late_alert', value: '1', category: 'whatsapp', description: 'إرسال إشعار فوري للموظف عند التأخير' },
+    { key: 'time_format_12h', value: '1', category: 'general', description: 'عرض الوقت بنظام 12 ساعة' }
+  ];
+
+  const insertSettingStmt = db.prepare(`
+    INSERT OR IGNORE INTO company_settings (key, value, category, description)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  defaultWhatsAppSettings.forEach(s => {
+    insertSettingStmt.run(s.key, s.value, s.category, s.description);
+  });
+} catch (waSettingErr) {
+  console.error('WhatsApp settings init error:', waSettingErr);
 }
 
 // Helper to log audit events

@@ -296,7 +296,7 @@ const App = {
         <div class="flex-1">
           <div class="font-bold text-slate-900 dark:text-white">${n.title}</div>
           <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${n.message}</div>
-          <div class="text-[10px] text-slate-400 font-mono mt-1">${n.created_at}</div>
+          <div class="text-[10px] text-slate-400 font-mono mt-1">${formatDateTime12(n.created_at)}</div>
         </div>
         <button onclick="App.deleteNotification(${n.id})" class="p-1 text-slate-300 hover:text-rose-500 transition-colors" title="حذف هذا الإشعار">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>

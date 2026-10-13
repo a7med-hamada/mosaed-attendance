@@ -17,6 +17,7 @@ const reportsRouter = require('./reports');
 const notificationsRouter = require('./notifications');
 const auditRouter = require('./audit');
 const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
+const whatsappModule = require('./whatsapp');
 
 // Auto seed on boot
 seedDatabase();
@@ -47,13 +48,16 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/advances', advancesRouter);
 app.use('/api/bonuses', bonusesRouter);
+app.use('/api/whatsapp', whatsappModule.router);
 
 // Fallback to SPA index.html
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, error: 'نقطة النهاية غير موجودة' });
   }
-  res.sendFile(path.join(publicDir, 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
 });
 
 // Start server

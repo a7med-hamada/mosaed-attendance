@@ -16,6 +16,11 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
+  <!-- Cairo Font & Arabic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -24,7 +29,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Tajawal', 'Inter', 'sans-serif'],
+            sans: ['Cairo', 'sans-serif'],
           },
           colors: {
             brand: {
@@ -172,7 +177,7 @@
   <div id="app-view" class="min-h-screen flex flex-col hidden">
     <!-- Top Global Header -->
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
-      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
+      <div class="w-full max-w-[96%] xl:max-w-[85%] 2xl:max-w-[80%] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
         <!-- Logo & Title -->
         <div class="flex items-center gap-2 sm:gap-3 min-w-0">
           <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-grad text-white flex items-center justify-center shadow-md shadow-emerald-glow flex-shrink-0">
@@ -244,7 +249,7 @@
     </div>
 
     <!-- Main Dynamic Body -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+    <main class="flex-1 w-full max-w-[96%] xl:max-w-[85%] 2xl:max-w-[80%] mx-auto p-3 sm:p-6 lg:p-8">
 
       <!-- ========================================== -->
       <!-- VIEW A: EMPLOYEE PORTAL -->
@@ -263,7 +268,7 @@
       <div id="manager-layout" class="hidden">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
           <!-- Sidebar Navigation (Horizontal on mobile, vertical on desktop) -->
-          <aside class="lg:col-span-3 min-w-0">
+          <aside class="lg:col-span-3 xl:col-span-2 min-w-0">
             <div class="bg-white dark:bg-slate-900 rounded-2xl lg:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-slate-200 dark:border-slate-800 sticky top-18 lg:top-24 z-20">
               <span class="hidden lg:block text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2.5">قائمة الإدارة</span>
               <ul id="manager-nav-list" class="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-1 lg:pb-0 scrollbar-none w-full"></ul>
@@ -271,7 +276,7 @@
           </aside>
 
           <!-- Main Content Area -->
-          <section class="lg:col-span-9 min-w-0" id="manager-content"></section>
+          <section class="lg:col-span-9 xl:col-span-10 min-w-0" id="manager-content"></section>
         </div>
       </div>
 
@@ -450,6 +455,7 @@
   <div id="advances-modal"></div>
   <div id="bonuses-modal"></div>
   <div id="payslip-modal"></div>
+  <div id="gps-helper-modal"></div>
 
   <!-- General Photo Modal -->
   <div id="photo-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">

@@ -23,11 +23,17 @@ const EmployeeUI = {
       const dateEl = document.getElementById('emp-current-date');
       if (clockEl || dateEl) {
         const now = new Date();
-        const locale = currentLang === 'ar' ? 'ar-SA' : 'en-US';
         if (clockEl) {
-          clockEl.textContent = now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+          let hours = now.getHours();
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const seconds = String(now.getSeconds()).padStart(2, '0');
+          const period = hours >= 12 ? 'م' : 'ص';
+          hours = hours % 12 || 12;
+          const hoursStr = String(hours).padStart(2, '0');
+          clockEl.textContent = `${hoursStr}:${minutes}:${seconds} ${period}`;
         }
         if (dateEl) {
+          const locale = currentLang === 'ar' ? 'ar-EG' : 'en-US';
           dateEl.textContent = now.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
       }
@@ -130,6 +136,143 @@ const EmployeeUI = {
     );
   },
 
+  openGpsEnableModal() {
+    const modal = document.getElementById('gps-helper-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-right text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <i data-lucide="navigation" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تشغيل وتفعيل الـ GPS</h3>
+                <span class="text-[11px] text-slate-400">إرشادات تفعيل إشارة الموقع الجغرافي</span>
+              </div>
+            </div>
+            <button onclick="document.getElementById('gps-helper-modal').innerHTML=''" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Live status box -->
+          <div id="gps-modal-live-status" class="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-center gap-3 text-blue-700 dark:text-blue-300 font-semibold">
+            <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+            <span>جاري محاولة الاتصال بالـ GPS والتقاط إحداثياتك...</span>
+          </div>
+
+          <!-- Quick 3-Step Visual Guide -->
+          <div class="space-y-2.5 pt-1">
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 font-black flex items-center justify-center flex-shrink-0 text-xs">1</span>
+              <div>
+                <strong class="font-bold text-slate-900 dark:text-white block text-xs">إذا ظهرت لك رسالة المتصفح:</strong>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  اضغط فوراً على خيار <strong class="text-emerald-600 dark:text-emerald-400 font-bold">"سماح" (Allow)</strong> للموافقة على تحديد موقعك.
+                </p>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-500 font-black flex items-center justify-center flex-shrink-0 text-xs">2</span>
+              <div>
+                <strong class="font-bold text-slate-900 dark:text-white block text-xs">على الموبايل (تشغيل الموقع):</strong>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  اسحب شريط الإشعارات من أعلى الشاشة وتأكد من تشغيل أيقونة <strong class="text-blue-600 dark:text-blue-400 font-bold">"الموقع / Location"</strong> لتكون مفعّلة.
+                </p>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-start gap-3">
+              <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-500 font-black flex items-center justify-center flex-shrink-0 text-xs">3</span>
+              <div>
+                <strong class="font-bold text-slate-900 dark:text-white block text-xs">إذا كان الموقع محظوراً بالمتصفح (Locked 🔒):</strong>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  اضغط على أيقونة 🔒 بجوار رابط الموقع في شريط العنوان بالأعلى، واضبط <strong>"الموقع / Location"</strong> على <strong>"سماح / Allow"</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Big Action Button -->
+          <div class="pt-2">
+            <button type="button" onclick="EmployeeUI.forceRetryGps()" class="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span>فحص وتشغيل الموقع الآن ⚡</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    // Trigger browser geolocation prompt immediately
+    this.forceRetryGps();
+  },
+
+  forceRetryGps() {
+    const liveStatus = document.getElementById('gps-modal-live-status');
+    if (liveStatus) {
+      liveStatus.className = 'p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-center gap-3 text-blue-700 dark:text-blue-300 font-semibold';
+      liveStatus.innerHTML = `
+        <div class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+        <span>جاري طلب الإذن والتقاط إشارة الموقع من الجهاز...</span>
+      `;
+    }
+
+    if (!navigator.geolocation) {
+      if (liveStatus) {
+        liveStatus.className = 'p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-rose-600 font-bold';
+        liveStatus.innerHTML = `<span>المتصفح لا يدعم خدمة تحديد الموقع الجغرافي.</span>`;
+      }
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        currentEmpPosition = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy)
+        };
+        if (liveStatus) {
+          liveStatus.className = 'p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 text-emerald-700 dark:text-emerald-300 font-bold';
+          liveStatus.innerHTML = `
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0"></i>
+            <span>تم تفعيل وتحديد موقعك بنجاح! دقة الإشارة: ${currentEmpPosition.accuracy} متر.</span>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+        showToast('تم التقاط إشارة الـ GPS بنجاح!', 'success');
+        this.updateGpsCard();
+        setTimeout(() => {
+          const m = document.getElementById('gps-helper-modal');
+          if (m) m.innerHTML = '';
+        }, 1200);
+      },
+      (err) => {
+        console.warn('Geolocation retry error:', err);
+        currentEmpPosition = null;
+        if (liveStatus) {
+          liveStatus.className = 'p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-rose-700 dark:text-rose-300 font-medium text-xs';
+          liveStatus.innerHTML = `
+            <i data-lucide="alert-circle" class="w-5 h-5 text-rose-500 flex-shrink-0"></i>
+            <div>
+              <strong class="font-bold block">لم يتم الحصول على الموقع بعد:</strong>
+              <span>${err.code === 1 ? 'تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو القفل 🔒 بالأعلى.' : 'تأكد من تشغيل الـ GPS من شريط إشعارات الهاتف.'}</span>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+        this.updateGpsCard(err.message);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  },
+
   updateGpsCard(errorMsg = null) {
     const statusContainer = document.getElementById('emp-gps-status-card');
     const checkInBtn = document.getElementById('emp-checkin-submit-btn');
@@ -139,15 +282,29 @@ const EmployeeUI = {
 
     if (errorMsg || !currentEmpPosition) {
       statusContainer.innerHTML = `
-        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 flex items-start gap-3">
-          <i data-lucide="alert-triangle" class="w-6 h-6 flex-shrink-0 text-amber-600 mt-0.5"></i>
-          <div>
-            <h4 class="font-bold text-sm">تعذر الحصول على إذن الموقع الجغرافي</h4>
-            <p class="text-xs mt-1 text-amber-700 dark:text-amber-400">
-              يرجى تفعيل صلاحية الوصول للموقع (GPS) في المتصفح للسماح بتسجيل الحضور في مقر العمل.
-            </p>
-            <button onclick="EmployeeUI.requestGeolocation()" class="mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> إعادة المحاولة
+        <div class="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-3">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i data-lucide="map-pin-off" class="w-5 h-5 animate-pulse"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                <h4 class="font-extrabold text-sm text-amber-900 dark:text-amber-100">تنبيه: الموقع الجغرافي (GPS) غير مفعل حالياً</h4>
+              </div>
+              <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                لتسجيل الحضور أو الانصراف، يجب فتح الـ GPS في هاتفك والموافقة على إذن الموقع للتأكد من تواجدك في مقر العمل.
+              </p>
+            </div>
+          </div>
+          <div class="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <button type="button" onclick="EmployeeUI.openGpsEnableModal()" class="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all">
+              <i data-lucide="navigation" class="w-4 h-4"></i>
+              <span>📍 تشغيل وتفعيل الـ GPS فوراً</span>
+            </button>
+            <button type="button" onclick="EmployeeUI.requestGeolocation()" class="py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>فحص مجدد</span>
             </button>
           </div>
         </div>
@@ -344,15 +501,24 @@ const EmployeeUI = {
               <div class="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-right text-xs">
                 <div>
                   <span class="text-slate-500 dark:text-slate-400 block">${t('check_in_time_lbl')}</span>
-                  <span class="text-base font-bold text-slate-800 dark:text-white">${todayRecord.check_in_time}</span>
+                  <span class="text-base font-bold text-slate-800 dark:text-white font-mono">${formatTime12(todayRecord.check_in_time)}</span>
                 </div>
                 <div>
                   <span class="text-slate-500 dark:text-slate-400 block">${t('status_lbl')}</span>
                   <div class="mt-1">${getStatusBadge(todayRecord.status)}</div>
                 </div>
                 ${todayRecord.late_minutes > 0 ? `
-                  <div class="col-span-2 text-amber-600 dark:text-amber-400 pt-2 border-t border-slate-200 dark:border-slate-700 font-medium">
-                    تأخير: ${todayRecord.late_minutes} دقيقة
+                  <div class="col-span-2 pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
+                    <div class="flex items-center justify-between text-amber-600 dark:text-amber-400 font-bold">
+                      <span>تأخير: ${todayRecord.late_minutes} دقيقة</span>
+                      ${todayRecord.estimated_deduction > 0 ? `<span class="text-rose-500 font-extrabold text-xs">الخصم المطبق: ${todayRecord.estimated_deduction} ج.م</span>` : ''}
+                    </div>
+                    <a href="${getWhatsAppLink(user.phone, `صباح الخير، تم تسجيل حضوري اليوم متأخراً ${todayRecord.late_minutes} دقيقة${todayRecord.estimated_deduction > 0 ? ` - الخصم المطبق ${todayRecord.estimated_deduction} ج.م` : ''}.`)}"
+                       target="_blank"
+                       class="w-full py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all border border-emerald-500/30 shadow-sm">
+                      <i data-lucide="message-circle" class="w-4 h-4"></i>
+                      <span>إشعار التأخير عبر واتساب 📲</span>
+                    </a>
                   </div>
                 ` : ''}
               </div>
@@ -384,11 +550,11 @@ const EmployeeUI = {
               <div class="grid grid-cols-3 gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-center text-xs">
                 <div>
                   <span class="text-slate-500 block">الحضور</span>
-                  <strong class="text-slate-800 dark:text-white text-sm">${todayRecord.check_in_time}</strong>
+                  <strong class="text-slate-800 dark:text-white text-sm font-mono">${formatTime12(todayRecord.check_in_time)}</strong>
                 </div>
                 <div>
                   <span class="text-slate-500 block">الانصراف</span>
-                  <strong class="text-slate-800 dark:text-white text-sm">${todayRecord.check_out_time}</strong>
+                  <strong class="text-slate-800 dark:text-white text-sm font-mono">${formatTime12(todayRecord.check_out_time)}</strong>
                 </div>
                 <div>
                   <span class="text-slate-500 block">ساعات العمل</span>
@@ -730,8 +896,8 @@ const EmployeeUI = {
               ${records.map(r => `
                 <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                   <td class="py-3.5 px-4 font-mono font-medium text-slate-800 dark:text-slate-200">${r.date}</td>
-                  <td class="py-3.5 px-4 font-mono">${r.check_in_time || '-'}</td>
-                  <td class="py-3.5 px-4 font-mono">${r.check_out_time || '-'}</td>
+                  <td class="py-3.5 px-4 font-mono">${formatTime12(r.check_in_time)}</td>
+                  <td class="py-3.5 px-4 font-mono">${formatTime12(r.check_out_time)}</td>
                   <td class="py-3.5 px-4">${getStatusBadge(r.status)}</td>
                   <td class="py-3.5 px-4 ${r.late_minutes > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}">
                     ${r.late_minutes > 0 ? `${r.late_minutes} د` : '-'}
@@ -960,7 +1126,109 @@ const EmployeeUI = {
     }
   },
 
-  // 5. Profile Tab
+  // 5. Profile Tab (Editable Name & Avatar)
+  tempEmployeeAvatar: null,
+
+  handleProfileAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('يرجى اختيار ملف صورة صالح', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 400;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        EmployeeUI.tempEmployeeAvatar = compressedBase64;
+        const preview = document.getElementById('emp-profile-avatar-preview');
+        if (preview) preview.src = compressedBase64;
+        showToast('تم تحميل الصورة بنجاح! اضغط "حفظ التعديلات" لتطبيقها', 'info');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  async saveProfile(event) {
+    event.preventDefault();
+    const fullNameInput = document.getElementById('emp-edit-fullname');
+    const phoneInput = document.getElementById('emp-edit-phone');
+    const emailInput = document.getElementById('emp-edit-email');
+    const passInput = document.getElementById('emp-edit-password');
+    const confirmPassInput = document.getElementById('emp-edit-confirm-password');
+
+    const fullName = fullNameInput ? fullNameInput.value.trim() : '';
+    if (!fullName) {
+      showToast('الاسم الكامل حقل إلزامي', 'warning');
+      return;
+    }
+
+    const data = {
+      full_name: fullName,
+      phone: phoneInput ? phoneInput.value.trim() : null,
+      email: emailInput ? emailInput.value.trim() : (API.getCurrentUser() || {}).email
+    };
+
+    if (passInput && passInput.value.trim().length > 0) {
+      if (passInput.value.trim().length < 6) {
+        showToast('كلمة المرور يجب أن لا تقل عن 6 خانات', 'danger');
+        return;
+      }
+      if (passInput.value !== confirmPassInput.value) {
+        showToast('كلمتا المرور غير متطابقتين', 'danger');
+        return;
+      }
+      data.password = passInput.value.trim();
+      data.confirm_password = confirmPassInput.value.trim();
+    }
+
+    if (this.tempEmployeeAvatar) {
+      data.profile_photo = this.tempEmployeeAvatar;
+    }
+
+    try {
+      const res = await API.updateProfile(data);
+      showToast(res.message || 'تم تحديث بياناتك الشخصية وصورتك بنجاح!', 'success');
+
+      // Refresh currentUser
+      const meRes = await API.getMe();
+      if (meRes && meRes.user) {
+        API.setCurrentUser(meRes.user);
+        App.currentUser = meRes.user;
+        const avatarEl = document.getElementById('header-user-avatar');
+        const nameEl = document.getElementById('header-user-name');
+        if (avatarEl) avatarEl.src = meRes.user.profile_photo || '/uploads/avatar.svg';
+        if (nameEl) nameEl.textContent = meRes.user.full_name || '';
+      }
+      this.tempEmployeeAvatar = null;
+      this.renderProfileTab();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
   renderProfileTab() {
     const container = document.getElementById('employee-content');
     if (!container) return;
@@ -969,37 +1237,112 @@ const EmployeeUI = {
 
     container.innerHTML = `
       <div class="max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6">
-        <div class="flex items-center gap-4">
-          <img src="${u.profile_photo || '/uploads/avatar.svg'}" class="w-20 h-20 rounded-2xl object-cover bg-slate-100" />
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 class="text-xl font-bold text-slate-900 dark:text-white">${u.full_name}</h3>
-            <p class="text-sm text-slate-500">${u.job_title || 'موظف'} • ${u.employee_code}</p>
-            <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-              ${u.department_name || 'القسم العام'}
-            </span>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="user-cog" class="w-5 h-5 text-emerald-500"></i> الملف الشخصي وتعديل البيانات
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">يمكنك تعديل اسمك الكامل وصورتك الشخصية ورقم الهاتف وكلمة المرور</p>
           </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            ${u.department_name || 'القسم العام'}
+          </span>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm">
-          <div>
-            <span class="text-xs text-slate-500 block">البريد الإلكتروني:</span>
-            <span class="font-medium text-slate-800 dark:text-slate-200">${u.email}</span>
+        <!-- Form for editing profile -->
+        <form onsubmit="EmployeeUI.saveProfile(event)" class="space-y-5">
+          <!-- Avatar section -->
+          <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <div class="relative group flex-shrink-0">
+              <img id="emp-profile-avatar-preview" src="${u.profile_photo || '/uploads/avatar.svg'}" class="w-24 h-24 rounded-2xl object-cover bg-slate-100 dark:bg-slate-700 border-2 border-white dark:border-slate-600 shadow-md" />
+              <label for="emp-avatar-input" class="absolute inset-0 bg-slate-900/60 rounded-2xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[11px] font-bold cursor-pointer transition-opacity">
+                <i data-lucide="camera" class="w-5 h-5 mb-1"></i>
+                تغيير الصورة
+              </label>
+              <input type="file" id="emp-avatar-input" accept="image/*" class="hidden" onchange="EmployeeUI.handleProfileAvatarUpload(event)" />
+            </div>
+            <div class="text-center sm:text-right flex-1 min-w-0">
+              <h4 class="text-base font-extrabold text-slate-900 dark:text-white">${u.full_name}</h4>
+              <p class="text-xs text-slate-500 font-mono mt-0.5">${u.employee_code} • ${u.job_title || 'موظف'}</p>
+              <div class="mt-3 flex items-center justify-center sm:justify-start gap-2">
+                <label for="emp-avatar-input" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors shadow-xs">
+                  <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-500"></i>
+                  <span>تغيير الصورة الشخصية</span>
+                </label>
+              </div>
+            </div>
           </div>
-          <div>
-            <span class="text-xs text-slate-500 block">رقم الهاتف:</span>
-            <span class="font-medium text-slate-800 dark:text-slate-200">${u.phone || '-'}</span>
+
+          <!-- Name & Phone Fields -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                الاسم الكامل *
+              </label>
+              <input type="text" id="emp-edit-fullname" required value="${(u.full_name || '').replace(/"/g, '&quot;')}"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                رقم الهاتف (اختياري)
+              </label>
+              <input type="text" id="emp-edit-phone" value="${(u.phone || '').replace(/"/g, '&quot;')}" placeholder="010..."
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+            </div>
           </div>
+
           <div>
-            <span class="text-xs text-slate-500 block">تاريخ التعيين:</span>
-            <span class="font-medium text-slate-800 dark:text-slate-200">${u.hire_date || '-'}</span>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              البريد الإلكتروني (لتسجيل الدخول) *
+            </label>
+            <input type="email" id="emp-edit-email" required value="${(u.email || '').replace(/"/g, '&quot;')}"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
           </div>
-          <div>
-            <span class="text-xs text-slate-500 block">جدول الدوام المعين:</span>
-            <span class="font-medium text-slate-800 dark:text-slate-200">${u.schedule_name || 'الدوام القياسي (09:00 - 17:00)'}</span>
+
+          <!-- Password change (optional) -->
+          <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+            <span class="text-xs font-bold text-amber-700 dark:text-amber-400 block">تغيير كلمة المرور (اختياري)</span>
+            <p class="text-[11px] text-slate-500">اترك الحقول فارغة إذا كنت ترغب بالاحتفاظ بكلمة مرورك الحالية.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input type="password" id="emp-edit-password" minlength="6" placeholder="كلمة المرور الجديدة"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+              <input type="password" id="emp-edit-confirm-password" minlength="6" placeholder="تأكيد كلمة المرور"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+            </div>
           </div>
-        </div>
+
+          <!-- Read-only organizational info -->
+          <div class="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+            <div>
+              <span class="text-slate-400 block font-medium">الرقم الوظيفي:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200 font-mono">${u.employee_code || '-'}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block font-medium">المسمى الوظيفي:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">${u.job_title || 'موظف'}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block font-medium">تاريخ التعيين:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200 font-mono">${u.hire_date || '-'}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block font-medium">جدول الدوام:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">${u.schedule_name || 'الدوام القياسي'}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>حفظ التعديلات</span>
+            </button>
+          </div>
+        </form>
       </div>
     `;
+    if (window.lucide) lucide.createIcons();
   },
 
   // 6. Finances & Payroll Tab (المرتب والسلف وقسيمة الراتب)

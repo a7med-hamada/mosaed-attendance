@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
+const {
+  sendWhatsAppMessage,
+  buildLateAlertMessage,
+  getWhatsAppSettings,
+  generateWhatsAppLink
+} = require('./whatsapp');
 
 const router = express.Router();
 
@@ -31,27 +37,28 @@ function getCurrentTimeString() {
   return `${h}:${m}:${s}`;
 }
 
-// Save base64 photo to uploads folder
+// Save base64 photo (returns data URI for cloud persistence and optionally saves to disk locally)
 function saveBase64Image(base64Data, prefix = 'att') {
   if (!base64Data) return null;
   try {
-    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    let buffer;
-    let ext = 'jpg';
-    if (matches && matches.length === 3) {
-      ext = matches[1].includes('png') ? 'png' : 'jpg';
-      buffer = Buffer.from(matches[2], 'base64');
-    } else {
-      buffer = Buffer.from(base64Data, 'base64');
+    if (!process.env.VERCEL) {
+      const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      let buffer;
+      let ext = 'jpg';
+      if (matches && matches.length === 3) {
+        ext = matches[1].includes('png') ? 'png' : 'jpg';
+        buffer = Buffer.from(matches[2], 'base64');
+      } else {
+        buffer = Buffer.from(base64Data, 'base64');
+      }
+      const fileName = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+      const filePath = path.join(uploadsDir, fileName);
+      fs.writeFileSync(filePath, buffer);
     }
-    const fileName = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
-    const filePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(filePath, buffer);
-    return `/uploads/${fileName}`;
   } catch (err) {
-    console.error('Error saving image:', err);
-    return null;
+    // Ignore local disk write error on read-only environments
   }
+  return base64Data.startsWith('data:image') ? base64Data : `data:image/jpeg;base64,${base64Data}`;
 }
 
 // Automatic absence check logic
@@ -111,7 +118,7 @@ setInterval(checkAndMarkAutoAbsences, 10 * 60 * 1000);
 // ==========================================
 // 1. Employee Check-in (POST /api/attendance/check-in)
 // ==========================================
-router.post('/check-in', authenticateToken, (req, res) => {
+router.post('/check-in', authenticateToken, async (req, res) => {
   try {
     const employeeId = req.user.id;
     const { latitude, longitude, accuracy } = req.body;
@@ -350,9 +357,37 @@ router.post('/check-in', authenticateToken, (req, res) => {
       createNotification(null, `تسجيل حضور متأخر: ${req.user.full_name}`, `الموظف ${req.user.full_name} سجل حضوره في ${currentTime} (${status === 'Late' ? `متأخر ${lateMinutes} دقيقة` : 'نصف يوم'}).`, 'warning');
     }
 
+    // Automatic WhatsApp notification if late
+    let whatsappAlert = null;
+    const waSettings = getWhatsAppSettings();
+    if ((status === 'Late' || status === 'Half Day') && waSettings.whatsapp_enabled === '1') {
+      try {
+        const empUserRow = db.prepare('SELECT phone, full_name FROM users WHERE id = ?').get(employeeId);
+        const empPhone = empUserRow ? (empUserRow.phone || req.user.phone) : req.user.phone;
+        if (empPhone) {
+          const lateMsg = buildLateAlertMessage(req.user.full_name, lateMinutes, deduction, currentTime);
+          const waRes = await sendWhatsAppMessage({
+            phone: empPhone,
+            name: req.user.full_name,
+            role: 'employee',
+            type: 'late_alert',
+            message: lateMsg
+          });
+          whatsappAlert = {
+            sent: waRes.apiDelivered || false,
+            phone: waRes.phone,
+            message: lateMsg,
+            waLink: waRes.waLink
+          };
+        }
+      } catch (waErr) {
+        console.error('Auto WhatsApp late alert error:', waErr);
+      }
+    }
+
     res.json({
       success: true,
-      message: 'تم تسجيل الحضور بنجاح',
+      message: 'تم تسجيل الحضور بنجاح' + (whatsappAlert ? ' (تم إشعار التأخير عبر واتساب)' : ''),
       record: {
         id: recordId,
         date: today,
@@ -362,7 +397,8 @@ router.post('/check-in', authenticateToken, (req, res) => {
         distance_meters: distanceMeters,
         verification_status: verificationStatus,
         photo_url: photoUrl
-      }
+      },
+      whatsapp_alert: whatsappAlert
     });
   } catch (error) {
     console.error('Check-in error:', error);

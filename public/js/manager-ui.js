@@ -3548,6 +3548,10 @@ const ManagerUI = {
             class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="gift" class="w-4 h-4"></i> + إضافة مكافأة
           </button>
+          <button onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="award" class="w-4 h-4"></i> إدارة وحذف المكافآت
+          </button>
           <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
             class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة ومراجعة السلف
@@ -3555,10 +3559,6 @@ const ManagerUI = {
           <button onclick="window.open('/api/reports/export/csv?date_from=${targetMonth}-01&date_to=${targetMonth}-31', '_blank')"
             class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="download" class="w-4 h-4"></i> تصدير Excel
-          </button>
-          <button onclick="ManagerUI.confirmResetArchive()"
-            class="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-all" title="تصفير سجلات وأرشيف الحضور والبدء من جديد">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> تصفير الأرشيف
           </button>
         `;
       }
@@ -4168,11 +4168,109 @@ const ManagerUI = {
       if (employeeId && month) {
         await this.openEmployeeMonthDetailsModal(employeeId, month);
       }
+      const hubBody = document.getElementById('bonuses-hub-body');
+      if (hubBody) {
+        await this.openBonusesManagementModal(month);
+      }
       if (this.activeSection === 'archive') {
         await this.renderMonthlyArchiveSection(month);
       }
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  async openBonusesManagementModal(selectedMonth = null) {
+    const modal = document.getElementById('bonuses-modal');
+    if (!modal) return;
+
+    const targetMonth = selectedMonth || new Date().toISOString().substring(0, 7);
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[90vh] flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="award" class="w-5 h-5 text-purple-500"></i> إدارة وحذف مكافآت الموظفين
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">عرض وسجل جميع المكافآت والحوافز لشهر ${targetMonth} مع إمكانية حذف أي مكافأة أضيفت بالخطأ</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="ManagerUI.openAddBonusModal(null, '${targetMonth}')"
+                class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-purple-500/25">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> + إضافة مكافأة جديدة
+              </button>
+              <button onclick="document.getElementById('bonuses-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bonuses Table Container -->
+          <div class="py-3 flex-1 overflow-y-auto" id="bonuses-hub-body">
+            <div class="p-8 text-center text-slate-400">جاري تحميل سجل المكافآت...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await API.getBonuses({ month: targetMonth });
+      const bonuses = res.bonuses || [];
+      const hubBody = document.getElementById('bonuses-hub-body');
+      if (!hubBody) return;
+
+      if (bonuses.length === 0) {
+        hubBody.innerHTML = `<div class="p-12 text-center text-slate-400">لا توجد مكافآت مسجلة في شهر ${targetMonth}.</div>`;
+        return;
+      }
+
+      hubBody.innerHTML = `
+        <table class="w-full text-right text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 font-semibold uppercase">
+            <tr>
+              <th class="py-2.5 px-3">الموظف</th>
+              <th class="py-2.5 px-3">المبلغ</th>
+              <th class="py-2.5 px-3">السبب والتاريخ</th>
+              <th class="py-2.5 px-3">بواسطة</th>
+              <th class="py-2.5 px-3 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+            ${bonuses.map(b => `
+              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                <td class="py-3 px-3 font-sans">
+                  <span class="font-bold text-slate-800 dark:text-slate-200 block">${b.full_name}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${b.employee_code} • ${b.department_name || 'عام'}</span>
+                </td>
+                <td class="py-3 px-3 font-black text-purple-600 dark:text-purple-400 text-sm">
+                  +${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م
+                </td>
+                <td class="py-3 px-3 font-sans">
+                  <span class="font-bold text-slate-700 dark:text-slate-300 block">🎁 ${b.reason}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${b.date} (شهر: ${b.month})</span>
+                </td>
+                <td class="py-3 px-3 font-sans text-slate-500 text-[11px]">
+                  ${b.creator_name || 'الإدارة'}
+                </td>
+                <td class="py-3 px-3 text-center font-sans">
+                  <button onclick="ManagerUI.deleteBonus(${b.id}, null, '${targetMonth}')"
+                    class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors mx-auto" title="حذف المكافأة نهائياً">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>حذف المكافأة</span>
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      const hubBody = document.getElementById('bonuses-hub-body');
+      if (hubBody) hubBody.innerHTML = `<div class="p-6 text-center text-rose-500">${err.message}</div>`;
     }
   },
 
@@ -4407,12 +4505,18 @@ const ManagerUI = {
                           class="px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 font-bold text-xs" title="رفض طلب السلفة">
                           رفض ✗
                         </button>
+                        <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
+                          class="p-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 transition-colors" title="حذف السلفة نهائياً">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
                       </div>
                     ` : `
                       <div class="flex items-center justify-center gap-2">
                         <span class="text-[10px] text-slate-400 font-mono">${a.approver_name ? 'بواسطة: ' + a.approver_name : 'تمت المعالجة'}</span>
-                        <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')" class="text-rose-500 hover:text-rose-700 p-1" title="حذف السجل">
+                        <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
+                          class="px-2 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">
                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف</span>
                         </button>
                       </div>
                     `}
@@ -4645,29 +4749,6 @@ const ManagerUI = {
           </form>
         </div>
 
-        <!-- Danger Zone Card: Reset Attendance & Start Fresh -->
-        <div class="rounded-3xl p-6 sm:p-7 border border-rose-500/25 bg-rose-500/5 dark:bg-rose-950/25 space-y-4 shadow-sm">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="space-y-1.5">
-              <h4 class="font-extrabold text-sm sm:text-base text-rose-600 dark:text-rose-400 flex items-center gap-2">
-                <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
-                تصفير سجلات الحضور والبدء من جديد (إعادة التعيين)
-              </h4>
-              <p class="text-xs text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
-                يقوم هذا الإجراء بحذف وتصفير كافة سجلات الحضور والانصراف، الأرشيف، وطلبات التصحيح والإشعارات لتبدأ المنظومة نظيفة تماماً من الصفر.
-              </p>
-              <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 pt-0.5">
-                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
-                <span>محفوظ بأمان تام: الموظفون ببياناتهم، مواعيد الدوام الرسمية، وموقع المنشأة الجغرافي لن يتم المساس بهم.</span>
-              </div>
-            </div>
-            <button type="button" onclick="ManagerUI.openResetSystemModal()"
-              class="px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center gap-2 self-start sm:self-center transition-all transform active:scale-98 whitespace-nowrap">
-              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-              <span>تصفير الحضور والبدء من جديد</span>
-            </button>
-          </div>
-        </div>
       </div>
     `;
 

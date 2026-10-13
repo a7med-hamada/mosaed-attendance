@@ -357,56 +357,12 @@ router.put('/company', authenticateToken, requireManager, (req, res) => {
   }
 });
 
-// POST /api/settings/reset-attendance-system (Manager resets attendance & starts from scratch while preserving employees, schedules, workplace)
+// POST /api/settings/reset-attendance-system (Disabled to protect attendance records)
 router.post('/reset-attendance-system', authenticateToken, requireManager, (req, res) => {
-  try {
-    const managerId = req.user.id;
-    
-    // Delete attendance records for this manager's employees
-    db.prepare(`
-      DELETE FROM attendance_records 
-      WHERE employee_id IN (
-        SELECT id FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-      )
-    `).run(managerId, managerId);
-
-    // Delete attendance corrections
-    db.prepare(`
-      DELETE FROM attendance_corrections 
-      WHERE employee_id IN (
-        SELECT id FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-      )
-    `).run(managerId, managerId);
-
-    // Delete notifications
-    db.prepare(`
-      DELETE FROM notifications 
-      WHERE user_id IS NULL OR user_id = ? OR user_id IN (
-        SELECT id FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-      )
-    `).run(managerId, managerId, managerId);
-
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logAudit(
-      req.user.id,
-      req.user.full_name,
-      'RESET_ATTENDANCE_SYSTEM',
-      'attendance_records',
-      null,
-      null,
-      null,
-      'تصفير كافة سجلات الحضور والانصراف وإعادة البدء من جديد مع الحفاظ على الموظفين والمواعيد والمكان',
-      clientIp
-    );
-
-    res.json({
-      success: true,
-      message: 'تم تصفير جميع سجلات الحضور والانصراف والأرشيف بنجاح والبدء من جديد، مع الحفاظ التام على الموظفين ومواعيد العمل وموقع المنشأة.'
-    });
-  } catch (error) {
-    console.error('Reset system error:', error);
-    res.status(500).json({ success: false, error: 'فشل في إعادة ضبط سجلات الحضور' });
-  }
+  return res.status(400).json({
+    success: false,
+    error: 'تم تعطيل تصفير المنظومة لحماية سجلات وتقارير الحضور من الحذف غير المقصود'
+  });
 });
 
 module.exports = router;

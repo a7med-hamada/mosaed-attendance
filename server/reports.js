@@ -508,30 +508,9 @@ router.get('/export/csv', authenticateToken, (req, res) => {
   }
 });
 
-// POST /api/reports/reset-archive (Manager resets all attendance records)
+// POST /api/reports/reset-archive (Disabled to protect attendance records)
 router.post('/reset-archive', authenticateToken, requireManager, (req, res) => {
-  try {
-    const managerId = req.user.id;
-    // Delete attendance records for this manager's employees
-    db.prepare(`
-      DELETE FROM attendance_records 
-      WHERE employee_id IN (
-        SELECT id FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-      )
-    `).run(managerId, managerId);
-
-    db.prepare(`
-      DELETE FROM attendance_corrections 
-      WHERE employee_id IN (
-        SELECT id FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-      )
-    `).run(managerId, managerId);
-
-    res.json({ success: true, message: 'تم تصفير سجلات الحضور والأرشيف بنجاح والبدء من جديد' });
-  } catch (error) {
-    console.error('Reset archive error:', error);
-    res.status(500).json({ success: false, error: 'فشل في تصفير الأرشيف' });
-  }
+  return res.status(400).json({ success: false, error: 'تم تعطيل تصفير الأرشيف لحماية سجلات وتقارير الحضور من الحذف غير المقصود' });
 });
 
 // Helper: Sync missing absences for a given month while skipping official weekends

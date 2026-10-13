@@ -59,7 +59,7 @@ function getWhatsAppSettings() {
     whatsapp_api_token: '',
     whatsapp_manager_phone: '01227580963',
     whatsapp_auto_late_alert: '1',
-    company_name: 'شركة مساعد'
+    company_name: 'وقتي - WAQTY'
   };
   settingsRows.forEach(r => {
     settings[r.key] = r.value;
@@ -715,7 +715,7 @@ router.post('/test', authenticateToken, requireManager, async (req, res) => {
   try {
     const { phone } = req.body;
     const targetPhone = phone || '01227580963';
-    const message = `👋 مرحباً بك! هذه رسالة تجريبية من نظام حضور وانصراف شركة مساعد للتأكد من اتصال خدمة إشعارات الواتساب بنجاح 🚀`;
+    const message = `👋 مرحباً بك! هذه رسالة تجريبية من نظام وقتي (WAQTY) لإدارة الحضور والانصراف للتأكد من اتصال خدمة إشعارات الواتساب بنجاح 🚀`;
 
     const dispatch = await sendWhatsAppMessage({
       phone: targetPhone,

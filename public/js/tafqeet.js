@@ -194,13 +194,11 @@
                 <!-- Company Logo & Title -->
                 <div class="text-right">
                   <div class="flex items-center gap-2 mb-1">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-sm">
-                      م
-                    </div>
-                    <h2 class="text-xl font-black text-slate-900 tracking-tight">شركة مساعد</h2>
+                    <img src="/waqty-logo.png" alt="وقتي" class="w-8 h-8 rounded-lg object-contain bg-[#0b1329] p-0.5" />
+                    <h2 class="text-xl font-black text-slate-900 tracking-tight">وقتي <span class="text-emerald-600 font-mono text-sm">WAQTY</span></h2>
                   </div>
                   <span class="text-[11px] font-bold text-slate-500 block">إدارة الموارد البشرية والرواتب (HR & Payroll)</span>
-                  <span class="text-[10px] text-slate-400 font-mono">نظام الحضور والانصراف ومسير الرواتب الذكي</span>
+                  <span class="text-[10px] text-slate-400 font-mono">نظام إدارة الحضور والانصراف ومسير الرواتب الذكي</span>
                 </div>
 
                 <!-- Center Title Badge -->
@@ -421,7 +419,7 @@
                 </div>
                 <div class="pt-6 border-b border-dotted border-slate-400 text-[10px] text-slate-400 flex items-center justify-between">
                   <span>الختم الرسمي:</span>
-                  <span class="text-[9px] text-emerald-700 font-bold">[ شركة مساعد ]</span>
+                  <span class="text-[9px] text-emerald-700 font-bold">[ وقتي - WAQTY ]</span>
                 </div>
               </div>
             </div>

@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "حضور شركة مساعد",
-  "short_name": "حضور مساعد",
-  "description": "نظام الحضور والانصراف الذكي والتحقق الجغرافي لشركة مساعد",
+  "name": "وقتي - نظام إدارة الحضور والانصراف",
+  "short_name": "وقتي | WAQTY",
+  "description": "نظام وقتي الذكي لإدارة الحضور والانصراف وتتبع الوقت والتحقق الجغرافي",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#060e18",
-  "theme_color": "#060e18",
+  "background_color": "#0b1329",
+  "theme_color": "#0b1329",
   "categories": ["business", "productivity"],
   "icons": [
     {

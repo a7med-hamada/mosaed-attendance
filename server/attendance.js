@@ -1012,4 +1012,221 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
   }
 });
 
+// ==========================================
+// 8. Delete Attendance Record (DELETE /api/attendance/:id) - Manager Only
+// ==========================================
+router.delete('/:id', authenticateToken, requireManager, (req, res) => {
+  try {
+    const recordId = parseInt(req.params.id, 10);
+    if (!recordId) {
+      return res.status(400).json({ success: false, error: 'معرف السجل غير صالح' });
+    }
+
+    const record = db.prepare(`
+      SELECT ar.*, u.full_name, u.employee_code 
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      WHERE ar.id = ?
+    `).get(recordId);
+
+    if (!record) {
+      return res.status(404).json({ success: false, error: 'السجل غير موجود أو تم حذفه مسبقاً' });
+    }
+
+    db.prepare(`DELETE FROM attendance_records WHERE id = ?`).run(recordId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'DELETE_ATTENDANCE_RECORD',
+      'attendance_records',
+      recordId,
+      record,
+      null,
+      `حذف سجل حضور ${record.full_name} ليوم ${record.date}`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تم حذف سجل الحضور ليوم ${record.date} للموظف ${record.full_name} بنجاح`
+    });
+  } catch (error) {
+    console.error('Delete attendance record error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حذف سجل الحضور: ' + error.message });
+  }
+});
+
+// ==========================================
+// 9. Bulk Manual Attendance Records (POST /api/attendance/bulk-manual-records) - Manager Only
+// ==========================================
+router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res) => {
+  try {
+    const {
+      employee_id,
+      date_from,
+      date_to,
+      exclude_weekends = true,
+      check_in_time,
+      check_out_time,
+      status = 'On Time',
+      waive_deductions = true,
+      reason
+    } = req.body;
+
+    if (!date_from || !date_to) {
+      return res.status(400).json({ success: false, error: 'يرجى تحديد تاريخ البداية وتاريخ النهاية' });
+    }
+
+    if (new Date(date_from) > new Date(date_to)) {
+      return res.status(400).json({ success: false, error: 'تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية' });
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      return res.status(400).json({ success: false, error: 'سبب الإضافة الجماعية إلزامي للتوثيق في سجل العمليات الرقابي' });
+    }
+
+    // Determine target employees
+    let employees = [];
+    if (employee_id && employee_id !== 'all') {
+      const emp = db.prepare(`
+        SELECT u.id, u.full_name, u.schedule_id,
+               COALESCE(s.start_time, '09:00') as start_time,
+               COALESCE(s.end_time, '17:00') as end_time,
+               COALESCE(s.grace_period_minutes, 15) as grace_period_minutes,
+               COALESCE(s.working_days, '0,1,2,3,4') as working_days
+        FROM users u
+        LEFT JOIN schedules s ON u.schedule_id = s.id
+        WHERE u.id = ?
+      `).get(employee_id);
+      if (!emp) return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+      employees = [emp];
+    } else {
+      employees = db.prepare(`
+        SELECT u.id, u.full_name, u.schedule_id,
+               COALESCE(s.start_time, '09:00') as start_time,
+               COALESCE(s.end_time, '17:00') as end_time,
+               COALESCE(s.grace_period_minutes, 15) as grace_period_minutes,
+               COALESCE(s.working_days, '0,1,2,3,4') as working_days
+        FROM users u
+        LEFT JOIN schedules s ON u.schedule_id = s.id
+        WHERE u.is_active = 1 AND u.role = 'employee'
+      `).all();
+    }
+
+    if (employees.length === 0) {
+      return res.status(400).json({ success: false, error: 'لم يتم العثور على موظفين نشطين' });
+    }
+
+    // Build dates list
+    const dates = [];
+    let cur = new Date(date_from + 'T12:00:00');
+    const end = new Date(date_to + 'T12:00:00');
+    let loopCount = 0;
+    while (cur <= end && loopCount < 100) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+      loopCount++;
+    }
+
+    let insertedOrUpdated = 0;
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    for (const emp of employees) {
+      const workingDays = (emp.working_days || '0,1,2,3,4').split(',');
+
+      for (const d of dates) {
+        const dayOfWeek = String(new Date(d + 'T12:00:00').getDay());
+        if (exclude_weekends && !workingDays.includes(dayOfWeek)) {
+          continue; // Skip off-day / weekend
+        }
+
+        const inTime = check_in_time || emp.start_time;
+        const outTime = check_out_time || emp.end_time;
+        let workedHours = 0;
+        if (inTime && outTime) {
+          const inM = timeToMinutes(inTime);
+          const outM = timeToMinutes(outTime);
+          workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
+        } else if (inTime) {
+          workedHours = 8.0;
+        }
+
+        let finalStatus = status || 'On Time';
+        let lateMinutes = 0;
+        let deduction = 0;
+
+        if (waive_deductions || finalStatus === 'On Time' || finalStatus === 'On Leave') {
+          lateMinutes = 0;
+          deduction = 0;
+          if (finalStatus !== 'On Leave') finalStatus = 'On Time';
+        } else if (inTime) {
+          const schedStartM = timeToMinutes(emp.start_time);
+          const inM = timeToMinutes(inTime);
+          const diff = inM - schedStartM;
+          if (diff > emp.grace_period_minutes) {
+            lateMinutes = diff;
+            finalStatus = 'Late';
+            const lateRate = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_late_rate'`).get();
+            deduction = lateRate ? parseFloat(lateRate.value) : 50;
+          }
+        }
+
+        const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, d);
+
+        if (existing) {
+          db.prepare(`
+            UPDATE attendance_records SET
+              check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
+              late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
+              notes = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).run(inTime, outTime, finalStatus, workedHours, lateMinutes, deduction, reason, existing.id);
+        } else {
+          db.prepare(`
+            INSERT INTO attendance_records (
+              employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
+              status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
+              verification_status, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
+          `).run(
+            emp.id, d, inTime, outTime, emp.start_time, emp.end_time,
+            finalStatus, workedHours, lateMinutes, deduction, reason
+          );
+        }
+        insertedOrUpdated++;
+      }
+
+      createNotification(
+        emp.id,
+        'توثيق حضور بأثر رجعي لفترة محددة',
+        `قام مدير النظام بتوثيق حضورك للفترة من ${date_from} إلى ${date_to}. المبرر: ${reason}`,
+        'info'
+      );
+    }
+
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'BULK_MANUAL_ATTENDANCE',
+      'attendance_records',
+      null,
+      null,
+      { employee_id, date_from, date_to, total_records: insertedOrUpdated },
+      `إضافة حضور جماعي من ${date_from} إلى ${date_to} بإجمالي (${insertedOrUpdated}) سجل: ${reason}`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تم بنجاح توثيق الحضور الجماعي (${insertedOrUpdated} سجل) للفترة من ${date_from} إلى ${date_to}`,
+      count: insertedOrUpdated
+    });
+  } catch (error) {
+    console.error('Bulk manual attendance error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حفظ الحضور الجماعي: ' + error.message });
+  }
+});
+
 module.exports = router;

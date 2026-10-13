@@ -149,8 +149,21 @@ const API = {
     });
   },
 
+  deleteAttendance(id) {
+    return this.request(`/attendance/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   createManualAttendanceRecord(data) {
     return this.request('/attendance/manual-record', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  bulkManualAttendance(data) {
+    return this.request('/attendance/bulk-manual-records', {
       method: 'POST',
       body: data
     });

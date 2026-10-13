@@ -1,9 +1,9 @@
 // Internationalization (i18n) dictionary
 const translations = {
   ar: {
-    system_title: "حضور شركة مساعد",
-    login_title: "حضور شركة مساعد",
-    login_subtitle: "منظومة الحضور والانصراف الذكي والتحقق الجغرافي",
+    system_title: "وقتي - نظام إدارة الحضور والانصراف",
+    login_title: "نظام وقتي | WAQTY",
+    login_subtitle: "نظام إدارة الحضور والانصراف وتتبع الوقت الذكي",
     email_or_code: "البريد الإلكتروني أو الرقم الوظيفي",
     password: "كلمة المرور",
     login_button: "تسجيل الدخول",
@@ -110,9 +110,9 @@ const translations = {
     audit_trail: "سجل الرقابة"
   },
   en: {
-    system_title: "Workforce Attendance & HR Management System",
-    login_title: "Sign in to Workforce System",
-    login_subtitle: "Smart Attendance, GPS Verification & Facial Evidence",
+    system_title: "WAQTY - Smart Attendance & Time Tracking System",
+    login_title: "WAQTY Attendance System",
+    login_subtitle: "Smart Attendance, GPS Verification & Time Tracking",
     email_or_code: "Email or Employee ID",
     password: "Password",
     login_button: "Sign In",

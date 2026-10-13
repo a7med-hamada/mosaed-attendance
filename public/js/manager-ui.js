@@ -2016,10 +2016,26 @@ const ManagerUI = {
         <!-- Panel 1: Retroactive Entry -->
         <div id="panel-retroactive" class="space-y-6">
           <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
-              <i data-lucide="user-plus" class="w-4 h-4 text-blue-500"></i> إضافة حضور موظف ليوم سابق
-            </h3>
-            <p class="text-xs text-slate-400 mb-5">استخدم هذا النموذج لمن حضروا من أول الشهر أو أي يوم سابق ولم تكن لديهم بصمة بالسيستم</p>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="user-plus" class="w-4 h-4 text-blue-500"></i> إضافة وتوثيق حضور بأثر رجعي
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">استخدم هذا النموذج لمن حضروا من أول الشهر أو أي فترة سابقة ولم تكن لديهم بصمة بالسيستم</p>
+              </div>
+
+              <!-- Mode Switch: Single Day vs Bulk Multi-Day -->
+              <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+                <button type="button" id="btn-mode-single" onclick="ManagerUI.switchManualEntryMode('single')"
+                  class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs">
+                  📅 يوم واحد
+                </button>
+                <button type="button" id="btn-mode-bulk" onclick="ManagerUI.switchManualEntryMode('bulk')"
+                  class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900">
+                  🚀 فترة / أيام متعددة (Bulk)
+                </button>
+              </div>
+            </div>
 
             <form onsubmit="event.preventDefault(); ManagerUI.submitManualAttendance();" class="space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -2031,10 +2047,22 @@ const ManagerUI = {
                   </select>
                 </div>
 
-                <!-- Date -->
-                <div>
+                <!-- Single Date Box -->
+                <div id="manual-single-date-box">
                   <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">تاريخ الحضور *</label>
-                  <input type="date" id="manual-att-date" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                  <input type="date" id="manual-att-date" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                </div>
+
+                <!-- Bulk Date Box (Hidden by default) -->
+                <div id="manual-bulk-date-box" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">من تاريخ (بداية الفترة) *</label>
+                    <input type="date" id="manual-bulk-date-from" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">إلى تاريخ (نهاية الفترة) *</label>
+                    <input type="date" id="manual-bulk-date-to" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                  </div>
                 </div>
 
                 <!-- Status -->
@@ -2060,11 +2088,15 @@ const ManagerUI = {
                   <input type="time" id="manual-att-checkout" value="17:00" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
                 </div>
 
-                <!-- Waive Deduction -->
-                <div class="flex items-center pt-5">
+                <!-- Options: Waive Deduction & Exclude Weekends -->
+                <div class="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-6 pt-2">
                   <label class="flex items-center gap-2 cursor-pointer select-none">
                     <input type="checkbox" id="manual-att-waive" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
-                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إعفاء من الخصومات والتأخير (حضور منضبط)</span>
+                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">إعفاء من الخصومات والتأخير (حضور منضبط 0 دقيقة تأخير)</span>
+                  </label>
+                  <label id="lbl-exclude-weekends" class="hidden flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="manual-bulk-exclude-weekends" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                    <span class="text-xs font-bold text-blue-700 dark:text-blue-400">استثناء عطلات نهاية الأسبوع (الجمعة والسبت) تلقائياً</span>
                   </label>
                 </div>
               </div>
@@ -2090,10 +2122,10 @@ const ManagerUI = {
 
         <!-- Panel 2: Existing Records Edit -->
         <div id="panel-existing" class="hidden space-y-4">
-          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-2 flex-wrap flex-1">
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap flex-1">
               <div>
-                <label class="text-[11px] font-bold text-slate-400 block mb-1">التاريخ:</label>
+                <label class="text-[11px] font-bold text-slate-400 block mb-1">التاريخ المحدد (اختياري):</label>
                 <input type="date" id="filter-edit-date" class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
               </div>
               <div>
@@ -2102,9 +2134,15 @@ const ManagerUI = {
                   <option value="">جميع الموظفين</option>
                 </select>
               </div>
-              <div class="pt-4 sm:pt-0">
-                <button onclick="ManagerUI.loadRecordsToEdit()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1">
-                  <i data-lucide="search" class="w-3.5 h-3.5"></i> عرض السجلات
+              <div class="pt-4 md:pt-0 flex items-center gap-1.5 flex-wrap">
+                <button onclick="ManagerUI.loadRecordsToEdit()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i> بحث وفلترة
+                </button>
+                <button onclick="ManagerUI.showAllRecordsToEdit()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition-all" title="عرض كل الأيام المسجلة بالنظام">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-500"></i> عرض كل الأيام 📋
+                </button>
+                <button onclick="ManagerUI.setFilterTodayToEdit()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition-all">
+                  اليوم فقط 📅
                 </button>
               </div>
             </div>
@@ -2112,7 +2150,7 @@ const ManagerUI = {
 
           <div id="records-to-edit-table-container">
             <div class="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-              اضغط "عرض السجلات" لتحميل قائمة الحضور والتعديل
+              جاري تحميل السجلات...
             </div>
           </div>
         </div>
@@ -2183,6 +2221,40 @@ const ManagerUI = {
     }
   },
 
+  switchManualEntryMode(mode) {
+    const btnSingle = document.getElementById('btn-mode-single');
+    const btnBulk = document.getElementById('btn-mode-bulk');
+    const singleBox = document.getElementById('manual-single-date-box');
+    const bulkBox = document.getElementById('manual-bulk-date-box');
+    const excludeLabel = document.getElementById('lbl-exclude-weekends');
+    const submitBtn = document.getElementById('manual-att-submit-btn');
+
+    if (mode === 'bulk') {
+      btnBulk?.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
+      btnBulk?.classList.remove('text-slate-600', 'dark:text-slate-400');
+      btnSingle?.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
+      btnSingle?.classList.add('text-slate-600', 'dark:text-slate-400');
+      singleBox?.classList.add('hidden');
+      bulkBox?.classList.remove('hidden');
+      excludeLabel?.classList.remove('hidden');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i data-lucide="calendar-plus" class="w-4 h-4"></i> توثيق الحضور للفترة المحددة دفعة واحدة 🚀';
+      }
+    } else {
+      btnSingle?.classList.add('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
+      btnSingle?.classList.remove('text-slate-600', 'dark:text-slate-400');
+      btnBulk?.classList.remove('bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-400', 'shadow-xs');
+      btnBulk?.classList.add('text-slate-600', 'dark:text-slate-400');
+      singleBox?.classList.remove('hidden');
+      bulkBox?.classList.add('hidden');
+      excludeLabel?.classList.add('hidden');
+      if (submitBtn) {
+        submitBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> حفظ وتوثيق سجل الحضور';
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+  },
+
   async populateAdjustmentDropdowns() {
     try {
       const empsRes = await API.getEmployees({ limit: 100 });
@@ -2195,20 +2267,49 @@ const ManagerUI = {
         <option value="${e.id}">${e.full_name} (${e.employee_code || e.job_title || 'موظف'})</option>
       `).join('');
 
-      if (empSelect1) empSelect1.innerHTML = `<option value="">-- اختر الموظف --</option>${options}`;
+      if (empSelect1) empSelect1.innerHTML = `<option value="">-- اختر الموظف --</option><option value="all">👥 جميع الموظفين (للحضور الجماعي)</option>${options}`;
       if (empSelect2) empSelect2.innerHTML = `<option value="">جميع الموظفين</option>${options}`;
 
       const today = new Date().toISOString().split('T')[0];
       const date1 = document.getElementById('manual-att-date');
-      const date2 = document.getElementById('filter-edit-date');
+      const bulkFrom = document.getElementById('manual-bulk-date-from');
+      const bulkTo = document.getElementById('manual-bulk-date-to');
       if (date1 && !date1.value) date1.value = today;
-      if (date2 && !date2.value) date2.value = today;
+      if (bulkFrom && !bulkFrom.value) {
+        const d = new Date();
+        bulkFrom.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      }
+      if (bulkTo && !bulkTo.value) bulkTo.value = today;
+
+      // Notice: filter-edit-date is intentionally left empty so ALL days are queried by default
+      const date2 = document.getElementById('filter-edit-date');
+      if (date2) date2.value = '';
+
+      // Auto-load all records immediately so nothing is hidden
+      await this.loadRecordsToEdit();
     } catch (e) {
       console.warn('Error populating adjustment dropdowns:', e);
     }
   },
 
+  showAllRecordsToEdit() {
+    const dateInput = document.getElementById('filter-edit-date');
+    if (dateInput) dateInput.value = '';
+    this.loadRecordsToEdit();
+  },
+
+  setFilterTodayToEdit() {
+    const dateInput = document.getElementById('filter-edit-date');
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    this.loadRecordsToEdit();
+  },
+
   async submitManualAttendance() {
+    const isBulk = !document.getElementById('manual-bulk-date-box')?.classList.contains('hidden');
+    if (isBulk) {
+      return this.submitBulkAttendance();
+    }
+
     const empId = document.getElementById('manual-att-emp')?.value;
     const date = document.getElementById('manual-att-date')?.value;
     const status = document.getElementById('manual-att-status')?.value;
@@ -2217,8 +2318,13 @@ const ManagerUI = {
     const waive = document.getElementById('manual-att-waive')?.checked;
     const reason = document.getElementById('manual-att-reason')?.value;
 
-    if (!empId || !date) {
-      showToast('يرجى اختيار الموظف والتاريخ', 'warning');
+    if (!empId || empId === 'all') {
+      showToast('يرجى اختيار الموظف المطلوب', 'warning');
+      return;
+    }
+
+    if (!date) {
+      showToast('يرجى اختيار التاريخ', 'warning');
       return;
     }
 
@@ -2244,10 +2350,83 @@ const ManagerUI = {
       showToast(res.message || 'تم حفظ وتوثيق سجل الحضور بنجاح ✓', 'success');
       const reasonInput = document.getElementById('manual-att-reason');
       if (reasonInput) reasonInput.value = '';
+      await this.loadRecordsToEdit();
     } catch (err) {
       showToast(err.message || 'فشل في حفظ سجل الحضور', 'danger');
     } finally {
       if (btn) btn.disabled = false;
+    }
+  },
+
+  async submitBulkAttendance() {
+    const empId = document.getElementById('manual-att-emp')?.value;
+    const dateFrom = document.getElementById('manual-bulk-date-from')?.value;
+    const dateTo = document.getElementById('manual-bulk-date-to')?.value;
+    const excludeWeekends = document.getElementById('manual-bulk-exclude-weekends')?.checked;
+    const status = document.getElementById('manual-att-status')?.value;
+    const checkin = document.getElementById('manual-att-checkin')?.value;
+    const checkout = document.getElementById('manual-att-checkout')?.value;
+    const waive = document.getElementById('manual-att-waive')?.checked;
+    const reason = document.getElementById('manual-att-reason')?.value;
+
+    if (!empId) {
+      showToast('يرجى اختيار الموظف أو تحديد جميع الموظفين', 'warning');
+      return;
+    }
+
+    if (!dateFrom || !dateTo) {
+      showToast('يرجى تحديد تاريخ البداية وتاريخ النهاية', 'warning');
+      return;
+    }
+
+    if (new Date(dateFrom) > new Date(dateTo)) {
+      showToast('تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية', 'warning');
+      return;
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      showToast('سبب الإضافة الجماعية إلزامي للتوثيق في سجل الرقابة', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('manual-att-submit-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.bulkManualAttendance({
+        employee_id: empId === 'all' ? 'all' : parseInt(empId, 10),
+        date_from: dateFrom,
+        date_to: dateTo,
+        exclude_weekends: excludeWeekends,
+        check_in_time: checkin || null,
+        check_out_time: checkout || null,
+        status,
+        waive_deductions: waive,
+        reason: reason.trim()
+      });
+
+      showToast(res.message || 'تم توثيق الحضور الجماعي بنجاح 🚀', 'success');
+      const reasonInput = document.getElementById('manual-att-reason');
+      if (reasonInput) reasonInput.value = '';
+      await this.loadRecordsToEdit();
+    } catch (err) {
+      showToast(err.message || 'فشل في حفظ الحضور الجماعي', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  async deleteAttendanceRecord(recordId, employeeName, date) {
+    if (!confirm(`تحذير:\nهل أنت متأكد من حذف سجل حضور "${employeeName}" ليوم ${date}؟\n\nهذا الإجراء سيقوم بحذف السجل وتوثيق العملية في سجل العمليات الرقابي.`)) {
+      return;
+    }
+
+    try {
+      const res = await API.deleteAttendance(recordId);
+      showToast(res.message || 'تم حذف السجل بنجاح 🗑️', 'success');
+      await this.loadRecordsToEdit();
+    } catch (err) {
+      showToast(err.message || 'فشل في حذف السجل', 'danger');
     }
   },
 
@@ -2262,12 +2441,12 @@ const ManagerUI = {
 
     try {
       const params = {};
-      if (dateVal) {
-        params.date_from = dateVal;
-        params.date_to = dateVal;
+      if (dateVal && dateVal.trim()) {
+        params.date_from = dateVal.trim();
+        params.date_to = dateVal.trim();
       }
-      if (empVal) {
-        params.employee_id = empVal;
+      if (empVal && empVal.trim()) {
+        params.employee_id = empVal.trim();
       }
 
       const res = await API.getHistory(params);
@@ -2277,7 +2456,7 @@ const ManagerUI = {
       if (records.length === 0) {
         container.innerHTML = `
           <div class="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-            لا توجد سجلات حضور مسجلة لهذا التاريخ أو الموظف المحدد. يمكنك استخدام تبويب "إضافة حضور بأثر رجعي" لإضافة سجل جديد.
+            لا توجد سجلات حضور مسجلة ${dateVal ? `لتاريخ ${dateVal}` : 'حالياً'}. يمكنك استخدام تبويب "إضافة حضور بأثر رجعي" لإضافة سجل جديد.
           </div>
         `;
         return;
@@ -2285,6 +2464,17 @@ const ManagerUI = {
 
       container.innerHTML = `
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between mb-3 px-1 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300">قائمة السجلات:</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold font-mono">${records.length} سجل</span>
+              ${dateVal ? `<span class="text-[11px] text-slate-400 font-mono">📅 تاريخ: ${dateVal}</span>` : `<span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">📋 معروض جميع الأيام</span>`}
+            </div>
+            <button onclick="ManagerUI.showAllRecordsToEdit()" class="text-xs font-bold text-blue-600 hover:underline">
+              تحديث وعرض الكل 🔄
+            </button>
+          </div>
+
           <div class="overflow-x-auto">
             <table class="w-full text-right text-xs">
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
@@ -2295,12 +2485,13 @@ const ManagerUI = {
                   <th class="py-3 px-3 text-center">وقت الانصراف</th>
                   <th class="py-3 px-3 text-center">الحالة</th>
                   <th class="py-3 px-3 text-center">التأخير والخصم</th>
-                  <th class="py-3 px-3 text-center">إجراء</th>
+                  <th class="py-3 px-3 text-center">إجراءات</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
                 ${records.map(r => {
                   const lateText = r.late_minutes > 0 ? `${r.late_minutes} دقيقة (${r.estimated_deduction || 0} ج.م)` : 'لا يوجد';
+                  const safeName = (r.full_name || '').replace(/'/g, "\\'");
                   return `
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td class="py-3 px-3">
@@ -2330,11 +2521,18 @@ const ManagerUI = {
                         ${lateText}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <button onclick="ManagerUI.openEditAttendanceModal(${r.id})"
-                          class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all">
-                          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                          <span>تعديل الموعد ✏️</span>
-                        </button>
+                        <div class="flex items-center justify-center gap-1.5">
+                          <button onclick="ManagerUI.openEditAttendanceModal(${r.id})"
+                            class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="تعديل الموعد">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            <span>تعديل ✏️</span>
+                          </button>
+                          <button onclick="ManagerUI.deleteAttendanceRecord(${r.id}, '${safeName}', '${r.date}')"
+                            class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="حذف السجل نهائياً">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>حذف 🗑️</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;
@@ -2361,6 +2559,8 @@ const ManagerUI = {
 
     const modal = document.getElementById('manual-edit-modal');
     if (!modal) return;
+
+    const safeName = (record.full_name || '').replace(/'/g, "\\'");
 
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -2417,13 +2617,20 @@ const ManagerUI = {
                 class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
             </div>
 
-            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-              <button type="button" onclick="document.getElementById('manual-edit-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
-                إلغاء
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <button type="button" onclick="ManagerUI.deleteAttendanceRecord(${record.id}, '${safeName}', '${record.date}'); document.getElementById('manual-edit-modal').innerHTML='';"
+                class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1 transition-all">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> حذف هذا السجل 🗑️
               </button>
-              <button type="submit" id="edit-rec-save-btn" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all">
-                حفظ التعديل وتحديث السجل
-              </button>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="document.getElementById('manual-edit-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                  إلغاء
+                </button>
+                <button type="submit" id="edit-rec-save-btn" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all">
+                  حفظ التعديل وتحديث السجل
+                </button>
+              </div>
             </div>
           </form>
         </div>

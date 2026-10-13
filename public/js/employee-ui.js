@@ -46,10 +46,11 @@ const EmployeeUI = {
     const nav = document.getElementById('employee-subnav');
     if (!nav) return;
 
-    // Subnavigation: Attendance, History, Finances, Profile
+    // Subnavigation: Attendance, History, Leaves, Finances, Profile
     const tabs = [
       { id: 'attendance', icon: 'clock', label: 'الحضور (Attendance)' },
       { id: 'history', icon: 'calendar', label: 'سجل الحضور (History)' },
+      { id: 'leaves', icon: 'calendar-check', label: 'الإجازات والأذونات (Leaves)' },
       { id: 'finances', icon: 'wallet-cards', label: 'المرتب والسلف (Payroll)' },
       { id: 'profile', icon: 'user', label: 'الملف الشخصي (Profile)' }
     ];
@@ -79,6 +80,8 @@ const EmployeeUI = {
       this.renderAttendanceTab();
     } else if (tabId === 'history') {
       this.renderHistoryTab();
+    } else if (tabId === 'leaves') {
+      this.renderLeavesTab();
     } else if (tabId === 'finances') {
       this.renderFinancesTab();
     } else if (tabId === 'profile') {
@@ -1343,6 +1346,480 @@ const EmployeeUI = {
       </div>
     `;
     if (window.lucide) lucide.createIcons();
+  },
+
+  // 5. Leaves & Permissions Tab (الإجازات والأذونات الرسمية)
+  async renderLeavesTab() {
+    const container = document.getElementById('employee-content');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="calendar-check" class="w-5 h-5 text-blue-500"></i> نظام الإجازات والأذونات الرسمية
+            </h2>
+            <p class="text-xs text-slate-500">متابعة رصيد إجازاتك السنوية، تقديم طلبات الإجازات والأذونات، ومتابعة ردود الإدارة</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="EmployeeUI.openLeaveRequestModal()"
+              class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i> طلب إجازة 🌴
+            </button>
+            <button onclick="EmployeeUI.openPermissionRequestModal()"
+              class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all">
+              <i data-lucide="clock" class="w-4 h-4"></i> طلب إذن خروج ⏱️
+            </button>
+          </div>
+        </div>
+
+        <div id="emp-leaves-balance-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center animate-pulse">
+            <span class="text-xs text-slate-400">جاري التحميل...</span>
+          </div>
+        </div>
+
+        <!-- Leaves Section -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="plane" class="w-4 h-4 text-emerald-500"></i> سجل طلبات الإجازات
+            </h3>
+            <span id="emp-leaves-count" class="text-xs font-bold text-slate-400"></span>
+          </div>
+          <div id="emp-leaves-list" class="space-y-2.5">
+            <div class="p-6 text-center text-xs text-slate-400">جاري تحميل سجل الإجازات...</div>
+          </div>
+        </div>
+
+        <!-- Permissions Section -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="timer" class="w-4 h-4 text-indigo-500"></i> سجل طلبات الأذونات (التأخير والانصراف المبكر)
+            </h3>
+            <span id="emp-permissions-count" class="text-xs font-bold text-slate-400"></span>
+          </div>
+          <div id="emp-permissions-list" class="space-y-2.5">
+            <div class="p-6 text-center text-xs text-slate-400">جاري تحميل سجل الأذونات...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container for Leave & Permission Modals -->
+      <div id="leave-action-modal"></div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const [balRes, leavesRes, permsRes] = await Promise.all([
+        API.getLeaveBalance(),
+        API.getLeaves(),
+        API.getPermissions()
+      ]);
+
+      const bal = balRes.balance || { annual_total: 21, annual_used: 0, annual_remaining: 21, sick_used: 0, casual_used: 0, permissions_this_month: 0, permission_hours_this_month: 0 };
+      const leaves = leavesRes.requests || [];
+      const perms = permsRes.requests || [];
+
+      // Render Balance Cards
+      const balContainer = document.getElementById('emp-leaves-balance-cards');
+      if (balContainer) {
+        balContainer.innerHTML = `
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20 text-right">
+            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block mb-1">الرصيد السنوي المتبقي</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${bal.annual_remaining}</span>
+              <span class="text-xs text-slate-400">/ ${bal.annual_total} يوم</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 text-right">
+            <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 block mb-1">الإجازات السنوية المستهلكة</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${bal.annual_used}</span>
+              <span class="text-xs text-slate-400">أيام</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 text-right">
+            <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 block mb-1">مرضية وعارضة</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${(bal.sick_used || 0) + (bal.casual_used || 0)}</span>
+              <span class="text-xs text-slate-400">أيام</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-indigo-500/20 text-right">
+            <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block mb-1">أذونات هذا الشهر</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${bal.permissions_this_month}</span>
+              <span class="text-xs text-slate-400">(${bal.permission_hours_this_month} ساعة)</span>
+            </div>
+          </div>
+        `;
+      }
+
+      // Render Leaves List
+      const leavesCountEl = document.getElementById('emp-leaves-count');
+      if (leavesCountEl) leavesCountEl.textContent = `${leaves.length} طلب`;
+      const leavesListEl = document.getElementById('emp-leaves-list');
+      if (leavesListEl) {
+        if (leaves.length === 0) {
+          leavesListEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">لا توجد طلبات إجازة مسجلة بعد.</div>`;
+        } else {
+          const typeNames = { annual: 'إجازة سنوية اعتيادية', sick: 'إجازة مرضية', casual: 'إجازة عارضة / طارئة', unpaid: 'إجازة بدون راتب' };
+          const typeColors = { annual: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60', sick: 'text-amber-600 bg-amber-50 dark:bg-amber-950/60', casual: 'text-purple-600 bg-purple-50 dark:bg-purple-950/60', unpaid: 'text-rose-600 bg-rose-50 dark:bg-rose-950/60' };
+          const statusBadges = {
+            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة ⏳</span>',
+            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة ✓</span>',
+            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة ✕</span>'
+          };
+
+          leavesListEl.innerHTML = leaves.map(l => `
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div class="space-y-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2.5 py-0.5 rounded-lg font-bold text-[11px] ${typeColors[l.leave_type] || 'text-blue-600 bg-blue-50'}">
+                    ${typeNames[l.leave_type] || l.leave_type}
+                  </span>
+                  <span class="font-extrabold text-slate-800 dark:text-white">
+                    ${l.days_count} ${l.days_count === 1 ? 'يوم' : 'أيام'}
+                  </span>
+                  <span class="text-slate-400 font-mono text-[11px]">(${l.start_date} ← ${l.end_date})</span>
+                </div>
+                ${l.reason ? `<p class="text-slate-600 dark:text-slate-300 text-xs mt-1">السبب: ${l.reason}</p>` : ''}
+                ${l.review_notes ? `<p class="text-blue-600 dark:text-blue-400 text-[11px] font-medium">ملاحظات الإدارة: ${l.review_notes}</p>` : ''}
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                ${statusBadges[l.status] || l.status}
+                ${l.status === 'pending' ? `
+                  <button onclick="EmployeeUI.cancelLeaveRequest(${l.id})" class="px-2 py-1 text-rose-500 hover:text-rose-600 font-bold text-[11px] hover:underline" title="إلغاء الطلب">
+                    إلغاء
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Render Permissions List
+      const permsCountEl = document.getElementById('emp-permissions-count');
+      if (permsCountEl) permsCountEl.textContent = `${perms.length} طلب`;
+      const permsListEl = document.getElementById('emp-permissions-list');
+      if (permsListEl) {
+        if (perms.length === 0) {
+          permsListEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">لا توجد طلبات أذونات مسجلة بعد.</div>`;
+        } else {
+          const permTypes = { late_arrival: 'إذن تأخير صباحي بعذر', early_departure: 'إذن انصراف مبكر', during_day: 'إذن خروج وعودة أثناء الدوام' };
+          const statusBadges = {
+            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة ⏳</span>',
+            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد ✓</span>',
+            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض ✕</span>'
+          };
+
+          permsListEl.innerHTML = perms.map(p => `
+            <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div class="space-y-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2.5 py-0.5 rounded-lg font-bold text-[11px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60">
+                    ${permTypes[p.permission_type] || p.permission_type}
+                  </span>
+                  <span class="font-extrabold text-slate-800 dark:text-white">
+                    ${p.hours_count} ساعة
+                  </span>
+                  <span class="text-slate-400 font-mono text-[11px]">
+                    يوم ${p.date} (${formatTime12(p.start_time)} ← ${formatTime12(p.end_time)})
+                  </span>
+                </div>
+                <p class="text-slate-600 dark:text-slate-300 text-xs mt-1">السبب: ${p.reason || '-'}</p>
+                ${p.review_notes ? `<p class="text-blue-600 dark:text-blue-400 text-[11px] font-medium">ملاحظات الإدارة: ${p.review_notes}</p>` : ''}
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                ${statusBadges[p.status] || p.status}
+                ${p.status === 'pending' ? `
+                  <button onclick="EmployeeUI.cancelPermissionRequest(${p.id})" class="px-2 py-1 text-rose-500 hover:text-rose-600 font-bold text-[11px] hover:underline" title="إلغاء الطلب">
+                    إلغاء
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    } catch (err) {
+      console.error('Error rendering leaves tab:', err);
+      showToast('حدث خطأ أثناء تحميل بيانات الإجازات', 'danger');
+    }
+  },
+
+  openLeaveRequestModal() {
+    const modal = document.getElementById('leave-action-modal');
+    if (!modal) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-right text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">طلب إجازة رسمية</h3>
+                <span class="text-[11px] text-slate-400">إرسال طلب إجازة لاعتماده من الإدارة</span>
+              </div>
+            </div>
+            <button onclick="document.getElementById('leave-action-modal').innerHTML=''" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="EmployeeUI.submitLeaveRequest(event)" class="space-y-3.5">
+            <div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">نوع الإجازة:</label>
+              <select id="leave-type-select" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold focus:ring-2 focus:ring-blue-500">
+                <option value="annual">🌴 إجازة سنوية اعتيادية (تُخصم من الرصيد)</option>
+                <option value="sick">🩺 إجازة مرضية (تقرير طبي)</option>
+                <option value="casual">⚡ إجازة عارضة / طارئة</option>
+                <option value="unpaid">💼 إجازة بدون راتب</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">من تاريخ:</label>
+                <input type="date" id="leave-start-date" required value="${todayStr}" min="${todayStr}"
+                  onchange="EmployeeUI.updateLeaveDaysCalc()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs" />
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">إلى تاريخ:</label>
+                <input type="date" id="leave-end-date" required value="${todayStr}" min="${todayStr}"
+                  onchange="EmployeeUI.updateLeaveDaysCalc()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs" />
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 flex items-center justify-between text-blue-700 dark:text-blue-300 font-bold">
+              <span>إجمالي عدد الأيام المطلوبة:</span>
+              <span id="leave-days-calc-badge" class="px-2.5 py-0.5 rounded-lg bg-blue-600 text-white text-xs">1 يوم</span>
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">سبب الإجازة (اختياري):</label>
+              <textarea id="leave-reason" rows="2" placeholder="اكتب سبب طلب الإجازة هنا..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs resize-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+              <button type="button" onclick="document.getElementById('leave-action-modal').innerHTML=''" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs">
+                إلغاء
+              </button>
+              <button type="submit" id="leave-submit-btn" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/25">
+                <i data-lucide="send" class="w-4 h-4"></i> إرسال الطلب
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  updateLeaveDaysCalc() {
+    const s = document.getElementById('leave-start-date');
+    const e = document.getElementById('leave-end-date');
+    const badge = document.getElementById('leave-days-calc-badge');
+    if (!s || !e || !badge) return;
+    try {
+      const d1 = new Date(s.value + 'T00:00:00');
+      const d2 = new Date(e.value + 'T00:00:00');
+      const diffDays = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const count = diffDays > 0 ? diffDays : 1;
+      badge.textContent = `${count} ${count === 1 ? 'يوم' : 'أيام'}`;
+    } catch {
+      badge.textContent = '1 يوم';
+    }
+  },
+
+  async submitLeaveRequest(event) {
+    event.preventDefault();
+    const btn = document.getElementById('leave-submit-btn');
+    const leave_type = document.getElementById('leave-type-select').value;
+    const start_date = document.getElementById('leave-start-date').value;
+    const end_date = document.getElementById('leave-end-date').value;
+    const reason = document.getElementById('leave-reason').value;
+
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.submitLeave({ leave_type, start_date, end_date, reason });
+      if (res.success) {
+        showToast(res.message || 'تم تقديم طلب الإجازة بنجاح', 'success');
+        document.getElementById('leave-action-modal').innerHTML = '';
+        this.renderLeavesTab();
+      } else {
+        showToast(res.error || 'فشل في تقديم الطلب', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في تقديم الطلب', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  async cancelLeaveRequest(id) {
+    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب الإجازة هذا؟')) return;
+    try {
+      const res = await API.deleteLeave(id);
+      if (res.success) {
+        showToast('تم إلغاء طلب الإجازة', 'info');
+        this.renderLeavesTab();
+      } else {
+        showToast(res.error || 'فشل في إلغاء الطلب', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في إلغاء الطلب', 'danger');
+    }
+  },
+
+  openPermissionRequestModal() {
+    const modal = document.getElementById('leave-action-modal');
+    if (!modal) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-right text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">طلب إذن خروج أو تأخير</h3>
+                <span class="text-[11px] text-slate-400">طلب إذن ساعتين أو خروج طارئ أثناء الدوام</span>
+              </div>
+            </div>
+            <button onclick="document.getElementById('leave-action-modal').innerHTML=''" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="EmployeeUI.submitPermissionRequest(event)" class="space-y-3.5">
+            <div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">نوع الإذن:</label>
+              <select id="perm-type-select" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold focus:ring-2 focus:ring-indigo-500">
+                <option value="late_arrival">🌅 إذن تأخير صباحي بعذر</option>
+                <option value="early_departure">🚪 إذن انصراف مبكر</option>
+                <option value="during_day">⚡ إذن خروج وعودة أثناء الدوام</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">تاريخ الإذن:</label>
+              <input type="date" id="perm-date" required value="${todayStr}" min="${todayStr}"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">من الساعة:</label>
+                <input type="time" id="perm-start-time" required value="09:00"
+                  onchange="EmployeeUI.updatePermHoursCalc()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs font-mono" />
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">إلى الساعة:</label>
+                <input type="time" id="perm-end-time" required value="11:00"
+                  onchange="EmployeeUI.updatePermHoursCalc()"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs font-mono" />
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between text-indigo-700 dark:text-indigo-300 font-bold">
+              <span>مدة الإذن المقدرة:</span>
+              <span id="perm-hours-calc-badge" class="px-2.5 py-0.5 rounded-lg bg-indigo-600 text-white text-xs">2 ساعة</span>
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">سبب الإذن (إلزامي):</label>
+              <textarea id="perm-reason" required rows="2" placeholder="مثال: ظرف عائلي طارئ / مراجعة مصلحة حكومية..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs resize-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+              <button type="button" onclick="document.getElementById('leave-action-modal').innerHTML=''" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs">
+                إلغاء
+              </button>
+              <button type="submit" id="perm-submit-btn" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/25">
+                <i data-lucide="send" class="w-4 h-4"></i> إرسال الطلب
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  updatePermHoursCalc() {
+    const s = document.getElementById('perm-start-time');
+    const e = document.getElementById('perm-end-time');
+    const badge = document.getElementById('perm-hours-calc-badge');
+    if (!s || !e || !badge) return;
+    try {
+      const [h1, m1] = s.value.split(':').map(Number);
+      const [h2, m2] = e.value.split(':').map(Number);
+      const diffMins = (h2 * 60 + (m2 || 0)) - (h1 * 60 + (m1 || 0));
+      const hours = diffMins > 0 ? (diffMins / 60).toFixed(1) : '1.0';
+      badge.textContent = `${hours} ساعة`;
+    } catch {
+      badge.textContent = '1 ساعة';
+    }
+  },
+
+  async submitPermissionRequest(event) {
+    event.preventDefault();
+    const btn = document.getElementById('perm-submit-btn');
+    const permission_type = document.getElementById('perm-type-select').value;
+    const date = document.getElementById('perm-date').value;
+    const start_time = document.getElementById('perm-start-time').value;
+    const end_time = document.getElementById('perm-end-time').value;
+    const reason = document.getElementById('perm-reason').value;
+
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await API.submitPermission({ permission_type, date, start_time, end_time, reason });
+      if (res.success) {
+        showToast(res.message || 'تم تقديم طلب الإذن بنجاح', 'success');
+        document.getElementById('leave-action-modal').innerHTML = '';
+        this.renderLeavesTab();
+      } else {
+        showToast(res.error || 'فشل في إرسال طلب الإذن', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في إرسال طلب الإذن', 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  async cancelPermissionRequest(id) {
+    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب الإذن هذا؟')) return;
+    try {
+      const res = await API.deletePermission(id);
+      if (res.success) {
+        showToast('تم إلغاء طلب الإذن', 'info');
+        this.renderLeavesTab();
+      } else {
+        showToast(res.error || 'فشل في إلغاء الطلب', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في إلغاء الطلب', 'danger');
+    }
   },
 
   // 6. Finances & Payroll Tab (المرتب والسلف وقسيمة الراتب)

@@ -336,6 +336,62 @@ const API = {
     });
   },
 
+  // Leaves & Permissions (الإجازات والأذونات الرسمية)
+  getLeaveBalance(employeeId) {
+    const qs = employeeId ? `?employee_id=${employeeId}` : '';
+    return this.request(`/leaves/balance${qs}`);
+  },
+
+  getLeaves(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/leaves?${qs}`);
+  },
+
+  submitLeave(data) {
+    return this.request('/leaves', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  reviewLeave(id, status, review_notes) {
+    return this.request(`/leaves/${id}/review`, {
+      method: 'PUT',
+      body: { status, review_notes }
+    });
+  },
+
+  deleteLeave(id) {
+    return this.request(`/leaves/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  getPermissions(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/permissions?${qs}`);
+  },
+
+  submitPermission(data) {
+    return this.request('/permissions', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  reviewPermission(id, status, review_notes) {
+    return this.request(`/permissions/${id}/review`, {
+      method: 'PUT',
+      body: { status, review_notes }
+    });
+  },
+
+  deletePermission(id) {
+    return this.request(`/permissions/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Notifications
   getNotifications() {
     return this.request('/notifications');
@@ -592,6 +648,10 @@ function getStatusBadge(status) {
     case 'Early Leave':
       badgeClass = 'badge-earlyleave';
       label = t('status_earlyleave');
+      break;
+    case 'On Leave':
+      badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
+      label = 'إجازة معتمدة 🌴';
       break;
     case 'Outside Location':
       badgeClass = 'badge-outside';

@@ -71,6 +71,28 @@ function checkAndMarkAutoAbsences() {
       const workingDays = emp.working_days.split(',');
       if (!workingDays.includes(dayOfWeek)) continue;
 
+      // Check if employee has an approved leave today
+      const approvedLeave = db.prepare(`
+        SELECT id, leave_type FROM leave_requests
+        WHERE employee_id = ? AND status = 'approved' AND ? BETWEEN start_date AND end_date
+      `).get(emp.id, today);
+
+      if (approvedLeave) {
+        const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, today);
+        if (!existing) {
+          const leaveLabel = approvedLeave.leave_type === 'sick' ? 'إجازة مرضية معتمدة' :
+                             approvedLeave.leave_type === 'annual' ? 'إجازة سنوية معتمدة' :
+                             approvedLeave.leave_type === 'casual' ? 'إجازة عارضة معتمدة' : 'إجازة رسمية معتمدة';
+          db.prepare(`
+            INSERT INTO attendance_records (
+              employee_id, date, status, scheduled_start, scheduled_end,
+              worked_hours, estimated_deduction, verification_status, notes
+            ) VALUES (?, ?, 'On Leave', ?, ?, 0, 0, 'approved_leave', ?)
+          `).run(emp.id, today, emp.start_time, emp.end_time, leaveLabel);
+        }
+        continue;
+      }
+
       const absenceMins = timeToMinutes(emp.absence_threshold);
       if (currentMins >= absenceMins) {
         // Check if attendance record exists for today
@@ -270,6 +292,25 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       status = 'On Time';
     }
 
+    // Check if employee has an approved permission for today (late_arrival or during_day)
+    const approvedPerm = db.prepare(`
+      SELECT * FROM permission_requests
+      WHERE employee_id = ? AND date = ? AND status = 'approved' AND permission_type IN ('late_arrival', 'during_day')
+    `).get(employeeId, today);
+
+    if (approvedPerm && (status === 'Late' || status === 'Half Day')) {
+      const permMins = Math.round((approvedPerm.hours_count || 1) * 60);
+      if (lateMinutes <= permMins) {
+        status = 'On Time';
+        lateMinutes = 0;
+        deduction = 0;
+        notes = `حضور بإذن تأخير معتمد (${approvedPerm.hours_count} ساعة)`;
+      } else {
+        lateMinutes = Math.max(0, lateMinutes - permMins);
+        notes = `تأخير مخفف بإذن معتمد (${approvedPerm.hours_count} ساعة)`;
+      }
+    }
+
     // Save photo to file
     const photoUrl = saveBase64Image(photo, `checkin_emp${employeeId}`);
 
@@ -460,12 +501,24 @@ router.post('/check-out', authenticateToken, (req, res) => {
 
     if (outMins < (scheduledEndMins - earlyGraceMins)) {
       earlyLeaveMinutes = scheduledEndMins - outMins;
-      if (status === 'On Time') {
-        status = 'Early Leave';
-      }
-      const earlyLeaveRateSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_early_leave_rate'`).get();
-      if (earlyLeaveRateSetting) {
-        deduction += parseFloat(earlyLeaveRateSetting.value);
+
+      // Check if employee has an approved early departure permission
+      const approvedEarlyPerm = db.prepare(`
+        SELECT * FROM permission_requests
+        WHERE employee_id = ? AND date = ? AND status = 'approved' AND permission_type IN ('early_departure', 'during_day')
+      `).get(employeeId, today);
+
+      if (approvedEarlyPerm) {
+        earlyLeaveMinutes = 0;
+        // Don't add early leave deduction if approved permission exists
+      } else {
+        if (status === 'On Time') {
+          status = 'Early Leave';
+        }
+        const earlyLeaveRateSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_early_leave_rate'`).get();
+        if (earlyLeaveRateSetting) {
+          deduction += parseFloat(earlyLeaveRateSetting.value);
+        }
       }
     }
 

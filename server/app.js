@@ -17,6 +17,7 @@ const reportsRouter = require('./reports');
 const notificationsRouter = require('./notifications');
 const auditRouter = require('./audit');
 const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
+const { leavesRouter, permissionsRouter } = require('./leaves-permissions');
 const whatsappModule = require('./whatsapp');
 const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
@@ -53,6 +54,8 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/advances', advancesRouter);
 app.use('/api/bonuses', bonusesRouter);
+app.use('/api/leaves', leavesRouter);
+app.use('/api/permissions', permissionsRouter);
 app.use('/api/whatsapp', whatsappModule.router);
 
 // Fallback to SPA index.html

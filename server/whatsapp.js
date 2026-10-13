@@ -209,13 +209,14 @@ function buildLateAlertMessage(employeeName, lateMinutes, deduction, checkInTime
     `نتمنى لك يوماً موفقاً ومثمراً في العمل! 💼`;
 }
 
-function buildMorningBriefingMessage(companyName, date, stats, lateList, absentList) {
+function buildMorningBriefingMessage(companyName, date, stats, lateList, absentList, onLeaveList = []) {
   let msg = `🏢 *تقرير الصباح اليومي - ${companyName || 'حضور وانصراف الشركة'}*\n`;
   msg += `📅 *التاريخ:* ${date}\n\n`;
   msg += `📊 *ملخص حضور اليوم:*\n`;
   msg += `👥 إجمالي الموظفين: ${stats.total}\n`;
   msg += `✅ الحضور في الموعد: ${stats.onTime}\n`;
   msg += `⏰ المتأخرين: ${lateList.length}\n`;
+  msg += `🌴 إجازات معتمدة: ${onLeaveList.length}\n`;
   msg += `❌ لم يحضروا بعد / غياب: ${absentList.length}\n\n`;
 
   if (lateList.length > 0) {
@@ -228,8 +229,17 @@ function buildMorningBriefingMessage(companyName, date, stats, lateList, absentL
     msg += `⏰ *المتأخرين:* لا يوجد متأخرين اليوم 🎉\n\n`;
   }
 
+  if (onLeaveList.length > 0) {
+    msg += `🌴 *الموظفون في إجازة معتمدة اليوم:*\n`;
+    onLeaveList.forEach(emp => {
+      const typeLabel = emp.leaveType === 'sick' ? 'إجازة مرضية' : emp.leaveType === 'casual' ? 'إجازة عارضة' : 'إجازة سنوية';
+      msg += `• *${emp.name}*: ${typeLabel} معتمدة ✓\n`;
+    });
+    msg += `\n`;
+  }
+
   if (absentList.length > 0) {
-    msg += `❌ *قائمة من لم يسجلوا الحضور بعد:*\n`;
+    msg += `❌ *قائمة من لم يسجلوا الحضور بعد (غياب بدون إذن):*\n`;
     absentList.forEach(emp => {
       msg += `• *${emp.name}* (${emp.code})${emp.phone ? ` - 📞 ${emp.phone}` : ''}\n`;
     });
@@ -339,10 +349,24 @@ router.get('/morning-briefing', authenticateToken, requireManager, (req, res) =>
     let onTimeCount = 0;
     const lateList = [];
     const absentList = [];
+    const onLeaveList = [];
 
     employees.forEach(emp => {
       const rec = recordMap.get(emp.id);
-      if (!rec || !rec.check_in_time) {
+      const approvedLeave = db.prepare(`
+        SELECT leave_type FROM leave_requests
+        WHERE employee_id = ? AND status = 'approved' AND ? BETWEEN start_date AND end_date
+      `).get(emp.id, today);
+
+      if (approvedLeave) {
+        onLeaveList.push({
+          id: emp.id,
+          name: emp.full_name,
+          code: emp.employee_code,
+          phone: emp.phone,
+          leaveType: approvedLeave.leave_type
+        });
+      } else if (!rec || !rec.check_in_time) {
         absentList.push({
           id: emp.id,
           name: emp.full_name,
@@ -369,10 +393,11 @@ router.get('/morning-briefing', authenticateToken, requireManager, (req, res) =>
       present: records.length,
       onTime: onTimeCount,
       late: lateList.length,
+      onLeave: onLeaveList.length,
       absent: absentList.length
     };
 
-    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList);
+    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList);
     const managerPhone = settings.whatsapp_manager_phone || req.user.phone || '01227580963';
     const waLink = generateWhatsAppLink(managerPhone, messageText);
 
@@ -407,10 +432,24 @@ router.post('/morning-briefing/send', authenticateToken, requireManager, async (
     let onTimeCount = 0;
     const lateList = [];
     const absentList = [];
+    const onLeaveList = [];
 
     employees.forEach(emp => {
       const rec = recordMap.get(emp.id);
-      if (!rec || !rec.check_in_time) {
+      const approvedLeave = db.prepare(`
+        SELECT leave_type FROM leave_requests
+        WHERE employee_id = ? AND status = 'approved' AND ? BETWEEN start_date AND end_date
+      `).get(emp.id, today);
+
+      if (approvedLeave) {
+        onLeaveList.push({
+          id: emp.id,
+          name: emp.full_name,
+          code: emp.employee_code,
+          phone: emp.phone,
+          leaveType: approvedLeave.leave_type
+        });
+      } else if (!rec || !rec.check_in_time) {
         absentList.push({ id: emp.id, name: emp.full_name, code: emp.employee_code, phone: emp.phone });
       } else if (rec.status === 'Late' || rec.late_minutes > 0 || rec.status === 'Half Day') {
         lateList.push({
@@ -432,10 +471,11 @@ router.post('/morning-briefing/send', authenticateToken, requireManager, async (
       present: records.length,
       onTime: onTimeCount,
       late: lateList.length,
+      onLeave: onLeaveList.length,
       absent: absentList.length
     };
 
-    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList);
+    const messageText = buildMorningBriefingMessage(settings.company_name, today, stats, lateList, absentList, onLeaveList);
     const targetPhone = req.body.phone || settings.whatsapp_manager_phone || req.user.phone || '01227580963';
 
     const dispatchResult = await sendWhatsAppMessage({

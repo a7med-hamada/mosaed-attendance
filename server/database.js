@@ -221,11 +221,50 @@ db.exec(`
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS leave_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    leave_type TEXT NOT NULL DEFAULT 'annual', -- 'annual', 'sick', 'casual', 'unpaid'
+    start_date TEXT NOT NULL, -- YYYY-MM-DD
+    end_date TEXT NOT NULL, -- YYYY-MM-DD
+    days_count INTEGER NOT NULL DEFAULT 1,
+    reason TEXT,
+    attachment_photo TEXT,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    reviewed_by INTEGER,
+    reviewed_at TEXT,
+    review_notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS permission_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    permission_type TEXT NOT NULL DEFAULT 'late_arrival', -- 'late_arrival', 'early_departure', 'during_day'
+    start_time TEXT NOT NULL, -- HH:MM
+    end_time TEXT NOT NULL, -- HH:MM
+    hours_count REAL NOT NULL DEFAULT 1.0,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    reviewed_by INTEGER,
+    reviewed_at TEXT,
+    review_notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_att_emp_date ON attendance_records(employee_id, date);
   CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
   CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
   CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
+  CREATE INDEX IF NOT EXISTS idx_leave_emp ON leave_requests(employee_id, status);
+  CREATE INDEX IF NOT EXISTS idx_leave_dates ON leave_requests(start_date, end_date, status);
+  CREATE INDEX IF NOT EXISTS idx_perm_emp_date ON permission_requests(employee_id, date, status);
   CREATE INDEX IF NOT EXISTS idx_wa_phone ON whatsapp_logs(recipient_phone);
 `);
 
@@ -235,6 +274,9 @@ try {
   if (!userCols.includes('manager_id')) {
     db.exec(`ALTER TABLE users ADD COLUMN manager_id INTEGER;`);
     db.exec(`UPDATE users SET manager_id = 1 WHERE role = 'employee';`);
+  }
+  if (!userCols.includes('annual_leave_balance')) {
+    db.exec(`ALTER TABLE users ADD COLUMN annual_leave_balance INTEGER DEFAULT 21;`);
   }
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);

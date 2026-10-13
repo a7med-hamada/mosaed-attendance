@@ -22,6 +22,7 @@ const ManagerUI = {
       { id: 'dashboard', icon: 'layout-dashboard', label: isEn ? 'Dashboard' : 'لوحة التحكم' },
       { id: 'employees', icon: 'users', label: isEn ? 'Employees' : 'الموظفون' },
       { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
+      { id: 'leaves', icon: 'calendar-check', label: isEn ? 'Leaves & Permissions' : 'الإجازات والأذونات' },
       { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
       { id: 'workplace', icon: 'map-pin', label: isEn ? 'Workplace' : 'موقع العمل' },
       { id: 'archive', icon: 'coins', label: isEn ? 'Payroll & Monthly Archive' : 'مسير الرواتب والخصومات' },
@@ -61,6 +62,8 @@ const ManagerUI = {
       await this.renderEmployeesSection();
     } else if (sectionId === 'attendance') {
       await this.renderAttendanceSection();
+    } else if (sectionId === 'leaves') {
+      await this.renderLeavesSection();
     } else if (sectionId === 'hours') {
       await this.renderWorkingHoursSection();
     } else if (sectionId === 'workplace') {
@@ -921,6 +924,419 @@ const ManagerUI = {
       }
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  // ========================================================
+  // LEAVES & PERMISSIONS MANAGEMENT ("الإجازات والأذونات")
+  // ========================================================
+  async renderLeavesSection(currentFilter = 'all') {
+    const container = document.getElementById('manager-content');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="space-y-6 w-full">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="calendar-check" class="w-5 h-5 text-blue-500"></i> إدارة الإجازات والأذونات الرسمية
+            </h2>
+            <p class="text-xs text-slate-500">مراجعة واعتماد أو رفض طلبات الإجازات والأذونات لجميع موظفي منشأتك</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="mgr-leaves-status-filter" onchange="ManagerUI.renderLeavesSection(this.value)"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+              <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>جميع الطلبات</option>
+              <option value="pending" ${currentFilter === 'pending' ? 'selected' : ''}>⏳ بانتظار الاعتماد فقط</option>
+              <option value="approved" ${currentFilter === 'approved' ? 'selected' : ''}>✓ المعتمدة</option>
+              <option value="rejected" ${currentFilter === 'rejected' ? 'selected' : ''}>✕ المرفوضة</option>
+            </select>
+            <button onclick="ManagerUI.renderLeavesSection('${currentFilter}')"
+              class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300" title="تحديث">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div id="mgr-leaves-kpi-container" class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center animate-pulse">
+            <span class="text-xs text-slate-400">جاري التحميل...</span>
+          </div>
+        </div>
+
+        <!-- Tab Toggle for Manager View: Leaves vs Permissions -->
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <button id="mgr-tab-btn-leaves" onclick="ManagerUI.toggleManagerLeavesTab('leaves')"
+            class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm flex items-center gap-1.5 transition-all">
+            <i data-lucide="plane" class="w-4 h-4"></i>
+            <span>طلبات الإجازات (<span id="mgr-leaves-badge-count">0</span>)</span>
+          </button>
+          <button id="mgr-tab-btn-permissions" onclick="ManagerUI.toggleManagerLeavesTab('permissions')"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all">
+            <i data-lucide="timer" class="w-4 h-4"></i>
+            <span>طلبات الأذونات (<span id="mgr-perms-badge-count">0</span>)</span>
+          </button>
+        </div>
+
+        <!-- Main Content Area: Leaves Container & Permissions Container -->
+        <div id="mgr-leaves-table-container"></div>
+        <div id="mgr-perms-table-container" class="hidden"></div>
+      </div>
+
+      <!-- Review Action Modal -->
+      <div id="mgr-leave-review-modal"></div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const filterParams = currentFilter !== 'all' ? { status: currentFilter } : {};
+      const [leavesRes, permsRes] = await Promise.all([
+        API.getLeaves(filterParams),
+        API.getPermissions(filterParams)
+      ]);
+
+      const leaves = leavesRes.requests || [];
+      const perms = permsRes.requests || [];
+
+      // Calculate KPIs
+      const pendingLeaves = leaves.filter(l => l.status === 'pending').length;
+      const pendingPerms = perms.filter(p => p.status === 'pending').length;
+      const totalPending = pendingLeaves + pendingPerms;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const onLeaveToday = leaves.filter(l => l.status === 'approved' && todayStr >= l.start_date && todayStr <= l.end_date).length;
+      const permToday = perms.filter(p => p.status === 'approved' && p.date === todayStr).length;
+
+      const kpiEl = document.getElementById('mgr-leaves-kpi-container');
+      if (kpiEl) {
+        kpiEl.innerHTML = `
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 text-right">
+            <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 block mb-1">طلبات بانتظار الاعتماد</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${totalPending}</span>
+              <span class="text-xs text-slate-400">طلب</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 text-right">
+            <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 block mb-1">إجازات اليوم المعتمدة</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${onLeaveToday}</span>
+              <span class="text-xs text-slate-400">موظف</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-indigo-500/20 text-right">
+            <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block mb-1">أذونات اليوم المعتمدة</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${permToday}</span>
+              <span class="text-xs text-slate-400">إذن</span>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20 text-right">
+            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block mb-1">الإجازات المعتمدة (الكل)</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">${leaves.filter(l => l.status === 'approved').length}</span>
+              <span class="text-xs text-slate-400">إجازة</span>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('mgr-leaves-badge-count').textContent = leaves.length;
+      document.getElementById('mgr-perms-badge-count').textContent = perms.length;
+
+      this.populateManagerLeavesTable(leaves);
+      this.populateManagerPermissionsTable(perms);
+
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      console.error('Error in renderLeavesSection:', err);
+      showToast('حدث خطأ أثناء تحميل بيانات الإجازات', 'danger');
+    }
+  },
+
+  toggleManagerLeavesTab(tab) {
+    const leavesBtn = document.getElementById('mgr-tab-btn-leaves');
+    const permsBtn = document.getElementById('mgr-tab-btn-permissions');
+    const leavesContainer = document.getElementById('mgr-leaves-table-container');
+    const permsContainer = document.getElementById('mgr-perms-table-container');
+
+    if (tab === 'leaves') {
+      leavesBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm flex items-center gap-1.5 transition-all';
+      permsBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all';
+      leavesContainer.classList.remove('hidden');
+      permsContainer.classList.add('hidden');
+    } else {
+      permsBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 transition-all';
+      leavesBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all';
+      permsContainer.classList.remove('hidden');
+      leavesContainer.classList.add('hidden');
+    }
+  },
+
+  populateManagerLeavesTable(leaves) {
+    const container = document.getElementById('mgr-leaves-table-container');
+    if (!container) return;
+
+    if (leaves.length === 0) {
+      container.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 text-center text-slate-400 border border-slate-200 dark:border-slate-800 text-xs">
+          لا توجد طلبات إجازة مطابقة للفلتر المحدد.
+        </div>
+      `;
+      return;
+    }
+
+    const typeNames = { annual: 'إجازة سنوية اعتيادية', sick: 'إجازة مرضية', casual: 'إجازة عارضة / طارئة', unpaid: 'إجازة بدون راتب' };
+    const typeColors = { annual: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60', sick: 'text-amber-600 bg-amber-50 dark:bg-amber-950/60', casual: 'text-purple-600 bg-purple-50 dark:bg-purple-950/60', unpaid: 'text-rose-600 bg-rose-50 dark:bg-rose-950/60' };
+    const statusBadges = {
+      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار ⏳</span>',
+      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة ✓</span>',
+      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة ✕</span>'
+    };
+
+    container.innerHTML = `
+      <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto lg:overflow-x-visible w-full">
+          <table class="w-full text-right text-xs min-w-[720px] lg:min-w-0">
+            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
+              <tr>
+                <th class="py-3 px-4">الموظف</th>
+                <th class="py-3 px-4">نوع الإجازة</th>
+                <th class="py-3 px-4">الفترة (من - إلى)</th>
+                <th class="py-3 px-4 text-center">المدة</th>
+                <th class="py-3 px-4">السبب وملاحظات</th>
+                <th class="py-3 px-4 text-center">الحالة</th>
+                <th class="py-3 px-4 text-center">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${leaves.map(l => `
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-2.5">
+                      <img src="${l.profile_photo || '/uploads/avatar.svg'}" onerror="this.src='/uploads/avatar.svg'" class="w-8 h-8 rounded-xl object-cover bg-slate-200" />
+                      <div>
+                        <strong class="font-bold text-slate-800 dark:text-white block">${l.full_name}</strong>
+                        <span class="text-[10px] text-slate-400 font-mono">${l.employee_code || '-'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="px-2.5 py-1 rounded-lg font-bold text-[11px] ${typeColors[l.leave_type] || 'text-blue-600 bg-blue-50'}">
+                      ${typeNames[l.leave_type] || l.leave_type}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 font-mono font-medium text-slate-600 dark:text-slate-300">
+                    ${l.start_date} ← ${l.end_date}
+                  </td>
+                  <td class="py-3 px-4 text-center font-extrabold text-slate-900 dark:text-white">
+                    ${l.days_count} ${l.days_count === 1 ? 'يوم' : 'أيام'}
+                  </td>
+                  <td class="py-3 px-4 max-w-xs truncate text-slate-600 dark:text-slate-300">
+                    ${l.reason || '—'}
+                    ${l.review_notes ? `<span class="block text-[10px] text-blue-500 mt-0.5">ملاحظات: ${l.review_notes}</span>` : ''}
+                  </td>
+                  <td class="py-3 px-4 text-center whitespace-nowrap">
+                    ${statusBadges[l.status] || l.status}
+                  </td>
+                  <td class="py-3 px-4 text-center whitespace-nowrap">
+                    ${l.status === 'pending' ? `
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="ManagerUI.openReviewLeaveModal(${l.id}, '${l.full_name}', ${l.days_count}, '${typeNames[l.leave_type] || l.leave_type}')"
+                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i> اعتماد
+                        </button>
+                        <button onclick="ManagerUI.submitReviewLeave(${l.id}, 'rejected', 'رفض من قِبل المدير')"
+                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all">
+                          <i data-lucide="x" class="w-3.5 h-3.5"></i> رفض
+                        </button>
+                      </div>
+                    ` : `
+                      <span class="text-[11px] text-slate-400">بواسطة ${l.approver_name || 'المدير'}</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  populateManagerPermissionsTable(perms) {
+    const container = document.getElementById('mgr-perms-table-container');
+    if (!container) return;
+
+    if (perms.length === 0) {
+      container.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 text-center text-slate-400 border border-slate-200 dark:border-slate-800 text-xs">
+          لا توجد طلبات أذونات مطابقة للفلتر المحدد.
+        </div>
+      `;
+      return;
+    }
+
+    const permTypes = { late_arrival: 'إذن تأخير صباحي بعذر', early_departure: 'إذن انصراف مبكر', during_day: 'إذن خروج وعودة أثناء الدوام' };
+    const statusBadges = {
+      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار ⏳</span>',
+      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد ✓</span>',
+      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض ✕</span>'
+    };
+
+    container.innerHTML = `
+      <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div class="overflow-x-auto lg:overflow-x-visible w-full">
+          <table class="w-full text-right text-xs min-w-[720px] lg:min-w-0">
+            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
+              <tr>
+                <th class="py-3 px-4">الموظف</th>
+                <th class="py-3 px-4">نوع الإذن</th>
+                <th class="py-3 px-4">تاريخ الإذن</th>
+                <th class="py-3 px-4">الميعاد (من - إلى)</th>
+                <th class="py-3 px-4 text-center">المدة</th>
+                <th class="py-3 px-4">السبب</th>
+                <th class="py-3 px-4 text-center">الحالة</th>
+                <th class="py-3 px-4 text-center">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${perms.map(p => `
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-2.5">
+                      <img src="${p.profile_photo || '/uploads/avatar.svg'}" onerror="this.src='/uploads/avatar.svg'" class="w-8 h-8 rounded-xl object-cover bg-slate-200" />
+                      <div>
+                        <strong class="font-bold text-slate-800 dark:text-white block">${p.full_name}</strong>
+                        <span class="text-[10px] text-slate-400 font-mono">${p.employee_code || '-'}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="px-2.5 py-1 rounded-lg font-bold text-[11px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60">
+                      ${permTypes[p.permission_type] || p.permission_type}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 font-mono font-medium text-slate-700 dark:text-slate-300">
+                    ${p.date}
+                  </td>
+                  <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">
+                    ${formatTime12(p.start_time)} ← ${formatTime12(p.end_time)}
+                  </td>
+                  <td class="py-3 px-4 text-center font-extrabold text-slate-900 dark:text-white">
+                    ${p.hours_count} ساعة
+                  </td>
+                  <td class="py-3 px-4 max-w-xs truncate text-slate-600 dark:text-slate-300">
+                    ${p.reason || '—'}
+                    ${p.review_notes ? `<span class="block text-[10px] text-blue-500 mt-0.5">ملاحظات: ${p.review_notes}</span>` : ''}
+                  </td>
+                  <td class="py-3 px-4 text-center whitespace-nowrap">
+                    ${statusBadges[p.status] || p.status}
+                  </td>
+                  <td class="py-3 px-4 text-center whitespace-nowrap">
+                    ${p.status === 'pending' ? `
+                      <div class="flex items-center justify-center gap-1.5">
+                        <button onclick="ManagerUI.submitReviewPermission(${p.id}, 'approved', 'تم اعتماد الإذن')"
+                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i> اعتماد
+                        </button>
+                        <button onclick="ManagerUI.submitReviewPermission(${p.id}, 'rejected', 'رفض من قِبل المدير')"
+                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all">
+                          <i data-lucide="x" class="w-3.5 h-3.5"></i> رفض
+                        </button>
+                      </div>
+                    ` : `
+                      <span class="text-[11px] text-slate-400">بواسطة ${p.approver_name || 'المدير'}</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  openReviewLeaveModal(leaveId, empName, daysCount, typeName) {
+    const modal = document.getElementById('mgr-leave-review-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-right text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">اعتماد طلب الإجازة</h3>
+            <button onclick="document.getElementById('mgr-leave-review-modal').innerHTML=''" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-1">
+            <div class="flex justify-between">
+              <span class="text-slate-500">الموظف:</span>
+              <strong class="text-slate-900 dark:text-white">${empName}</strong>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">نوع الإجازة:</span>
+              <span class="font-bold text-blue-600">${typeName}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">المدة:</span>
+              <span class="font-bold text-emerald-600">${daysCount} يوم</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">ملاحظات الاعتماد للموظف (اختياري):</label>
+            <input type="text" id="mgr-leave-review-notes" placeholder="مثال: تمت الموافقة - إجازة سعيدة"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+          </div>
+
+          <div class="pt-2 flex items-center justify-end gap-2">
+            <button onclick="document.getElementById('mgr-leave-review-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 font-bold">
+              إلغاء
+            </button>
+            <button onclick="ManagerUI.submitReviewLeave(${leaveId}, 'approved')" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20">
+              <i data-lucide="check" class="w-4 h-4"></i> تأكيد الاعتماد
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitReviewLeave(id, status, defaultNotes = null) {
+    const input = document.getElementById('mgr-leave-review-notes');
+    const notes = input ? input.value : defaultNotes;
+    try {
+      const res = await API.reviewLeave(id, status, notes);
+      if (res.success) {
+        showToast(res.message, status === 'approved' ? 'success' : 'info');
+        const modal = document.getElementById('mgr-leave-review-modal');
+        if (modal) modal.innerHTML = '';
+        this.renderLeavesSection(document.getElementById('mgr-leaves-status-filter')?.value || 'all');
+      } else {
+        showToast(res.error || 'فشل في مراجعة الطلب', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في مراجعة الطلب', 'danger');
+    }
+  },
+
+  async submitReviewPermission(id, status, notes = null) {
+    try {
+      const res = await API.reviewPermission(id, status, notes);
+      if (res.success) {
+        showToast(res.message, status === 'approved' ? 'success' : 'info');
+        this.renderLeavesSection(document.getElementById('mgr-leaves-status-filter')?.value || 'all');
+      } else {
+        showToast(res.error || 'فشل في مراجعة الطلب', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'فشل في مراجعة الطلب', 'danger');
     }
   },
 

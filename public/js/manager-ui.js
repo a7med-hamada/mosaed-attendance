@@ -1233,16 +1233,27 @@ const ManagerUI = {
                     ${l.status === 'pending' ? `
                       <div class="flex items-center justify-center gap-1.5">
                         <button onclick="ManagerUI.openReviewLeaveModal(${l.id}, '${l.full_name}', ${l.days_count}, '${typeNames[l.leave_type] || l.leave_type}')"
-                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all">
+                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all" title="اعتماد الإجازة">
                           <i data-lucide="check" class="w-3.5 h-3.5"></i> اعتماد
                         </button>
                         <button onclick="ManagerUI.submitReviewLeave(${l.id}, 'rejected', 'رفض من قِبل المدير')"
-                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all">
+                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all" title="رفض الإجازة">
                           <i data-lucide="x" class="w-3.5 h-3.5"></i> رفض
+                        </button>
+                        <button onclick="ManagerUI.deleteLeave(${l.id}, '${l.full_name}')"
+                          class="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 font-bold text-[11px] flex items-center gap-1 transition-all" title="حذف طلب الإجازة">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                       </div>
                     ` : `
-                      <span class="text-[11px] text-slate-400">بواسطة ${l.approver_name || 'المدير'}</span>
+                      <div class="flex items-center justify-center gap-2">
+                        <span class="text-[11px] text-slate-400">بواسطة ${l.approver_name || 'المدير'}</span>
+                        <button onclick="ManagerUI.deleteLeave(${l.id}, '${l.full_name}')"
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-[11px] font-bold flex items-center gap-1 transition-all" title="حذف الإجازة وإلغاء اعتمادها واستعادة الرصيد">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف الإجازة</span>
+                        </button>
+                      </div>
                     `}
                   </td>
                 </tr>
@@ -1252,6 +1263,7 @@ const ManagerUI = {
         </div>
       </div>
     `;
+    if (window.lucide) lucide.createIcons();
   },
 
   populateManagerPermissionsTable(perms) {
@@ -1327,16 +1339,27 @@ const ManagerUI = {
                     ${p.status === 'pending' ? `
                       <div class="flex items-center justify-center gap-1.5">
                         <button onclick="ManagerUI.submitReviewPermission(${p.id}, 'approved', 'تم اعتماد الإذن')"
-                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all">
+                          class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition-all" title="اعتماد الإذن">
                           <i data-lucide="check" class="w-3.5 h-3.5"></i> اعتماد
                         </button>
                         <button onclick="ManagerUI.submitReviewPermission(${p.id}, 'rejected', 'رفض من قِبل المدير')"
-                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all">
+                          class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition-all" title="رفض الإذن">
                           <i data-lucide="x" class="w-3.5 h-3.5"></i> رفض
+                        </button>
+                        <button onclick="ManagerUI.deletePermission(${p.id}, '${p.full_name}')"
+                          class="px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600 font-bold text-[11px] flex items-center gap-1 transition-all" title="حذف طلب الإذن">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                       </div>
                     ` : `
-                      <span class="text-[11px] text-slate-400">بواسطة ${p.approver_name || 'المدير'}</span>
+                      <div class="flex items-center justify-center gap-2">
+                        <span class="text-[11px] text-slate-400">بواسطة ${p.approver_name || 'المدير'}</span>
+                        <button onclick="ManagerUI.deletePermission(${p.id}, '${p.full_name}')"
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-[11px] font-bold flex items-center gap-1 transition-all" title="حذف الإذن">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف الإذن</span>
+                        </button>
+                      </div>
                     `}
                   </td>
                 </tr>
@@ -1346,6 +1369,7 @@ const ManagerUI = {
         </div>
       </div>
     `;
+    if (window.lucide) lucide.createIcons();
   },
 
   openReviewLeaveModal(leaveId, empName, daysCount, typeName) {
@@ -1426,6 +1450,44 @@ const ManagerUI = {
       }
     } catch (err) {
       showToast(err.message || 'فشل في مراجعة الطلب', 'danger');
+    }
+  },
+
+  async deleteLeave(id, empName) {
+    const confirmMsg = empName 
+      ? `هل أنت متأكد من حذف طلب الإجازة للموظف (${empName})؟\n\nتنبيه: سيتم إلغاء الإجازة فوراً واستعادة رصيد إجازات الموظف وتحديث سجلات الحضور.`
+      : `هل أنت متأكد من حذف طلب الإجازة؟`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await API.deleteLeave(id);
+      if (res && res.success) {
+        showToast(res.message || 'تم حذف الإجازة بنجاح واستعادة الرصيد', 'success');
+        this.renderLeavesSection(document.getElementById('mgr-leaves-status-filter')?.value || 'all');
+      } else {
+        showToast((res && res.error) || 'فشل في حذف طلب الإجازة', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'حدث خطأ أثناء حذف الإجازة', 'danger');
+    }
+  },
+
+  async deletePermission(id, empName) {
+    const confirmMsg = empName
+      ? `هل أنت متأكد من حذف طلب الإذن للموظف (${empName})؟`
+      : `هل أنت متأكد من حذف طلب الإذن؟`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await API.deletePermission(id);
+      if (res && res.success) {
+        showToast(res.message || 'تم حذف طلب الإذن بنجاح', 'success');
+        this.renderLeavesSection(document.getElementById('mgr-leaves-status-filter')?.value || 'all');
+      } else {
+        showToast((res && res.error) || 'فشل في حذف طلب الإذن', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'حدث خطأ أثناء حذف طلب الإذن', 'danger');
     }
   },
 

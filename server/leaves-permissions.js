@@ -308,7 +308,7 @@ leavesRouter.put('/:id/review', authenticateToken, requireManager, (req, res) =>
   }
 });
 
-// DELETE /api/leaves/:id - Cancel pending leave
+// DELETE /api/leaves/:id - Cancel pending leave or delete by manager
 leavesRouter.delete('/:id', authenticateToken, (req, res) => {
   try {
     const leaveId = parseInt(req.params.id, 10);
@@ -326,9 +326,43 @@ leavesRouter.delete('/:id', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'لا يمكن إلغاء طلب تمت مراجعته مسبقاً' });
     }
 
+    // If an approved leave is deleted by manager, clean up any associated 'On Leave' attendance records
+    if (leave.status === 'approved') {
+      db.prepare(`
+        DELETE FROM attendance_records
+        WHERE employee_id = ?
+          AND date BETWEEN ? AND ?
+          AND (verification_status = 'approved_leave' OR (status = 'On Leave' AND check_in_time IS NULL))
+      `).run(leave.employee_id, leave.start_date, leave.end_date);
+    }
+
     db.prepare('DELETE FROM leave_requests WHERE id = ?').run(leaveId);
-    res.json({ success: true, message: 'تم إلغاء طلب الإجازة بنجاح' });
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'DELETE_LEAVE_REQUEST',
+      'leave_requests',
+      leaveId,
+      leave,
+      null,
+      `حذف طلب إجازة (${leave.status}) للموظف #${leave.employee_id}`,
+      clientIp
+    );
+
+    if (req.user.role === 'manager' && leave.employee_id !== req.user.id) {
+      createNotification(
+        leave.employee_id,
+        'إلغاء / حذف إجازة 🌴',
+        `قامت الإدارة بحذف طلب إجازتك المسجل من ${leave.start_date} إلى ${leave.end_date}. تم تحديث رصيد إجازاتك وسجلات الحضور.`,
+        'warning'
+      );
+    }
+
+    res.json({ success: true, message: 'تم حذف طلب الإجازة بنجاح واستعادة الرصيد وسجلات الحضور' });
   } catch (error) {
+    console.error('Delete leave error:', error);
     res.status(500).json({ success: false, error: 'فشل في إلغاء طلب الإجازة' });
   }
 });
@@ -498,7 +532,7 @@ permissionsRouter.put('/:id/review', authenticateToken, requireManager, (req, re
   }
 });
 
-// DELETE /api/permissions/:id - Cancel pending permission
+// DELETE /api/permissions/:id - Cancel pending permission or delete by manager
 permissionsRouter.delete('/:id', authenticateToken, (req, res) => {
   try {
     const permId = parseInt(req.params.id, 10);
@@ -517,8 +551,32 @@ permissionsRouter.delete('/:id', authenticateToken, (req, res) => {
     }
 
     db.prepare('DELETE FROM permission_requests WHERE id = ?').run(permId);
-    res.json({ success: true, message: 'تم إلغاء طلب الإذن بنجاح' });
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'DELETE_PERMISSION_REQUEST',
+      'permission_requests',
+      permId,
+      perm,
+      null,
+      `حذف طلب إذن (${perm.status}) للموظف #${perm.employee_id}`,
+      clientIp
+    );
+
+    if (req.user.role === 'manager' && perm.employee_id !== req.user.id) {
+      createNotification(
+        perm.employee_id,
+        'إلغاء / حذف إذن ⏱️',
+        `قامت الإدارة بحذف طلب الإذن الخاص بك ليوم ${perm.date}.`,
+        'warning'
+      );
+    }
+
+    res.json({ success: true, message: 'تم إلغاء / حذف طلب الإذن بنجاح' });
   } catch (error) {
+    console.error('Delete permission error:', error);
     res.status(500).json({ success: false, error: 'فشل في إلغاء طلب الإذن' });
   }
 });

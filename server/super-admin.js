@@ -24,20 +24,25 @@ function authenticateSuperAdmin(req, res, next) {
   });
 }
 
-// POST /api/super-admin/login - Authenticate Platform Owner with Master PIN
+// POST /api/super-admin/login - Authenticate Platform Owner with Email & Password
 router.post('/login', (req, res) => {
   try {
-    const { passcode } = req.body;
-    if (!passcode) {
-      return res.status(400).json({ success: false, error: 'يرجى إدخال رمز المرور السري للمالك' });
+    const { email, password, passcode } = req.body;
+    const inputPassword = password || passcode;
+
+    if (!inputPassword) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور' });
     }
 
-    if (String(passcode).trim() !== SUPER_ADMIN_PASSCODE) {
-      return res.status(401).json({ success: false, error: 'رمز المرور غير صحيح' });
+    if (String(inputPassword).trim() !== SUPER_ADMIN_PASSCODE) {
+      return res.status(401).json({ success: false, error: 'كلمة المرور غير صحيحة' });
     }
+
+    const cleanEmail = (email && String(email).trim()) ? String(email).trim().toLowerCase() : 'admin@waqty.com';
 
     const payload = {
       role: 'superadmin',
+      email: cleanEmail,
       name: 'مالك المنظومة | Platform Owner',
       authenticated_at: new Date().toISOString()
     };
@@ -45,12 +50,13 @@ router.post('/login', (req, res) => {
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logAudit(0, 'SuperAdmin', 'SUPERADMIN_LOGIN', 'system', 0, null, null, 'تسجيل دخول ناجح إلى لوحة تحكم المالك الرئيسية', clientIp);
+    logAudit(0, 'SuperAdmin', 'SUPERADMIN_LOGIN', 'system', 0, null, null, `تسجيل دخول ناجح إلى لوحة تحكم المالك (${cleanEmail})`, clientIp);
 
     res.json({
       success: true,
       message: 'تم تسجيل الدخول بنجاح إلى لوحة المالك',
-      token
+      token,
+      email: cleanEmail
     });
   } catch (error) {
     console.error('Super admin login error:', error);

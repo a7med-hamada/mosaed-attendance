@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -34,15 +35,33 @@ app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// Static files
+// Static files directory
 const publicDir = path.join(__dirname, '..', 'public');
+
+// Dedicated secret URL routes for Platform Owner Dashboard (strictly isolated from main site navigation)
+app.use((req, res, next) => {
+  const normPath = req.path.toLowerCase().replace(/\/+$/, '');
+  if (
+    normPath === '/super-admin' ||
+    normPath === '/super-admin/index.html' ||
+    normPath === '/super-admin.html' ||
+    normPath === '/owner' ||
+    normPath === '/owner/index.html' ||
+    normPath === '/owner-portal' ||
+    normPath === '/owner-portal/index.html' ||
+    normPath === '/platform-admin'
+  ) {
+    const targetFile = fs.existsSync(path.join(publicDir, 'super-admin', 'index.html'))
+      ? path.join(publicDir, 'super-admin', 'index.html')
+      : path.join(publicDir, 'super-admin.html');
+    return res.sendFile(targetFile, { dotfiles: 'allow' });
+  }
+  next();
+});
+
+// Serve static assets
 app.use(express.static(publicDir));
 app.use('/uploads', express.static(path.join(publicDir, 'uploads')));
-
-// Dedicated secret URL routes for Platform Owner Dashboard (hidden from main site navigation)
-app.get(['/super-admin', '/platform-admin', '/owner-portal'], (req, res) => {
-  res.sendFile(path.join(publicDir, 'super-admin.html'));
-});
 
 // Cloud Persistence Sync Middleware (preserves all settings, attendance check-in/out, and user data across deployments)
 app.use(cloudSyncMiddleware);
@@ -70,7 +89,7 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, error: 'نقطة النهاية غير موجودة' });
   }
-  res.sendFile(path.join(publicDir, 'index.html'), (err) => {
+  res.sendFile(path.join(publicDir, 'index.html'), { dotfiles: 'allow' }, (err) => {
     if (err && !res.headersSent) res.status(404).end();
   });
 });

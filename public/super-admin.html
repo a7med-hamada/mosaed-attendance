@@ -82,25 +82,40 @@
         <h1 class="text-xl font-black text-white tracking-wide">بوابة مالك المنظومة</h1>
         <p class="text-xs text-slate-400 mt-1 font-medium">لوحة التحكم الرئيسية لإدارة الشركات والاشتراكات (SaaS Super Admin)</p>
         <span class="inline-block mt-3 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold">
-          🔒 منطقة محمية برمز المالك السري
+          🔒 منطقة محمية خاصة بمالك الموقع
         </span>
       </div>
 
       <form onsubmit="handleSuperAdminLogin(event)" class="space-y-4 relative z-10">
         <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1.5">رمز المرور السري للمالك (Master PIN)</label>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">البريد الإلكتروني</label>
           <div class="relative">
             <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-              <i data-lucide="key" class="w-4 h-4"></i>
+              <i data-lucide="mail" class="w-4 h-4"></i>
             </span>
-            <input type="password" id="master-pin-input" required placeholder="أدخل رمز المرور..."
-              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-white font-mono text-center tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-500" />
+            <input type="email" id="super-admin-email" required placeholder="admin@waqty.com"
+              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-500 text-left dir-ltr" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة المرور</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+            </span>
+            <input type="password" id="super-admin-password" required placeholder="أدخل كلمة المرور..."
+              class="w-full pr-10 pl-11 py-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-white font-mono text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-500 text-left dir-ltr" />
+            <button type="button" onclick="togglePasswordVisibility('super-admin-password', 'pwd-toggle-icon')"
+              class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 hover:text-slate-200 transition-colors">
+              <i id="pwd-toggle-icon" data-lucide="eye" class="w-4 h-4"></i>
+            </button>
           </div>
         </div>
 
         <button type="submit" id="login-submit-btn"
           class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
-          <span>دخول لوحة التحكم</span>
+          <span>تسجيل الدخول إلى لوحة المالك</span>
           <i data-lucide="arrow-left" class="w-4 h-4"></i>
         </button>
       </form>
@@ -120,6 +135,7 @@
             <div class="flex items-center gap-2">
               <h2 class="text-base sm:text-lg font-black text-white">وقتي | <span class="text-emerald-400 font-mono">WAQTY SaaS</span></h2>
               <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-extrabold uppercase">Super Admin</span>
+              <span id="superadmin-user-email" class="text-[11px] font-mono text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-md border border-slate-700/60 hidden sm:inline-block"></span>
             </div>
             <p class="text-[11px] text-slate-400 font-medium">لوحة إدارة كافة الشركات والمنشآت المسجلة والاشتراكات</p>
           </div>
@@ -470,48 +486,85 @@
       return res.json();
     }
 
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        if (icon) icon.setAttribute('data-lucide', 'eye');
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
     function showAuthModal() {
       document.getElementById('auth-modal').classList.remove('hidden');
       document.getElementById('dashboard-content').classList.add('hidden');
-      setTimeout(() => document.getElementById('master-pin-input')?.focus(), 100);
+      const savedEmail = localStorage.getItem('waqty_superadmin_email') || '';
+      const emailInput = document.getElementById('super-admin-email');
+      if (emailInput && savedEmail) {
+        emailInput.value = savedEmail;
+      }
+      setTimeout(() => {
+        if (emailInput && !emailInput.value) {
+          emailInput.focus();
+        } else {
+          document.getElementById('super-admin-password')?.focus();
+        }
+      }, 100);
     }
 
     function showDashboard() {
       document.getElementById('auth-modal').classList.add('hidden');
       document.getElementById('dashboard-content').classList.remove('hidden');
+      const email = localStorage.getItem('waqty_superadmin_email') || 'admin@waqty.com';
+      const emailBadge = document.getElementById('superadmin-user-email');
+      if (emailBadge) {
+        emailBadge.textContent = email;
+      }
       loadAllData();
       if (window.lucide) lucide.createIcons();
     }
 
     async function handleSuperAdminLogin(e) {
       e.preventDefault();
-      const pinInput = document.getElementById('master-pin-input');
-      const passcode = pinInput.value.trim();
+      const emailInput = document.getElementById('super-admin-email');
+      const passwordInput = document.getElementById('super-admin-password');
+      const email = emailInput ? emailInput.value.trim() : '';
+      const password = passwordInput ? passwordInput.value.trim() : '';
       const btn = document.getElementById('login-submit-btn');
 
-      if (!passcode) return;
+      if (!password) {
+        showToast('يرجى إدخال كلمة المرور', 'warning');
+        return;
+      }
+
       btn.disabled = true;
-      btn.innerText = 'جاري التحقق...';
+      btn.innerText = 'جاري تسجيل الدخول والتحقق...';
 
       try {
         const res = await apiRequest('/api/super-admin/login', {
           method: 'POST',
-          body: JSON.stringify({ passcode })
+          body: JSON.stringify({ email, password })
         });
 
         if (res.success && res.token) {
           setToken(res.token);
-          pinInput.value = '';
-          showToast('تم التحقق بنجاح! أهلاً بك في لوحة المالك', 'success');
+          if (email) localStorage.setItem('waqty_superadmin_email', email);
+          if (passwordInput) passwordInput.value = '';
+          showToast('تم تسجيل الدخول بنجاح! أهلاً بك في لوحة المالك', 'success');
           showDashboard();
         } else {
-          showToast(res.error || 'رمز المرور غير صحيح', 'danger');
+          showToast(res.error || 'بيانات الدخول غير صحيحة', 'danger');
         }
       } catch (err) {
         showToast('حدث خطأ في الاتصال بالسيرفر', 'danger');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>دخول لوحة التحكم</span> <i data-lucide="arrow-left" class="w-4 h-4"></i>';
+        btn.innerHTML = '<span>تسجيل الدخول إلى لوحة المالك</span> <i data-lucide="arrow-left" class="w-4 h-4"></i>';
         if (window.lucide) lucide.createIcons();
       }
     }

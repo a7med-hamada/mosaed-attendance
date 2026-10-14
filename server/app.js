@@ -19,6 +19,7 @@ const auditRouter = require('./audit');
 const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
 const { leavesRouter, permissionsRouter } = require('./leaves-permissions');
 const whatsappModule = require('./whatsapp');
+const superAdminRouter = require('./super-admin');
 const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
 // Auto seed on boot
@@ -37,6 +38,11 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 app.use('/uploads', express.static(path.join(publicDir, 'uploads')));
+
+// Dedicated secret URL routes for Platform Owner Dashboard (hidden from main site navigation)
+app.get(['/super-admin', '/platform-admin', '/owner-portal'], (req, res) => {
+  res.sendFile(path.join(publicDir, 'super-admin.html'));
+});
 
 // Cloud Persistence Sync Middleware (preserves all settings, attendance check-in/out, and user data across deployments)
 app.use(cloudSyncMiddleware);
@@ -57,6 +63,7 @@ app.use('/api/bonuses', bonusesRouter);
 app.use('/api/leaves', leavesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/whatsapp', whatsappModule.router);
+app.use('/api/super-admin', superAdminRouter);
 
 // Fallback to SPA index.html
 app.use((req, res) => {

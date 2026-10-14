@@ -144,6 +144,7 @@ const App = {
     const name = document.getElementById('reg-mgr-name').value.trim();
     const company = document.getElementById('reg-mgr-company').value.trim();
     const email = document.getElementById('reg-mgr-email').value.trim();
+    const phone = (document.getElementById('reg-mgr-phone')?.value || '').trim();
     const pass = document.getElementById('reg-mgr-pass').value;
     const confirmPass = document.getElementById('reg-mgr-confirm-pass').value;
     const submitBtn = document.getElementById('reg-mgr-btn');
@@ -168,6 +169,7 @@ const App = {
       const res = await API.registerManager({
         full_name: name,
         email: email,
+        phone: phone,
         password: pass,
         company_name: company
       });

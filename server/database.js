@@ -278,6 +278,12 @@ try {
   if (!userCols.includes('annual_leave_balance')) {
     db.exec(`ALTER TABLE users ADD COLUMN annual_leave_balance INTEGER DEFAULT 21;`);
   }
+  if (!userCols.includes('subscription_plan')) {
+    db.exec(`ALTER TABLE users ADD COLUMN subscription_plan TEXT DEFAULT 'trial';`);
+  }
+  if (!userCols.includes('trial_days')) {
+    db.exec(`ALTER TABLE users ADD COLUMN trial_days INTEGER DEFAULT 14;`);
+  }
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
   if (!wpCols.includes('manager_id')) {

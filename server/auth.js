@@ -21,6 +21,20 @@ function authenticateToken(req, res, next) {
     if (err) {
       return res.status(403).json({ success: false, error: 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً' });
     }
+
+    // Verify user account is still active (real-time suspension enforcement)
+    const activeCheck = db.prepare('SELECT id, is_active, role, manager_id FROM users WHERE id = ?').get(user.id);
+    if (!activeCheck || !activeCheck.is_active) {
+      return res.status(403).json({ success: false, error: 'تم إيقاف حسابك مؤقتاً، يرجى مراجعة إدارة المنظومة' });
+    }
+    // If employee, verify manager company account is also active
+    if (activeCheck.role === 'employee' && activeCheck.manager_id) {
+      const mgrCheck = db.prepare('SELECT is_active FROM users WHERE id = ?').get(activeCheck.manager_id);
+      if (mgrCheck && !mgrCheck.is_active) {
+        return res.status(403).json({ success: false, error: 'تم إيقاف حساب هذه المنشأة مؤقتاً، يرجى مراجعة إدارة المنظومة' });
+      }
+    }
+
     req.user = user;
     next();
   });
@@ -37,7 +51,7 @@ function requireManager(req, res, next) {
 // POST /api/auth/register-manager (New Manager Registration)
 router.post('/register-manager', (req, res) => {
   try {
-    const { company_name, full_name, email, password, confirm_password } = req.body;
+    const { company_name, full_name, email, password, confirm_password, phone } = req.body;
 
     if (!full_name || !email || !password) {
       return res.status(400).json({ success: false, error: 'اسم المدير، البريد الإلكتروني، وكلمة المرور حقول إلزامية' });
@@ -60,10 +74,10 @@ router.post('/register-manager', (req, res) => {
     const mgrCode = 'MGR-' + Math.floor(100 + Math.random() * 900);
 
     const userStmt = db.prepare(`
-      INSERT INTO users (employee_code, full_name, email, password_hash, role, manager_id, is_active)
-      VALUES (?, ?, ?, ?, 'manager', NULL, 1)
+      INSERT INTO users (employee_code, full_name, email, password_hash, role, manager_id, is_active, phone, subscription_plan, trial_days)
+      VALUES (?, ?, ?, ?, 'manager', NULL, 1, ?, 'trial', 14)
     `);
-    const newMgrResult = userStmt.run(mgrCode, full_name.trim(), email.trim(), hash);
+    const newMgrResult = userStmt.run(mgrCode, full_name.trim(), email.trim(), hash, phone ? phone.trim() : null);
     const newManagerId = newMgrResult.lastInsertRowid;
 
     // Create unconfigured workplace placeholder for this new manager
@@ -135,7 +149,14 @@ router.post('/login', (req, res) => {
     }
 
     if (!user.is_active) {
-      return res.status(403).json({ success: false, error: 'تم تعطيل هذا الحساب، يرجى مراجعة إدارة الموارد البشرية' });
+      return res.status(403).json({ success: false, error: 'تم تعطيل هذا الحساب، يرجى مراجعة إدارة المنظومة' });
+    }
+
+    if (user.role === 'employee' && user.manager_id) {
+      const mgr = db.prepare('SELECT is_active FROM users WHERE id = ?').get(user.manager_id);
+      if (mgr && !mgr.is_active) {
+        return res.status(403).json({ success: false, error: 'تم إيقاف حساب هذه المنشأة مؤقتاً، يرجى مراجعة إدارة المنظومة' });
+      }
     }
 
     let isMatch = bcrypt.compareSync(password, user.password_hash);

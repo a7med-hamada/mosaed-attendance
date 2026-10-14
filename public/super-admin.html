@@ -157,130 +157,470 @@
       </div>
     </header>
 
+    <!-- Tabs Navigation Bar -->
+    <div class="bg-slate-900/60 border-b border-slate-800 backdrop-blur-md sticky top-20 z-30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div class="flex items-center gap-1 sm:gap-2">
+          <button id="nav-tab-companies" onclick="switchSuperAdminTab('companies')"
+            class="py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            <span>الشركات والاشتراكات</span>
+            <span id="tab-companies-count" class="px-2 py-0.5 rounded-full text-[11px] bg-slate-800 text-slate-300 font-mono">0</span>
+          </button>
+
+          <button id="nav-tab-tickets" onclick="switchSuperAdminTab('tickets')"
+            class="py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all">
+            <i data-lucide="headphones" class="w-4 h-4"></i>
+            <span>الدعم الفني والشكاوى</span>
+            <span id="tab-tickets-badge" class="px-2 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">0</span>
+          </button>
+        </div>
+
+        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-bold">لوحة تحكم المالك الحية</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Body Area -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
 
-      <!-- KPI Summary Cards -->
-      <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <!-- 1. Total Companies -->
-        <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-400">إجمالي الشركات المسجلة</span>
-            <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <i data-lucide="building-2" class="w-4 h-4"></i>
+      <!-- ======================================================== -->
+      <!-- TAB 1: COMPANIES & SUBSCRIPTIONS -->
+      <!-- ======================================================== -->
+      <div id="tab-content-companies" class="space-y-8">
+        <!-- KPI Summary Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- 1. Total Companies -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400">إجمالي الشركات المسجلة</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                <i data-lucide="building-2" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-total-companies" class="text-3xl font-black text-white font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">شركة</span>
             </div>
           </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpi-total-companies" class="text-3xl font-black text-white font-mono">0</span>
-            <span class="text-xs text-slate-500 font-bold">شركة</span>
-          </div>
-        </div>
 
-        <!-- 2. Active Companies -->
-        <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-emerald-400">الشركات النشطة</span>
-            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <!-- 2. Active Companies -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">الشركات النشطة</span>
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-active-companies" class="text-3xl font-black text-emerald-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">نشطة</span>
             </div>
           </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpi-active-companies" class="text-3xl font-black text-emerald-400 font-mono">0</span>
-            <span class="text-xs text-slate-500 font-bold">نشطة</span>
-          </div>
-        </div>
 
-        <!-- 3. Suspended Companies -->
-        <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-rose-400">الشركات الموقوفة</span>
-            <div class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-              <i data-lucide="lock" class="w-4 h-4"></i>
+          <!-- 3. Suspended Companies -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-rose-400">الشركات الموقوفة</span>
+              <div class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-suspended-companies" class="text-3xl font-black text-rose-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">موقوفة</span>
             </div>
           </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpi-suspended-companies" class="text-3xl font-black text-rose-400 font-mono">0</span>
-            <span class="text-xs text-slate-500 font-bold">موقوفة</span>
-          </div>
-        </div>
 
-        <!-- 4. Total Employees -->
-        <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-purple-400">إجمالي الموظفين بالمنظومة</span>
-            <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-              <i data-lucide="users" class="w-4 h-4"></i>
+          <!-- 4. Total Employees -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-purple-400">إجمالي الموظفين بالمنظومة</span>
+              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                <i data-lucide="users" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-total-employees" class="text-3xl font-black text-purple-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">موظف</span>
             </div>
           </div>
-          <div class="flex items-baseline gap-2">
-            <span id="kpi-total-employees" class="text-3xl font-black text-purple-400 font-mono">0</span>
-            <span class="text-xs text-slate-500 font-bold">موظف</span>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Companies Section -->
-      <section class="space-y-4">
-        <!-- Toolbar: Title, Search & Filters -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <!-- Companies Section -->
+        <section class="space-y-4">
+          <!-- Toolbar: Title, Search & Filters -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-black text-white flex items-center gap-2">
+                <i data-lucide="layout-grid" class="w-5 h-5 text-emerald-400"></i>
+                <span>قائمة الشركات والمنشآت المسجلة</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">متابعة حسابات المديرين، التحكم في الصلاحيات والإيقاف وتجديد الباقات</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+              <!-- Search Input -->
+              <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                </span>
+                <input type="text" id="companies-search" oninput="filterCompanies()" placeholder="بحث باسم الشركة، المدير، الهاتف..."
+                  class="w-full pr-9 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500" />
+              </div>
+
+              <!-- Filter Status -->
+              <select id="status-filter" onchange="filterCompanies()"
+                class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="suspended">الموقوفة فقط</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Companies Table Container -->
+          <div class="bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+            <div class="overflow-x-auto w-full custom-scrollbar">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-800/60 text-slate-400 font-bold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3.5 px-4">الشركة والمنشأة</th>
+                    <th class="py-3.5 px-4">المدير المسئول</th>
+                    <th class="py-3.5 px-4">رقم الهاتف</th>
+                    <th class="py-3.5 px-4">البريد الإلكتروني</th>
+                    <th class="py-3.5 px-4 text-center">الموظفين</th>
+                    <th class="py-3.5 px-4 text-center">الاشتراك / التجربة</th>
+                    <th class="py-3.5 px-4 text-center">الحالة</th>
+                    <th class="py-3.5 px-4 text-center">تاريخ التسجيل</th>
+                    <th class="py-3.5 px-4 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="companies-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td colspan="9" class="py-8 text-center text-slate-500">
+                      جاري تحميل بيانات المنشآت...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- TAB 2: TECHNICAL SUPPORT & ISSUES (الدعم الفني) -->
+      <!-- ======================================================== -->
+      <div id="tab-content-tickets" class="space-y-8 hidden">
+        <!-- Tickets KPI Summary Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Total Tickets -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400">إجمالي التذاكر المستلمة</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                <i data-lucide="inbox" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-tickets-total" class="text-3xl font-black text-white font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">تذكرة</span>
+            </div>
+          </div>
+
+          <!-- New Tickets -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400">تذاكر جديدة بحاجة لرد</span>
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-tickets-new" class="text-3xl font-black text-amber-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">جديدة</span>
+            </div>
+          </div>
+
+          <!-- In Progress Tickets -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-blue-400">قيد المتابعة</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-tickets-in-progress" class="text-3xl font-black text-blue-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">قيد الحل</span>
+            </div>
+          </div>
+
+          <!-- Resolved Tickets -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">تم حلها بنجاح</span>
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <i data-lucide="check-check" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-tickets-resolved" class="text-3xl font-black text-emerald-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">مكتملة</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tickets Section Toolbar & Table -->
+        <section class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-black text-white flex items-center gap-2">
+                <i data-lucide="headphones" class="w-5 h-5 text-emerald-400"></i>
+                <span>تذاكر الدعم الفني والشكاوى المرسلة من الموقع</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">تواصل مباشر مع العملاء والمديرين عبر الواتساب وتحديث حالة المشاكل</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+              <!-- Search Input -->
+              <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                </span>
+                <input type="text" id="tickets-search" oninput="filterTickets()" placeholder="بحث بالاسم، الهاتف، المنشأة، المشكلة..."
+                  class="w-full pr-9 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500" />
+              </div>
+
+              <!-- Filter Status -->
+              <select id="tickets-status-filter" onchange="filterTickets()"
+                class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="all">كل التذاكر</option>
+                <option value="new">الجديدة فقط</option>
+                <option value="in_progress">قيد المتابعة</option>
+                <option value="resolved">تم الحل</option>
+              </select>
+
+              <button onclick="loadTickets()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all" title="تحديث التذاكر">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tickets Table Container -->
+          <div class="bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+            <div class="overflow-x-auto w-full custom-scrollbar">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-800/60 text-slate-400 font-bold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3.5 px-4">رقم التذكرة</th>
+                    <th class="py-3.5 px-4">اسم المرسل والصفة</th>
+                    <th class="py-3.5 px-4">المنشأة</th>
+                    <th class="py-3.5 px-4">الهاتف والواتساب</th>
+                    <th class="py-3.5 px-4">عنوان المشكلة وتفاصيلها</th>
+                    <th class="py-3.5 px-4 text-center">التاريخ</th>
+                    <th class="py-3.5 px-4 text-center">الحالة</th>
+                    <th class="py-3.5 px-4 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="tickets-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td colspan="8" class="py-8 text-center text-slate-500">
+                      جاري تحميل تذاكر الدعم الفني...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 2.5 COMPANY FULL DETAILS & SUBSCRIPTIONS MODAL (عرض تفاصيل المنشأة) -->
+  <!-- ============================================================ -->
+  <div id="company-details-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+    <div class="bg-slate-900 rounded-3xl max-w-4xl w-full p-5 sm:p-6 border border-slate-800 shadow-2xl space-y-5 max-h-[92vh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 font-bold">
+            <i data-lucide="building" class="w-5 h-5"></i>
+          </div>
           <div>
-            <h3 class="text-lg font-black text-white flex items-center gap-2">
-              <i data-lucide="layout-grid" class="w-5 h-5 text-emerald-400"></i>
-              <span>قائمة الشركات والمنشآت المسجلة</span>
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">متابعة حسابات المديرين، التحكم في الصلاحيات والإيقاف والحذف</p>
+            <h4 id="cd-company-name" class="font-black text-base text-white">اسم الشركة</h4>
+            <p id="cd-workplace-sub" class="text-xs text-slate-400 font-mono"></p>
+          </div>
+        </div>
+        <button onclick="closeCompanyDetailsModal()" class="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800/80">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="overflow-y-auto custom-scrollbar flex-1 space-y-5 pr-1">
+        
+        <!-- Row 1: Manager Information & Direct WhatsApp Button -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">المدير المسئول للتواصل</span>
+            <div class="flex items-center gap-2">
+              <span id="cd-manager-name" class="text-sm font-black text-white"></span>
+              <span id="cd-active-badge"></span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 font-mono mt-1">
+              <span class="flex items-center gap-1"><i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i> <span id="cd-phone"></span></span>
+              <span class="flex items-center gap-1"><i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i> <span id="cd-email"></span></span>
+            </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2.5">
-            <!-- Search Input -->
-            <div class="relative w-full sm:w-64">
-              <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                <i data-lucide="search" class="w-4 h-4"></i>
-              </span>
-              <input type="text" id="companies-search" oninput="filterCompanies()" placeholder="بحث باسم الشركة، المدير، الهاتف..."
-                class="w-full pr-9 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500" />
+          <!-- Direct WhatsApp Button -->
+          <a id="cd-whatsapp-btn" href="#" target="_blank"
+            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all flex-shrink-0">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>مراسلة واتساب المدير</span>
+          </a>
+        </div>
+
+        <!-- Row 2: Subscription Package & Days Control (The core requirement) -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900 border border-emerald-500/30 shadow-lg space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
+            <div>
+              <h5 class="text-sm font-black text-white flex items-center gap-2">
+                <i data-lucide="gem" class="w-4 h-4 text-emerald-400"></i>
+                <span>إدارة الباقة والاشتراك والأيام</span>
+              </h5>
+              <p class="text-[11px] text-slate-400">يمكنك تجديد الباقة عدة مرات تراكمياً أو تعديل عدد الأيام المتبقية بحرية</p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span id="cd-plan-badge" class="px-3 py-1 rounded-full text-xs font-bold font-mono"></span>
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 block">المتبقي:</span>
+                <span id="cd-days-remaining" class="text-base font-black font-mono"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Subscription Renewal Buttons (Stackable) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-2">
+              تفعيل وتجديد الباقات (يتم تمديد الأيام فوراً وبشكل تراكمي):
+            </label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <button onclick="extendSubscription(30, 'monthly')"
+                class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
+                <span class="block text-xs font-black text-emerald-400 group-hover:scale-105 transition-transform">+ شهر (30 يوم)</span>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">باقة شهرية</span>
+              </button>
+
+              <button onclick="extendSubscription(90, 'quarterly')"
+                class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
+                <span class="block text-xs font-black text-amber-400 group-hover:scale-105 transition-transform">+ 3 شهور (90 يوم)</span>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">ربع سنوي</span>
+              </button>
+
+              <button onclick="extendSubscription(180, 'semi_annual')"
+                class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
+                <span class="block text-xs font-black text-purple-400 group-hover:scale-105 transition-transform">+ 6 شهور (180 يوم)</span>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">نصف سنوي</span>
+              </button>
+
+              <button onclick="extendSubscription(365, 'annual')"
+                class="p-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-white border border-emerald-500/30 hover:border-emerald-500 transition-all text-center group">
+                <span class="block text-xs font-black text-emerald-300 group-hover:scale-105 transition-transform">+ سنة (365 يوم) ⭐</span>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">باقة سنوية</span>
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-medium">💡 ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وهكذا لجميع الباقات.</p>
+          </div>
+
+          <!-- Fine-tuning Days Control (+ / - / Custom Input) -->
+          <div class="pt-3 border-t border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-slate-300 ml-1">تعديل سريع:</span>
+              <button onclick="adjustDays(-1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-rose-400 border border-slate-700 text-xs font-mono font-bold" title="إنقاص يوم واحد">-1 يوم</button>
+              <button onclick="adjustDays(1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-emerald-500/20 text-emerald-400 border border-slate-700 text-xs font-mono font-bold" title="زيادة يوم واحد">+1 يوم</button>
+              <button onclick="adjustDays(-7)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-rose-400 border border-slate-700 text-xs font-mono font-bold" title="إنقاص أسبوع">-7 أيام</button>
+              <button onclick="adjustDays(7)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-emerald-500/20 text-emerald-400 border border-slate-700 text-xs font-mono font-bold" title="زيادة أسبوع">+7 أيام</button>
             </div>
 
-            <!-- Filter Status -->
-            <select id="status-filter" onchange="filterCompanies()"
-              class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="suspended">الموقوفة فقط</option>
-            </select>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-300 whitespace-nowrap">أو حدد إجمالي الأيام:</span>
+              <input type="number" id="cd-custom-days-input" min="0" max="3650"
+                class="w-20 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-center text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              <button onclick="saveCustomDays()"
+                class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all whitespace-nowrap">
+                حفظ
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Companies Table Container -->
-        <div class="bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
-          <div class="overflow-x-auto w-full custom-scrollbar">
+        <!-- Row 3: Employees Roster in this Company -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-black text-white flex items-center gap-1.5">
+              <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+              <span>قائمة موظفي هذه الشركة</span>
+            </h5>
+            <span id="cd-emp-count" class="text-[11px] font-bold text-slate-400 font-mono">0 موظف</span>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 overflow-hidden bg-slate-950/60 max-h-48 overflow-y-auto custom-scrollbar">
             <table class="w-full text-right text-xs">
-              <thead class="bg-slate-800/60 text-slate-400 font-bold border-b border-slate-800">
+              <thead class="bg-slate-800/70 text-slate-400 font-bold sticky top-0">
                 <tr>
-                  <th class="py-3.5 px-4">الشركة والمنشأة</th>
-                  <th class="py-3.5 px-4">المدير المسئول</th>
-                  <th class="py-3.5 px-4">رقم الهاتف</th>
-                  <th class="py-3.5 px-4">البريد الإلكتروني</th>
-                  <th class="py-3.5 px-4 text-center">الموظفين</th>
-                  <th class="py-3.5 px-4 text-center">الاشتراك / التجربة</th>
-                  <th class="py-3.5 px-4 text-center">الحالة</th>
-                  <th class="py-3.5 px-4 text-center">تاريخ التسجيل</th>
-                  <th class="py-3.5 px-4 text-center">الإجراءات</th>
+                  <th class="py-2 px-3">الكود</th>
+                  <th class="py-2 px-3">اسم الموظف</th>
+                  <th class="py-2 px-3">المسمى الوظيفي</th>
+                  <th class="py-2 px-3">الهاتف</th>
+                  <th class="py-2 px-3 text-center">الحالة</th>
                 </tr>
               </thead>
-              <tbody id="companies-table-body" class="divide-y divide-slate-800/60 text-slate-300">
-                <tr>
-                  <td colspan="9" class="py-8 text-center text-slate-500">
-                    جاري تحميل بيانات المنشآت...
-                  </td>
-                </tr>
+              <tbody id="cd-employees-tbody" class="divide-y divide-slate-800/60">
+                <tr><td colspan="5" class="py-4 text-center text-slate-500">جاري التحميل...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
-      </section>
 
-    </main>
+      </div>
+
+      <!-- Modal Footer (Action buttons: Edit, Suspend, Delete) -->
+      <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <!-- Suspend / Activate -->
+          <button id="cd-action-suspend-btn" onclick="triggerCompanySuspendFromDetails()"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border">
+          </button>
+
+          <!-- Edit Company -->
+          <button onclick="triggerCompanyEditFromDetails()"
+            class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            <span>تعديل البيانات</span>
+          </button>
+
+          <!-- Delete Company (Passcode 19931993) -->
+          <button onclick="triggerCompanyDeleteFromDetails()"
+            class="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>حذف المنشأة نهائياً</span>
+          </button>
+        </div>
+
+        <button onclick="closeCompanyDetailsModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-bold">
+          إغلاق النافذة
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ============================================================ -->
@@ -575,8 +915,11 @@
       showAuthModal();
     }
 
+    let allTickets = [];
+    let currentDetailsCompanyId = null;
+
     async function loadAllData() {
-      await Promise.all([loadOverview(), loadCompanies()]);
+      await Promise.all([loadOverview(), loadCompanies(), loadTickets()]);
     }
 
     async function loadOverview() {
@@ -719,6 +1062,14 @@
             <!-- 9. Actions -->
             <td class="py-3.5 px-4 text-center whitespace-nowrap">
               <div class="flex items-center justify-center gap-1.5">
+                <!-- View Details Button (زر تفاصيل المنشأة سميه عرض) -->
+                <button onclick="openCompanyDetailsModal(${c.id})"
+                  class="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all shadow-sm"
+                  title="عرض التفاصيل وإدارة الباقات والأيام">
+                  <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  <span>عرض</span>
+                </button>
+
                 <!-- Toggle Suspend Button -->
                 <button onclick="toggleCompanyStatus(${c.id}, ${c.is_active ? 0 : 1}, '${c.company_name}')"
                   class="p-2 rounded-xl text-xs font-bold transition-all border ${c.is_active ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20'}"
@@ -927,6 +1278,446 @@
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i> <span>تأكيد الحذف النهائي</span>';
         if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    // ============================================================
+    // TABS SWITCHER (COMPANIES vs TICKETS)
+    // ============================================================
+    function switchSuperAdminTab(tab) {
+      const tabCompBtn = document.getElementById('nav-tab-companies');
+      const tabTickBtn = document.getElementById('nav-tab-tickets');
+      const contentComp = document.getElementById('tab-content-companies');
+      const contentTick = document.getElementById('tab-content-tickets');
+
+      if (tab === 'companies') {
+        contentComp.classList.remove('hidden');
+        contentTick.classList.add('hidden');
+        tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
+        tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
+      } else {
+        contentComp.classList.add('hidden');
+        contentTick.classList.remove('hidden');
+        tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
+        tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
+        loadTickets();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // ============================================================
+    // COMPANY FULL DETAILS & SUBSCRIPTIONS MODAL (زر عرض)
+    // ============================================================
+    async function openCompanyDetailsModal(companyId) {
+      currentDetailsCompanyId = companyId;
+      const c = allCompanies.find(x => x.id === companyId);
+      if (!c) return;
+
+      document.getElementById('cd-company-name').textContent = c.company_name;
+      document.getElementById('cd-workplace-sub').textContent = `${c.workplace_name} • ${c.employee_code}`;
+      document.getElementById('cd-manager-name').textContent = c.full_name;
+      document.getElementById('cd-phone').textContent = c.phone || 'غير مسجل';
+      document.getElementById('cd-email').textContent = c.email;
+
+      // Direct WhatsApp link
+      const waBtn = document.getElementById('cd-whatsapp-btn');
+      if (c.phone) {
+        waBtn.href = `https://wa.me/${c.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('مرحباً بك، تواصل معك من إدارة منظومة وقتي WAQTY بخصوص منشأتكم')}`;
+        waBtn.classList.remove('opacity-50', 'pointer-events-none');
+      } else {
+        waBtn.href = '#';
+        waBtn.classList.add('opacity-50', 'pointer-events-none');
+      }
+
+      // Status badge
+      const activeBadge = document.getElementById('cd-active-badge');
+      if (c.is_active) {
+        activeBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        activeBadge.textContent = 'نشط';
+      } else {
+        activeBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20';
+        activeBadge.textContent = 'موقوف / مجمد';
+      }
+
+      // Subscription badge & days
+      updateCompanyDetailsModalSubscriptionUI(c);
+
+      // Suspend button in modal
+      const suspBtn = document.getElementById('cd-action-suspend-btn');
+      if (c.is_active) {
+        suspBtn.className = 'px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/25 text-xs font-bold flex items-center gap-1.5 transition-all';
+        suspBtn.innerHTML = '<i data-lucide="lock" class="w-3.5 h-3.5"></i> <span>تجميد الحساب</span>';
+      } else {
+        suspBtn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 text-xs font-bold flex items-center gap-1.5 transition-all';
+        suspBtn.innerHTML = '<i data-lucide="unlock" class="w-3.5 h-3.5"></i> <span>تفعيل الحساب</span>';
+      }
+
+      // Reset & load employees
+      const tbody = document.getElementById('cd-employees-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500">جاري تحميل الموظفين...</td></tr>';
+      document.getElementById('company-details-modal').classList.remove('hidden');
+
+      try {
+        const res = await apiRequest(`/api/super-admin/companies/${companyId}/employees`);
+        if (res.success && res.employees) {
+          document.getElementById('cd-emp-count').textContent = `${res.count} موظف`;
+          if (res.employees.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-500 italic">لا يوجد موظفون مسجلون بعد.</td></tr>';
+          } else {
+            tbody.innerHTML = res.employees.map(e => `
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-2 px-3 font-mono font-bold text-slate-400">${e.employee_code}</td>
+                <td class="py-2 px-3 font-bold text-white">${e.full_name}</td>
+                <td class="py-2 px-3 text-slate-300">${e.job_title || '-'}</td>
+                <td class="py-2 px-3 font-mono text-slate-400">${e.phone || '-'}</td>
+                <td class="py-2 px-3 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${e.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">
+                    ${e.is_active ? 'نشط' : 'معطل'}
+                  </span>
+                </td>
+              </tr>
+            `).join('');
+          }
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-rose-400">فشل في تحميل الموظفين</td></tr>';
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateCompanyDetailsModalSubscriptionUI(c) {
+      const planBadge = document.getElementById('cd-plan-badge');
+      const daysRemainingEl = document.getElementById('cd-days-remaining');
+      const customDaysInput = document.getElementById('cd-custom-days-input');
+
+      const planLabels = {
+        trial: 'فترة تجريبية (14 يوم)',
+        monthly: 'باقة شهرية',
+        quarterly: 'باقة ربع سنوية (3 شهور)',
+        semi_annual: 'باقة نصف سنوية (6 شهور)',
+        annual: 'باقة سنوية (سنة كاملة)',
+        pro: 'باقة احترافية ⭐',
+        custom: 'باقة مخصصة'
+      };
+
+      planBadge.textContent = planLabels[c.subscription_plan] || c.subscription_plan;
+      planBadge.className = `px-3 py-1 rounded-full text-xs font-bold font-mono ${c.is_trial_expired ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'}`;
+
+      if (c.is_trial_expired) {
+        daysRemainingEl.textContent = 'منتهي (0 يوم)';
+        daysRemainingEl.className = 'text-base font-black font-mono text-rose-400';
+      } else {
+        daysRemainingEl.textContent = `${c.trial_days_remaining} يوم`;
+        daysRemainingEl.className = 'text-base font-black font-mono text-emerald-400';
+      }
+
+      if (customDaysInput) {
+        customDaysInput.value = c.trial_days_remaining || 0;
+      }
+    }
+
+    function closeCompanyDetailsModal() {
+      document.getElementById('company-details-modal').classList.add('hidden');
+      currentDetailsCompanyId = null;
+    }
+
+    async function extendSubscription(days, plan) {
+      if (!currentDetailsCompanyId) return;
+
+      try {
+        const res = await apiRequest(`/api/super-admin/companies/${currentDetailsCompanyId}/subscription/extend`, {
+          method: 'POST',
+          body: JSON.stringify({ days, plan })
+        });
+
+        if (res.success) {
+          showToast(res.message, 'success');
+          // Update in-memory company
+          const c = allCompanies.find(x => x.id === currentDetailsCompanyId);
+          if (c) {
+            c.trial_days_remaining = res.days_remaining;
+            c.subscription_plan = res.plan;
+            c.is_trial_expired = res.days_remaining <= 0;
+            updateCompanyDetailsModalSubscriptionUI(c);
+          }
+          loadCompanies();
+        } else {
+          showToast(res.error || 'فشل في تمديد الاشتراك', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال', 'danger');
+      }
+    }
+
+    async function adjustDays(delta) {
+      if (!currentDetailsCompanyId) return;
+      const c = allCompanies.find(x => x.id === currentDetailsCompanyId);
+      if (!c) return;
+
+      const currentDays = c.trial_days_remaining || 0;
+      const newDays = Math.max(0, currentDays + delta);
+
+      try {
+        const res = await apiRequest(`/api/super-admin/companies/${currentDetailsCompanyId}/subscription/set-days`, {
+          method: 'PUT',
+          body: JSON.stringify({ days: newDays })
+        });
+
+        if (res.success) {
+          showToast(res.message, 'success');
+          c.trial_days_remaining = res.days_remaining;
+          c.is_trial_expired = res.days_remaining <= 0;
+          updateCompanyDetailsModalSubscriptionUI(c);
+          loadCompanies();
+        } else {
+          showToast(res.error || 'فشل في تعديل عدد الأيام', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال', 'danger');
+      }
+    }
+
+    async function saveCustomDays() {
+      if (!currentDetailsCompanyId) return;
+      const customInput = document.getElementById('cd-custom-days-input');
+      const days = parseInt(customInput.value, 10);
+
+      if (isNaN(days) || days < 0) {
+        showToast('يرجى إدخال عدد أيام صحيح (0 أو أكثر)', 'warning');
+        return;
+      }
+
+      try {
+        const res = await apiRequest(`/api/super-admin/companies/${currentDetailsCompanyId}/subscription/set-days`, {
+          method: 'PUT',
+          body: JSON.stringify({ days })
+        });
+
+        if (res.success) {
+          showToast(res.message, 'success');
+          const c = allCompanies.find(x => x.id === currentDetailsCompanyId);
+          if (c) {
+            c.trial_days_remaining = res.days_remaining;
+            c.is_trial_expired = res.days_remaining <= 0;
+            updateCompanyDetailsModalSubscriptionUI(c);
+          }
+          loadCompanies();
+        } else {
+          showToast(res.error || 'فشل في حفظ عدد الأيام', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال', 'danger');
+      }
+    }
+
+    function triggerCompanySuspendFromDetails() {
+      if (!currentDetailsCompanyId) return;
+      const c = allCompanies.find(x => x.id === currentDetailsCompanyId);
+      if (!c) return;
+      toggleCompanyStatus(c.id, c.is_active ? 0 : 1, c.company_name).then(() => {
+        closeCompanyDetailsModal();
+      });
+    }
+
+    function triggerCompanyEditFromDetails() {
+      if (!currentDetailsCompanyId) return;
+      const id = currentDetailsCompanyId;
+      closeCompanyDetailsModal();
+      openEditModal(id);
+    }
+
+    function triggerCompanyDeleteFromDetails() {
+      if (!currentDetailsCompanyId) return;
+      const c = allCompanies.find(x => x.id === currentDetailsCompanyId);
+      if (!c) return;
+      closeCompanyDetailsModal();
+      openDeleteModal(c.id, c.company_name, c.employee_count);
+    }
+
+    // ============================================================
+    // TECHNICAL SUPPORT TICKETS LOGIC
+    // ============================================================
+    async function loadTickets() {
+      const tbody = document.getElementById('tickets-table-body');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">جاري تحميل تذاكر الدعم الفني...</td></tr>';
+      }
+
+      try {
+        const res = await apiRequest('/api/super-admin/tickets');
+        if (res.success && res.tickets) {
+          allTickets = res.tickets;
+
+          // Update KPI cards
+          if (res.counts) {
+            document.getElementById('kpi-tickets-total').textContent = res.counts.total || 0;
+            document.getElementById('kpi-tickets-new').textContent = res.counts.new || 0;
+            document.getElementById('kpi-tickets-in-progress').textContent = res.counts.in_progress || 0;
+            document.getElementById('kpi-tickets-resolved').textContent = res.counts.resolved || 0;
+            document.getElementById('tab-tickets-badge').textContent = res.counts.new || 0;
+          }
+
+          renderTicketsTable(allTickets);
+        } else {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-rose-400">${res.error || 'فشل في تحميل التذاكر'}</td></tr>`;
+        }
+      } catch (err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-rose-400">حدث خطأ في الاتصال بالخادم</td></tr>';
+      }
+    }
+
+    function renderTicketsTable(tickets) {
+      const tbody = document.getElementById('tickets-table-body');
+      if (!tbody) return;
+
+      if (tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-12 text-center text-slate-500 font-bold">لا توجد تذاكر دعم فني مطابقة</td></tr>';
+        return;
+      }
+
+      const roleLabels = {
+        manager: 'مدير منشأة',
+        employee: 'موظف',
+        user: 'مستخدم'
+      };
+
+      tbody.innerHTML = tickets.map(t => {
+        const dateFormatted = t.created_at ? t.created_at.replace('T', ' ').substring(0, 16) : '-';
+
+        let statusBadge = '';
+        if (t.status === 'new') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">جديدة 🔥</span>';
+        } else if (t.status === 'in_progress') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">قيد المتابعة ⏳</span>';
+        } else if (t.status === 'resolved') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">تم الحل ✅</span>';
+        }
+
+        const phoneClean = (t.sender_phone || '').replace(/[^0-9]/g, '');
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-slate-400">#${t.id}</td>
+
+            <td class="py-3 px-4 font-bold text-white">
+              <span class="block">${t.sender_name}</span>
+              <span class="text-[10px] text-slate-400 font-medium">${roleLabels[t.role] || t.role}</span>
+            </td>
+
+            <td class="py-3 px-4 font-bold text-slate-300">${t.company_name || '-'}</td>
+
+            <td class="py-3 px-4 whitespace-nowrap font-mono">
+              <div class="flex items-center gap-1.5">
+                <span class="text-slate-300">${t.sender_phone}</span>
+                ${phoneClean ? `
+                  <a href="https://wa.me/${phoneClean}?text=${encodeURIComponent(`مرحباً أستاذ ${t.sender_name}، نتواصل معك من الدعم الفني لمنظومة وقتي بخصوص مشكلتكم: (${t.subject})`)}" target="_blank"
+                    class="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all" title="محادثة واتساب">
+                    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                  </a>
+                ` : ''}
+              </div>
+            </td>
+
+            <td class="py-3 px-4">
+              <span class="block font-black text-white text-xs mb-1">${t.subject}</span>
+              <p class="text-[11px] text-slate-400 leading-relaxed max-w-xs break-words">${t.message}</p>
+            </td>
+
+            <td class="py-3 px-4 text-center font-mono text-[11px] text-slate-400 whitespace-nowrap">${dateFormatted}</td>
+
+            <td class="py-3 px-4 text-center whitespace-nowrap">${statusBadge}</td>
+
+            <td class="py-3 px-4 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1.5">
+                ${t.status !== 'in_progress' ? `
+                  <button onclick="updateTicketStatus(${t.id}, 'in_progress')"
+                    class="px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-[10px] font-bold transition-all" title="تعيين قيد المتابعة">
+                    متابعة
+                  </button>
+                ` : ''}
+
+                ${t.status !== 'resolved' ? `
+                  <button onclick="updateTicketStatus(${t.id}, 'resolved')"
+                    class="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold transition-all" title="تعيين تم الحل">
+                    تم الحل ✅
+                  </button>
+                ` : `
+                  <button onclick="updateTicketStatus(${t.id}, 'new')"
+                    class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold transition-all" title="إعادة لجديد">
+                    إعادة فتح
+                  </button>
+                `}
+
+                <button onclick="deleteTicket(${t.id})"
+                  class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all" title="حذف التذكرة">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterTickets() {
+      const q = (document.getElementById('tickets-search')?.value || '').toLowerCase().trim();
+      const status = document.getElementById('tickets-status-filter')?.value || 'all';
+
+      const filtered = allTickets.filter(t => {
+        const matchesQuery = !q ||
+          (t.sender_name && t.sender_name.toLowerCase().includes(q)) ||
+          (t.sender_phone && t.sender_phone.includes(q)) ||
+          (t.company_name && t.company_name.toLowerCase().includes(q)) ||
+          (t.subject && t.subject.toLowerCase().includes(q)) ||
+          (t.message && t.message.toLowerCase().includes(q));
+
+        const matchesStatus = status === 'all' || t.status === status;
+
+        return matchesQuery && matchesStatus;
+      });
+
+      renderTicketsTable(filtered);
+    }
+
+    async function updateTicketStatus(id, newStatus) {
+      try {
+        const res = await apiRequest(`/api/super-admin/tickets/${id}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        if (res.success) {
+          showToast(res.message, 'success');
+          loadTickets();
+        } else {
+          showToast(res.error || 'فشل في تحديث حالة التذكرة', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال', 'danger');
+      }
+    }
+
+    async function deleteTicket(id) {
+      if (!confirm('هل أنت متأكد من رغبتك في حذف تذكرة الدعم الفني هذه؟')) {
+        return;
+      }
+
+      try {
+        const res = await apiRequest(`/api/super-admin/tickets/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (res.success) {
+          showToast(res.message, 'success');
+          loadTickets();
+        } else {
+          showToast(res.error || 'فشل في حذف التذكرة', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال', 'danger');
       }
     }
 

@@ -21,6 +21,7 @@ const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
 const { leavesRouter, permissionsRouter } = require('./leaves-permissions');
 const whatsappModule = require('./whatsapp');
 const superAdminRouter = require('./super-admin');
+const supportModule = require('./support');
 const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
 // Auto seed on boot
@@ -83,6 +84,7 @@ app.use('/api/leaves', leavesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/whatsapp', whatsappModule.router);
 app.use('/api/super-admin', superAdminRouter);
+app.use('/api/support', supportModule.router);
 
 // Fallback to SPA index.html
 app.use((req, res) => {

@@ -30,6 +30,8 @@ const ManagerUI = {
       { id: 'archive', icon: 'coins', label: isEn ? 'Payroll & Monthly Archive' : 'مسير الرواتب والخصومات' },
       { id: 'reports', icon: 'file-text', label: isEn ? 'Reports' : 'التقارير' },
       { id: 'settings', icon: 'sliders', label: isEn ? 'Settings' : 'الإعدادات' },
+      { id: 'packages', icon: 'sparkles', label: isEn ? 'Subscription Plans' : 'باقات الاشتراك 💎' },
+      { id: 'support', icon: 'headphones', label: isEn ? 'Technical Support' : 'الدعم الفني 🎧' },
       { id: 'profile', icon: 'user-cog', label: isEn ? 'Profile' : 'الملف الشخصي' }
     ];
 
@@ -80,6 +82,10 @@ const ManagerUI = {
       await this.renderReportsSection();
     } else if (sectionId === 'settings') {
       await this.renderSettingsSection();
+    } else if (sectionId === 'packages') {
+      await this.renderPackagesSection();
+    } else if (sectionId === 'support') {
+      await this.renderSupportSection();
     } else if (sectionId === 'profile') {
       await this.renderProfileSection();
     }
@@ -5253,6 +5259,321 @@ const ManagerUI = {
     } catch (err) {
       showToast(err.message, 'danger');
     }
+  },
+
+  async renderPackagesSection() {
+    const container = document.getElementById('manager-content');
+    if (!container) return;
+
+    let user = App.currentUser || API.getCurrentUser() || {};
+    try {
+      const res = await API.getMe();
+      if (res && res.user) {
+        user = res.user;
+        App.currentUser = user;
+      }
+    } catch (_) {}
+
+    const sub = user.subscription || {};
+    const remaining = sub.remainingDays !== undefined ? sub.remainingDays : 0;
+    const isExpired = sub.expired;
+    const company = user.company_name || 'شركتكم الموقرة';
+    const waBase = "https://wa.me/201093320211?text=";
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-1.5 border border-emerald-500/20">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>إدارة الاشتراكات والتجديد</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">باقات وأسعار نظام وقتي (WAQTY)</h2>
+            <p class="text-xs text-slate-500 mt-1">يمكنك ترقية أو تجديد اشتراك مؤسستك مباشرة عبر واتساب مع التفعيل الفوري</p>
+          </div>
+          <button onclick="App.openSupportModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-2 self-start sm:self-auto transition-all">
+            <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
+            <span>تحدث مع الدعم الفني</span>
+          </button>
+        </div>
+
+        <!-- Current Status Banner -->
+        <div class="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl ${isExpired ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'} flex items-center justify-center font-bold text-xl flex-shrink-0">
+              <i data-lucide="${isExpired ? 'alert-triangle' : 'shield-check'}" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 font-bold">المؤسسة: ${company}</div>
+              <h3 class="text-base font-extrabold text-white mt-0.5">
+                ${isExpired ? 'انتهت فترة الاشتراك أو التجربة' : `فترة الاشتراك نشطة (${remaining} يوم متبقي)`}
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                تاريخ الانتهاء: <span class="font-mono text-slate-200">${sub.expiresAt ? formatDateTime12(sub.expiresAt) : 'غير محدد'}</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود تجديد باقة مؤسسة ' + company)}" target="_blank"
+              class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تجديد / تمديد الاشتراك الآن</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Packages Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          <!-- 1. Monthly -->
+          <div class="rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">شهري</span>
+                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+              </div>
+              <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة الشهرية</h4>
+              <div class="my-4">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">199</span>
+                <span class="text-xs text-slate-500 font-bold">ج.م / 30 يوم</span>
+              </div>
+              <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> عدد لا محدود من الموظفين</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> إثبات الحضور بالـ GPS والصورة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> مسير رواتب وخصومات تلقائية</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> دعم فني مخصص</li>
+              </ul>
+            </div>
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في الباقة الشهرية (199 ج.م) لشركة ' + company)}" target="_blank"
+              class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تفعيل الباقة الشهرية</span>
+            </a>
+          </div>
+
+          <!-- 2. Quarterly -->
+          <div class="rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">ربع سنوي</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">وفر 16%</span>
+              </div>
+              <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة 3 أشهر</h4>
+              <div class="my-4">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">499</span>
+                <span class="text-xs text-slate-500 font-bold">ج.م / 90 يوم</span>
+              </div>
+              <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كل مميزات الباقة الشهرية</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> تقارير وتحليلات متقدمة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> استقرار واحتفاظ بالأرشيف</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> أولوية دعم فني</li>
+              </ul>
+            </div>
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة 3 أشهر (499 ج.م) لشركة ' + company)}" target="_blank"
+              class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تفعيل باقة 3 أشهر</span>
+            </a>
+          </div>
+
+          <!-- 3. Semi-Annual -->
+          <div class="rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">نصف سنوي</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">وفر 25%</span>
+              </div>
+              <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة 6 أشهر</h4>
+              <div class="my-4">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">899</span>
+                <span class="text-xs text-slate-500 font-bold">ج.م / 180 يوم</span>
+              </div>
+              <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كل مميزات النظام كاملة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> رسائل إشعارات ومسيرات واتساب</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> نسخ احتياطي دوري للبيانات</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> تدريب وإعداد مجاني للمنظومة</li>
+              </ul>
+            </div>
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة 6 أشهر (899 ج.م) لشركة ' + company)}" target="_blank"
+              class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تفعيل باقة 6 أشهر</span>
+            </a>
+          </div>
+
+          <!-- 4. Annual (Featured) -->
+          <div class="rounded-3xl p-6 bg-gradient-to-b from-emerald-500/10 via-white to-white dark:via-slate-900 dark:to-slate-900 border-2 border-emerald-500 shadow-md hover:shadow-2xl transition-all flex flex-col justify-between relative">
+            <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md">
+              الأكثر توفيراً ⭐
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">سنوي كامل</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">وفر 33%</span>
+              </div>
+              <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة السنوية (سنة)</h4>
+              <div class="my-4">
+                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">1599</span>
+                <span class="text-xs text-slate-500 font-bold">ج.م / 365 يوم</span>
+              </div>
+              <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> راحة بال لعام كامل بدون انقطاع</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> عدد لا نهائي من الموظفين والفروع</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> دعم فني VIP مباشر وفوري</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كافة التحديثات والميزات مجاناً</li>
+              </ul>
+            </div>
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في الباقة السنوية (1599 ج.م) لشركة ' + company)}" target="_blank"
+              class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25 transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تفعيل الباقة السنوية الآن</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Direct Contact Banner -->
+        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <i data-lucide="phone-call" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white">خط الدعم والاشتراكات المباشر</div>
+              <div class="text-slate-500 font-mono">01093320211 (واتساب ومكالمات)</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="App.openSupportModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 transition-all">
+              <i data-lucide="headphones" class="w-4 h-4"></i>
+              <span>تقديم طلب دعم فني</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async renderSupportSection() {
+    const container = document.getElementById('manager-content');
+    if (!container) return;
+
+    let user = App.currentUser || API.getCurrentUser() || {};
+    try {
+      const res = await API.getMe();
+      if (res && res.user) {
+        user = res.user;
+        App.currentUser = user;
+      }
+    } catch (_) {}
+
+    const company = user.company_name || '';
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold mb-1.5 border border-blue-500/20">
+              <i data-lucide="headphones" class="w-3.5 h-3.5 text-blue-500"></i>
+              <span>خدمة العملاء والدعم الفني المباشر</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">مركز الدعم الفني والمساعدة</h2>
+            <p class="text-xs text-slate-500 mt-1">فريقنا متواجد على مدار الساعة لمساعدتك في أي استفسار أو مشكلة تقنية</p>
+          </div>
+          <a href="https://wa.me/201093320211?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D9%84%D8%AF%D9%8A%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%AD%D9%88%D9%84%20%D9%86%D8%B8%D8%A7%D9%85%20%D9%88%D9%82%D8%AA%D9%8A" target="_blank"
+            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 self-start sm:self-auto shadow-md shadow-emerald-500/20 transition-all">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>محادثة واتساب مباشرة: 01093320211</span>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Ticket Form -->
+          <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+              <i data-lucide="send" class="w-4 h-4 text-blue-500"></i>
+              <span>فتح تذكرة دعم فني جديدة</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-5">أرسل لنا تفاصيل المشكلة وسيقوم مهندس الدعم الفني بالتواصل معك ومتابعتها</p>
+
+            <form onsubmit="App.submitSupportTicket(event)" class="space-y-4 text-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">الاسم الكامل *</label>
+                  <input type="text" id="supp-name" required value="${user.full_name || ''}" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                </div>
+                <div>
+                  <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">رقم الهاتف / الواتساب *</label>
+                  <input type="tel" id="supp-phone" required value="${user.phone || ''}" placeholder="01xxxxxxxxx" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-left" dir="ltr" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">اسم المؤسسة أو الشركة</label>
+                  <input type="text" id="supp-company" value="${company}" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+                </div>
+                <div>
+                  <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">نوع المشكلة أو الاستفسار *</label>
+                  <select id="supp-subject" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <option value="مشكلة في تسجيل الدخول">مشكلة في تسجيل الدخول</option>
+                    <option value="مشكلة في الحضور والانصراف / الموقع">مشكلة في الحضور والانصراف / الموقع</option>
+                    <option value="استفسار عن باقات الاشتراك والتجديد">استفسار عن باقات الاشتراك والتجديد</option>
+                    <option value="طلب ميزة أو تطوير خاص">طلب ميزة أو تطوير خاص</option>
+                    <option value="مشكلة تقنية عامة">مشكلة تقنية عامة</option>
+                    <option value="أخرى">أخرى</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تفاصيل المشكلة *</label>
+                <textarea id="supp-message" required rows="5" placeholder="يرجى كتابة تفاصيل المشكلة أو استفسارك بالتفصيل..." class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></textarea>
+              </div>
+
+              <div class="flex justify-end pt-2">
+                <button type="submit" id="supp-submit-btn" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-all">
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                  <span>إرسال التذكرة الآن</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Contact Cards -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-3xl p-6 shadow-xl">
+              <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                <i data-lucide="message-circle" class="w-6 h-6"></i>
+              </div>
+              <h4 class="font-extrabold text-base mb-1">خدمة عملاء واتساب المباشرة</h4>
+              <p class="text-xs text-white/80 mb-4 leading-relaxed">تواصل فوراً مع مسؤول الدعم الفني والحسابات عبر واتساب لحل المشاكل أو الاستفسار عن الباقات في أسرع وقت.</p>
+              <div class="text-xl font-mono font-black mb-4 tracking-wider">01093320211</div>
+              <a href="https://wa.me/201093320211" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-emerald-800 font-bold text-xs hover:bg-slate-100 transition-all shadow-md">
+                <span>فتح محادثة واتساب</span>
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-3">
+              <h4 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+                <span>نصائح سريعة قبل إرسال التذكرة:</span>
+              </h4>
+              <p>• إذا كان الموظف لا يظهر له زر الحضور، تأكد من تفعيل خاصية تحديد الموقع (GPS) في هاتفه وسماحه للمتصفح بالوصول للموقع الجغرافي.</p>
+              <p>• إذا كان الموظف خارج النطاق، يمكنك توسيع نطاق السماح بالمتر من إعدادات موقع العمل.</p>
+              <p>• لتجديد أو تمديد صلاحية الباقة، توجه إلى قائمة "باقات الاشتراك" وتواصل معنا مباشرة.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
   },
 
   async testWhatsAppConnection() {

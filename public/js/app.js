@@ -77,6 +77,12 @@ const App = {
       const res = await API.getMe();
       this.currentUser = res.user;
       API.setCurrentUser(res.user);
+
+      if (res.user?.subscription?.expired) {
+        this.showSubscriptionExpiredModal(res.user);
+        return;
+      }
+      this.closeSubscriptionExpiredModal();
       this.showAppView();
     } catch (err) {
       console.warn('Session expired or invalid:', err);
@@ -106,6 +112,13 @@ const App = {
       API.setToken(res.token);
       API.setCurrentUser(res.user);
       this.currentUser = res.user;
+
+      if (res.subscription_expired || res.user?.subscription?.expired) {
+        this.showSubscriptionExpiredModal(res.user);
+        showToast('لقد نفذت المدة المجانية - يرجى تجديد الاشتراك للمتابعة', 'warning', 6000);
+        return;
+      }
+      this.closeSubscriptionExpiredModal();
       showToast(`مرحباً بك ${res.user.full_name}`, 'success');
       this.showAppView();
     } catch (err) {
@@ -227,6 +240,19 @@ const App = {
     if (nameEl) nameEl.textContent = user.full_name || '';
     if (roleEl) {
       roleEl.textContent = user.role === 'manager' ? 'المدير العام (Manager)' : (user.job_title || 'موظف');
+    }
+
+    // Update Header packages button for managers
+    const pkgBtn = document.getElementById('header-packages-btn');
+    if (pkgBtn) {
+      if (user.role === 'manager') {
+        pkgBtn.classList.remove('hidden');
+        if (user.subscription && user.subscription.remainingDays !== undefined) {
+          pkgBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> <span class="hidden md:inline">الباقات (${user.subscription.remainingDays} يوم)</span>`;
+        }
+      } else {
+        pkgBtn.classList.add('hidden');
+      }
     }
 
     // Role-based views display
@@ -362,6 +388,132 @@ const App = {
     } catch (err) {
       console.error(err);
     }
+  },
+
+  showSubscriptionExpiredModal(user) {
+    const modal = document.getElementById('subscription-expired-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closeSubscriptionExpiredModal() {
+    const modal = document.getElementById('subscription-expired-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  openSupportModal(prefill = {}) {
+    const modal = document.getElementById('support-modal');
+    if (!modal) return;
+    const user = this.currentUser || API.getCurrentUser() || {};
+    const nameInput = document.getElementById('supp-name');
+    const phoneInput = document.getElementById('supp-phone');
+    const companyInput = document.getElementById('supp-company');
+
+    if (nameInput && !nameInput.value) nameInput.value = prefill.name || user.full_name || '';
+    if (phoneInput && !phoneInput.value) phoneInput.value = prefill.phone || user.phone || '';
+    if (companyInput && !companyInput.value) companyInput.value = prefill.company || user.company_name || '';
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closeSupportModal() {
+    const modal = document.getElementById('support-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  async submitSupportTicket(e) {
+    e.preventDefault();
+    const name = document.getElementById('supp-name')?.value.trim();
+    const phone = document.getElementById('supp-phone')?.value.trim();
+    const company = document.getElementById('supp-company')?.value.trim();
+    const subject = document.getElementById('supp-subject')?.value.trim();
+    const message = document.getElementById('supp-message')?.value.trim();
+    const submitBtn = document.getElementById('supp-submit-btn');
+
+    if (!name || !phone || !message) {
+      showToast('يرجى ملء جميع الحقول المطلوبة', 'warning');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> جاري الإرسال...`;
+    }
+
+    try {
+      const user = this.currentUser || API.getCurrentUser() || {};
+      const res = await API.submitSupportTicket({
+        sender_name: name,
+        sender_phone: phone,
+        sender_email: user.email || null,
+        company_name: company || user.company_name || null,
+        role: user.role || 'guest',
+        subject: subject,
+        message: message
+      });
+
+      showToast(res.message || 'تم إرسال تذكرتك بنجاح، سيتواصل معك فريق الدعم الفني قريباً', 'success');
+      this.closeSupportModal();
+      const msgEl = document.getElementById('supp-message');
+      if (msgEl) msgEl.value = '';
+    } catch (err) {
+      showToast(err.message, 'danger');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> <span>إرسال التذكرة</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+
+  async openPackagesModal() {
+    const modal = document.getElementById('packages-modal');
+    if (!modal) return;
+
+    const user = this.currentUser || API.getCurrentUser() || {};
+    const statusContainer = document.getElementById('packages-current-status');
+    if (statusContainer) {
+      const sub = user.subscription;
+      if (sub) {
+        const remaining = sub.remainingDays !== undefined ? sub.remainingDays : 0;
+        const statusBadge = sub.expired 
+          ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30">منتهية الصلاحية</span>`
+          : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">نشطة (${remaining} يوم متبقي)</span>`;
+
+        statusContainer.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-bold text-lg">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-slate-800 dark:text-white text-sm">حالة اشتراك المنظومة: ${user.company_name || 'حسابك'}</div>
+              <div class="text-[11px] text-slate-500">تاريخ الانتهاء: ${sub.expiresAt ? formatDateTime12(sub.expiresAt) : 'غير محدد'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            ${statusBadge}
+          </div>
+        `;
+      } else {
+        statusContainer.innerHTML = `
+          <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+            <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+            <span>تواصل معنا عبر واتساب للاشتراك وتفعيل منظومة شركتك فوراً</span>
+          </div>
+        `;
+      }
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closePackagesModal() {
+    const modal = document.getElementById('packages-modal');
+    if (modal) modal.classList.add('hidden');
   }
 };
 

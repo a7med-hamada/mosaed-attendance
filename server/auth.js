@@ -4,9 +4,37 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { db, logAudit, uploadsDir } = require('./database');
+const { PACKAGES, SUPPORT_WHATSAPP } = require('./support');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
+
+function getSubscriptionDetails(managerId) {
+  const mgr = db.prepare('SELECT id, is_active, subscription_plan, subscription_expires_at, trial_days, created_at FROM users WHERE id = ?').get(managerId);
+  if (!mgr) {
+    return { isExpired: false, daysRemaining: 14, plan: 'trial', expiresAt: null };
+  }
+
+  let expiresAt;
+  if (mgr.subscription_expires_at) {
+    expiresAt = new Date(mgr.subscription_expires_at);
+  } else {
+    const regDate = new Date(mgr.created_at || Date.now());
+    const totalTrial = mgr.trial_days || 14;
+    expiresAt = new Date(regDate.getTime() + totalTrial * 24 * 60 * 60 * 1000);
+  }
+
+  const diffMs = expiresAt.getTime() - Date.now();
+  const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  const isExpired = diffMs <= 0;
+
+  return {
+    isExpired,
+    daysRemaining,
+    plan: mgr.subscription_plan || 'trial',
+    expiresAt: expiresAt.toISOString()
+  };
+}
 
 // Middleware to authenticate JWT
 function authenticateToken(req, res, next) {
@@ -33,6 +61,20 @@ function authenticateToken(req, res, next) {
       if (mgrCheck && !mgrCheck.is_active) {
         return res.status(403).json({ success: false, error: 'تم إيقاف حساب هذه المنشأة مؤقتاً، يرجى مراجعة إدارة المنظومة' });
       }
+    }
+
+    // Check subscription expiration
+    const effectiveMgrId = activeCheck.role === 'manager' ? activeCheck.id : (activeCheck.manager_id || 1);
+    const subCheck = getSubscriptionDetails(effectiveMgrId);
+    user.subscription = subCheck;
+
+    if (subCheck.isExpired && req.method !== 'GET' && !req.path.includes('/support')) {
+      return res.status(403).json({
+        success: false,
+        subscription_expired: true,
+        error: 'لقد نفذت المدة المجانية لمنشأتكم، يرجى تجديد الاشتراك للاستمرار',
+        support_phone: SUPPORT_WHATSAPP
+      });
     }
 
     req.user = user;
@@ -73,11 +115,12 @@ router.post('/register-manager', (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
     const mgrCode = 'MGR-' + Math.floor(100 + Math.random() * 900);
 
+    const defaultExp = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     const userStmt = db.prepare(`
-      INSERT INTO users (employee_code, full_name, email, password_hash, role, manager_id, is_active, phone, subscription_plan, trial_days)
-      VALUES (?, ?, ?, ?, 'manager', NULL, 1, ?, 'trial', 14)
+      INSERT INTO users (employee_code, full_name, email, password_hash, role, manager_id, is_active, phone, subscription_plan, trial_days, subscription_expires_at)
+      VALUES (?, ?, ?, ?, 'manager', NULL, 1, ?, 'trial', 14, ?)
     `);
-    const newMgrResult = userStmt.run(mgrCode, full_name.trim(), email.trim(), hash, phone ? phone.trim() : null);
+    const newMgrResult = userStmt.run(mgrCode, full_name.trim(), email.trim(), hash, phone ? phone.trim() : null, defaultExp);
     const newManagerId = newMgrResult.lastInsertRowid;
 
     // Create unconfigured workplace placeholder for this new manager
@@ -168,6 +211,23 @@ router.post('/login', (req, res) => {
     }
 
     const effectiveManagerId = user.role === 'manager' ? user.id : (user.manager_id || 1);
+    const subStatus = getSubscriptionDetails(effectiveManagerId);
+
+    // If subscription has expired, return subscription_expired gate with packages and WhatsApp
+    if (subStatus.isExpired) {
+      return res.status(200).json({
+        success: false,
+        subscription_expired: true,
+        error: 'لقد نفذت المدة المجانية',
+        message: 'لقد نفذت المدة المجانية لمنشأتكم. يرجى تجديد الاشتراك للاستمرار في استخدام المنظومة.',
+        support_phone: SUPPORT_WHATSAPP,
+        whatsapp_url: `https://wa.me/201093320211`,
+        company_id: effectiveManagerId,
+        user_name: user.full_name,
+        role: user.role,
+        packages: PACKAGES
+      });
+    }
 
     const payload = {
       id: user.id,
@@ -185,6 +245,7 @@ router.post('/login', (req, res) => {
     // Safe user profile without password hash
     const { password_hash, ...safeUser } = user;
     safeUser.manager_id = effectiveManagerId;
+    safeUser.subscription = subStatus;
 
     // Log login in audit
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -220,6 +281,7 @@ router.get('/me', authenticateToken, (req, res) => {
     }
 
     user.manager_id = user.role === 'manager' ? user.id : (user.manager_id || 1);
+    user.subscription = getSubscriptionDetails(user.manager_id);
 
     res.json({ success: true, user });
   } catch (error) {
@@ -368,5 +430,6 @@ router.post('/verify-password', authenticateToken, (req, res) => {
 module.exports = {
   router,
   authenticateToken,
-  requireManager
+  requireManager,
+  getSubscriptionDetails
 };

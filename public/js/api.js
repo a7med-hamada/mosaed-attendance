@@ -507,6 +507,17 @@ const API = {
   },
   getWhatsAppLogs() {
     return this.request('/whatsapp/logs');
+  },
+
+  // Support & Packages
+  getPackages() {
+    return this.request('/support/packages');
+  },
+  submitSupportTicket(data) {
+    return this.request('/support/tickets', {
+      method: 'POST',
+      body: data
+    });
   }
 };
 

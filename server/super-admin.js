@@ -95,7 +95,7 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
     const managers = db.prepare(`
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.phone, u.role,
-        u.is_active, u.created_at, u.subscription_plan, u.trial_days
+        u.is_active, u.created_at, u.subscription_plan, u.trial_days, u.subscription_expires_at
       FROM users u
       WHERE u.role = 'manager'
       ORDER BY u.created_at DESC
@@ -129,13 +129,19 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
         WHERE u.manager_id = ? OR (? = 1 AND u.manager_id IS NULL)
       `).get(mgr.id, mgr.id).c;
 
-      // Calculate trial status
-      const regDate = new Date(mgr.created_at || Date.now());
-      const now = new Date();
-      const diffDays = Math.floor((now - regDate) / (1000 * 60 * 60 * 24));
-      const trialDaysTotal = mgr.trial_days || 14;
-      const trialDaysRemaining = Math.max(0, trialDaysTotal - diffDays);
-      const isTrialExpired = diffDays > trialDaysTotal;
+      // Calculate subscription / trial expiration
+      let expiresAt;
+      if (mgr.subscription_expires_at) {
+        expiresAt = new Date(mgr.subscription_expires_at);
+      } else {
+        const regDate = new Date(mgr.created_at || Date.now());
+        const totalTrial = mgr.trial_days || 14;
+        expiresAt = new Date(regDate.getTime() + totalTrial * 24 * 60 * 60 * 1000);
+      }
+
+      const diffMs = expiresAt.getTime() - Date.now();
+      const trialDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      const isTrialExpired = diffMs <= 0;
 
       return {
         id: mgr.id,
@@ -149,7 +155,9 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
         is_active: mgr.is_active === 1,
         created_at: mgr.created_at,
         subscription_plan: mgr.subscription_plan || 'trial',
-        trial_days_total: trialDaysTotal,
+        subscription_expires_at: expiresAt.toISOString(),
+        subscription_expires_date: expiresAt.toISOString().split('T')[0],
+        trial_days_total: mgr.trial_days || 14,
         trial_days_remaining: trialDaysRemaining,
         is_trial_expired: isTrialExpired,
         employee_count: empCount,
@@ -360,6 +368,222 @@ router.delete('/companies/:id', authenticateSuperAdmin, (req, res) => {
   } catch (error) {
     console.error('Super admin delete company error:', error);
     res.status(500).json({ success: false, error: 'فشل في حذف المنشأة' });
+  }
+});
+
+// POST /api/super-admin/companies/:id/subscription/extend
+// Extends subscription by N days (stackable! can click multiple times to stack years/months)
+router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, res) => {
+  try {
+    const managerId = parseInt(req.params.id, 10);
+    const { days, plan } = req.body;
+    const addDays = parseInt(days, 10);
+
+    if (!addDays || isNaN(addDays)) {
+      return res.status(400).json({ success: false, error: 'يرجى تحديد عدد الأيام المراد إضافتها' });
+    }
+
+    const manager = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'manager'").get(managerId);
+    if (!manager) {
+      return res.status(404).json({ success: false, error: 'الشركة غير موجودة' });
+    }
+
+    // Determine current expiration base date
+    let baseDate = new Date();
+    if (manager.subscription_expires_at) {
+      const curExp = new Date(manager.subscription_expires_at);
+      if (curExp.getTime() > Date.now()) {
+        baseDate = curExp; // Add on top of existing remaining time!
+      }
+    }
+
+    const newExpiresAt = new Date(baseDate.getTime() + addDays * 24 * 60 * 60 * 1000).toISOString();
+    const newPlan = plan || manager.subscription_plan || 'custom';
+
+    db.prepare(`
+      UPDATE users SET
+        subscription_expires_at = ?,
+        subscription_plan = ?
+      WHERE id = ?
+    `).run(newExpiresAt, newPlan, managerId);
+
+    const diffMs = new Date(newExpiresAt).getTime() - Date.now();
+    const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'EXTEND_SUBSCRIPTION',
+      'users',
+      managerId,
+      { old_expires: manager.subscription_expires_at },
+      { new_expires: newExpiresAt, added_days: addDays, plan: newPlan },
+      `تمديد اشتراك منشأة (${manager.full_name}) بإضافة ${addDays} يوم (باقة: ${newPlan}). المتبقي الجديد: ${remainingDays} يوم`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تم تمديد الاشتراك بنجاح! تم إضافة ${addDays} يوم. إجمالي الأيام المتبقية الآن: ${remainingDays} يوم ✅`,
+      subscription_expires_at: newExpiresAt,
+      subscription_expires_date: newExpiresAt.split('T')[0],
+      days_remaining: remainingDays,
+      plan: newPlan
+    });
+  } catch (error) {
+    console.error('Super admin extend subscription error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تمديد الاشتراك' });
+  }
+});
+
+// PUT /api/super-admin/companies/:id/subscription/set-days
+// Manually set exact remaining days or add/subtract days
+router.put('/companies/:id/subscription/set-days', authenticateSuperAdmin, (req, res) => {
+  try {
+    const managerId = parseInt(req.params.id, 10);
+    const { days } = req.body;
+    const targetDays = parseInt(days, 10);
+
+    if (isNaN(targetDays)) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال عدد الأيام بشكل صحيح' });
+    }
+
+    const manager = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'manager'").get(managerId);
+    if (!manager) {
+      return res.status(404).json({ success: false, error: 'الشركة غير موجودة' });
+    }
+
+    // Set expiration to (Now + targetDays)
+    const newExpiresAt = new Date(Date.now() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+
+    db.prepare(`
+      UPDATE users SET
+        subscription_expires_at = ?
+      WHERE id = ?
+    `).run(newExpiresAt, managerId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'SET_SUBSCRIPTION_DAYS',
+      'users',
+      managerId,
+      { old_expires: manager.subscription_expires_at },
+      { new_expires: newExpiresAt, days: targetDays },
+      `تعديل الأيام المتبقية لاشتراك منشأة (${manager.full_name}) إلى ${targetDays} يوم`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تم تعديل عدد الأيام المتبقية إلى ${targetDays} يوم بنجاح ✅`,
+      subscription_expires_at: newExpiresAt,
+      subscription_expires_date: newExpiresAt.split('T')[0],
+      days_remaining: Math.max(0, targetDays)
+    });
+  } catch (error) {
+    console.error('Super admin set subscription days error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تعديل عدد الأيام' });
+  }
+});
+
+// GET /api/super-admin/tickets - List all Support Tickets
+router.get('/tickets', authenticateSuperAdmin, (req, res) => {
+  try {
+    const tickets = db.prepare(`
+      SELECT * FROM support_tickets
+      ORDER BY id DESC
+    `).all();
+
+    const newCount = tickets.filter(t => t.status === 'new').length;
+    const inProgressCount = tickets.filter(t => t.status === 'in_progress').length;
+    const resolvedCount = tickets.filter(t => t.status === 'resolved').length;
+
+    res.json({
+      success: true,
+      count: tickets.length,
+      counts: {
+        total: tickets.length,
+        new: newCount,
+        in_progress: inProgressCount,
+        resolved: resolvedCount
+      },
+      tickets
+    });
+  } catch (error) {
+    console.error('Super admin list tickets error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تحميل تذاكر الدعم الفني' });
+  }
+});
+
+// PUT /api/super-admin/tickets/:id/status - Update Ticket Status
+router.put('/tickets/:id/status', authenticateSuperAdmin, (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id, 10);
+    const { status, admin_notes } = req.body;
+
+    if (!['new', 'in_progress', 'resolved'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'حالة التذكرة غير صحيحة' });
+    }
+
+    const ticket = db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'التذكرة غير موجودة' });
+    }
+
+    const resolvedAt = status === 'resolved' ? new Date().toISOString() : null;
+
+    db.prepare(`
+      UPDATE support_tickets SET
+        status = ?,
+        admin_notes = COALESCE(?, admin_notes),
+        resolved_at = COALESCE(?, resolved_at)
+      WHERE id = ?
+    `).run(status, admin_notes || null, resolvedAt, ticketId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'UPDATE_TICKET_STATUS',
+      'support_tickets',
+      ticketId,
+      { old_status: ticket.status },
+      { new_status: status },
+      `تحديث حالة تذكرة دعم فني #${ticketId} إلى: ${status}`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: 'تم تحديث حالة التذكرة بنجاح'
+    });
+  } catch (error) {
+    console.error('Super admin update ticket status error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تحديث حالة التذكرة' });
+  }
+});
+
+// DELETE /api/super-admin/tickets/:id - Delete Support Ticket
+router.delete('/tickets/:id', authenticateSuperAdmin, (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id, 10);
+    const ticket = db.prepare('SELECT * FROM support_tickets WHERE id = ?').get(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'التذكرة غير موجودة' });
+    }
+
+    db.prepare('DELETE FROM support_tickets WHERE id = ?').run(ticketId);
+
+    res.json({
+      success: true,
+      message: 'تم حذف التذكرة بنجاح 🗑️'
+    });
+  } catch (error) {
+    console.error('Super admin delete ticket error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حذف التذكرة' });
   }
 });
 

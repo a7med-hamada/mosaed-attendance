@@ -284,6 +284,30 @@ try {
   if (!userCols.includes('trial_days')) {
     db.exec(`ALTER TABLE users ADD COLUMN trial_days INTEGER DEFAULT 14;`);
   }
+  if (!userCols.includes('subscription_expires_at')) {
+    db.exec(`ALTER TABLE users ADD COLUMN subscription_expires_at TEXT;`);
+    const defaultExp = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    db.exec(`UPDATE users SET subscription_expires_at = '${defaultExp}' WHERE role = 'manager' AND (subscription_expires_at IS NULL OR subscription_expires_at = '');`);
+  }
+
+  // Support Tickets table for technical support from website to super admin
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_name TEXT NOT NULL,
+      sender_phone TEXT NOT NULL,
+      sender_email TEXT,
+      company_name TEXT,
+      role TEXT DEFAULT 'user',
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new',
+      admin_notes TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_ticket_status ON support_tickets(status);
+  `);
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
   if (!wpCols.includes('manager_id')) {

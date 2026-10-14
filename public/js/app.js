@@ -60,6 +60,7 @@ const App = {
   },
 
   setupListeners() {
+    this.setupSupportPasteListener();
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
       loginForm.addEventListener('submit', (e) => this.handleLogin(e));
@@ -417,9 +418,92 @@ const App = {
     if (window.lucide) lucide.createIcons();
   },
 
+  supportImageBase64: null,
+
+  handleSupportImageChange(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('يرجى اختيار ملف صورة صالح (JPG, PNG, WebP)', 'warning');
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      showToast('حجم الصورة كبير جداً، الحد الأقصى 12 ميجابايت', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      this.supportImageBase64 = event.target.result;
+      this.renderSupportImagePreview(file.name, file.size);
+    };
+    reader.readAsDataURL(file);
+  },
+
+  renderSupportImagePreview(name = 'لقطة شاشة مرفقة', size = 0) {
+    const containers = document.querySelectorAll('#supp-image-preview-container');
+    const previews = document.querySelectorAll('#supp-image-preview');
+    const nameEls = document.querySelectorAll('#supp-image-name');
+
+    previews.forEach(p => { p.src = this.supportImageBase64; });
+    containers.forEach(c => { c.classList.remove('hidden'); });
+
+    const sizeStr = size > 0 ? ` (${(size / 1024).toFixed(1)} KB)` : '';
+    nameEls.forEach(n => { n.textContent = `📎 ${name}${sizeStr}`; });
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  removeSupportImage() {
+    this.supportImageBase64 = null;
+    const containers = document.querySelectorAll('#supp-image-preview-container');
+    const previews = document.querySelectorAll('#supp-image-preview');
+    const inputs = document.querySelectorAll('#supp-image-file');
+    const nameEls = document.querySelectorAll('#supp-image-name');
+
+    previews.forEach(p => { p.src = ''; });
+    containers.forEach(c => { c.classList.add('hidden'); });
+    inputs.forEach(i => { i.value = ''; });
+    nameEls.forEach(n => { n.textContent = ''; });
+  },
+
+  setupSupportPasteListener() {
+    if (this._supportPasteBound) return;
+    this._supportPasteBound = true;
+
+    window.addEventListener('paste', (e) => {
+      // Only process if support modal is open or support form is visible
+      const modalOpen = !document.getElementById('support-modal')?.classList.contains('hidden');
+      const suppPage = document.getElementById('supp-message');
+      if (!modalOpen && !suppPage) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              this.supportImageBase64 = event.target.result;
+              this.renderSupportImagePreview(`screenshot_${Date.now()}.png`, blob.size);
+              showToast('تم التقاط الصورة من الحافظة ولصقها بنجاح 📋🖼️', 'info');
+            };
+            reader.readAsDataURL(blob);
+            break;
+          }
+        }
+      }
+    });
+  },
+
   closeSupportModal() {
     const modal = document.getElementById('support-modal');
     if (modal) modal.classList.add('hidden');
+    this.removeSupportImage();
   },
 
   async submitSupportTicket(e) {
@@ -450,11 +534,13 @@ const App = {
         company_name: company || user.company_name || null,
         role: user.role || 'guest',
         subject: subject,
-        message: message
+        message: message,
+        attachment_photo: this.supportImageBase64 || null
       });
 
       showToast(res.message || 'تم إرسال تذكرتك بنجاح، سيتواصل معك فريق الدعم الفني قريباً', 'success');
       this.closeSupportModal();
+      this.removeSupportImage();
       const msgEl = document.getElementById('supp-message');
       if (msgEl) msgEl.value = '';
     } catch (err) {

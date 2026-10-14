@@ -774,6 +774,34 @@
     </div>
   </div>
 
+  <!-- MODAL: PREVIEW TICKET ATTACHMENT IMAGE -->
+  <div id="ticket-image-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md" onclick="closeTicketImageModal()">
+    <div class="relative max-w-4xl max-h-[92vh] w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-2xl modal-enter overflow-hidden flex flex-col items-center" onclick="event.stopPropagation()">
+      <div class="w-full flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="image" class="w-5 h-5 text-emerald-400"></i>
+          <div>
+            <h4 class="text-sm font-black text-white" id="ticket-image-title">الصورة المرفقة مع التذكرة</h4>
+            <p class="text-[11px] text-slate-400" id="ticket-image-subtitle">معاينة تفاصيل المشكلة المرفوعة من المستخدم</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="ticket-image-download" href="#" download="ticket-attachment.png" target="_blank"
+            class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-700 shadow-sm">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>تحميل الصورة</span>
+          </a>
+          <button type="button" onclick="closeTicketImageModal()" class="text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      <div class="overflow-auto max-h-[75vh] w-full flex items-center justify-center bg-slate-950/60 rounded-2xl p-2 border border-slate-800/80">
+        <img id="ticket-image-full" src="" alt="معاينة الصورة كاملة" class="max-w-full max-h-[70vh] rounded-xl object-contain shadow-2xl" />
+      </div>
+    </div>
+  </div>
+
   <!-- ============================================================ -->
   <!-- JAVASCRIPT LOGIC -->
   <!-- ============================================================ -->
@@ -1620,6 +1648,17 @@
             <td class="py-3 px-4">
               <span class="block font-black text-white text-xs mb-1">${t.subject}</span>
               <p class="text-[11px] text-slate-400 leading-relaxed max-w-xs break-words">${t.message}</p>
+              ${t.attachment_photo ? `
+                <div class="mt-2 flex items-center gap-2">
+                  <button type="button" onclick="openTicketImageModal(${t.id})"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold transition-all shadow-sm">
+                    <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                    <span>عرض الصورة المرفقة 🖼️</span>
+                  </button>
+                  <img src="${t.attachment_photo}" onclick="openTicketImageModal(${t.id})"
+                    class="h-9 w-9 rounded-lg border border-emerald-500/40 object-cover cursor-pointer hover:scale-110 transition-transform shadow-sm" alt="مرفق" title="انقر لتكبير الصورة" />
+                </div>
+              ` : ''}
             </td>
 
             <td class="py-3 px-4 text-center font-mono text-[11px] text-slate-400 whitespace-nowrap">${dateFormatted}</td>
@@ -1717,6 +1756,23 @@
       } catch (err) {
         showToast('حدث خطأ في الاتصال', 'danger');
       }
+    }
+
+    // TICKET IMAGE MODAL HANDLERS
+    function openTicketImageModal(id) {
+      const t = allTickets.find(item => String(item.id) === String(id));
+      if (!t || !t.attachment_photo) return;
+      document.getElementById('ticket-image-full').src = t.attachment_photo;
+      document.getElementById('ticket-image-download').href = t.attachment_photo;
+      document.getElementById('ticket-image-title').textContent = `صورة مرفقة: تذكرة #${t.id} - ${t.subject}`;
+      document.getElementById('ticket-image-subtitle').textContent = `المرسل: ${t.sender_name} (${t.company_name || 'بدون اسم منشأة'}) - الهاتف: ${t.sender_phone}`;
+      document.getElementById('ticket-image-modal').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeTicketImageModal() {
+      const modal = document.getElementById('ticket-image-modal');
+      if (modal) modal.classList.add('hidden');
     }
 
     // On Load Initialization

@@ -301,6 +301,7 @@ try {
       role TEXT DEFAULT 'user',
       subject TEXT NOT NULL,
       message TEXT NOT NULL,
+      attachment_photo TEXT,
       status TEXT NOT NULL DEFAULT 'new',
       admin_notes TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -308,6 +309,11 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_ticket_status ON support_tickets(status);
   `);
+
+  const ticketCols = db.prepare('PRAGMA table_info(support_tickets)').all().map(c => c.name);
+  if (!ticketCols.includes('attachment_photo')) {
+    db.exec(`ALTER TABLE support_tickets ADD COLUMN attachment_photo TEXT;`);
+  }
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
   if (!wpCols.includes('manager_id')) {

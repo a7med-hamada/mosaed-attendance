@@ -93,7 +93,7 @@ router.get('/packages', (req, res) => {
 // POST /api/support/tickets - Submit a technical support ticket from main site
 router.post('/tickets', (req, res) => {
   try {
-    const { sender_name, sender_phone, sender_email, company_name, role, subject, message } = req.body;
+    const { sender_name, sender_phone, sender_email, company_name, role, subject, message, attachment_photo } = req.body;
 
     if (!sender_name || !sender_phone || !subject || !message) {
       return res.status(400).json({
@@ -103,8 +103,8 @@ router.post('/tickets', (req, res) => {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO support_tickets (sender_name, sender_phone, sender_email, company_name, role, subject, message, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
+      INSERT INTO support_tickets (sender_name, sender_phone, sender_email, company_name, role, subject, message, attachment_photo, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')
     `);
 
     const result = stmt.run(
@@ -114,7 +114,8 @@ router.post('/tickets', (req, res) => {
       company_name ? company_name.trim() : null,
       role ? role.trim() : 'user',
       subject.trim(),
-      message.trim()
+      message.trim(),
+      attachment_photo || null
     );
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

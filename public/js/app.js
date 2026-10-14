@@ -247,9 +247,8 @@ const App = {
     if (pkgBtn) {
       if (user.role === 'manager') {
         pkgBtn.classList.remove('hidden');
-        if (user.subscription && user.subscription.remainingDays !== undefined) {
-          pkgBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> <span class="hidden md:inline">الباقات (${user.subscription.remainingDays} يوم)</span>`;
-        }
+        const remaining = (user.subscription && (user.subscription.remainingDays !== undefined ? user.subscription.remainingDays : user.subscription.daysRemaining)) ?? 0;
+        pkgBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> <span class="hidden md:inline">الباقات (${remaining} يوم)</span>`;
       } else {
         pkgBtn.classList.add('hidden');
       }
@@ -478,8 +477,9 @@ const App = {
     if (statusContainer) {
       const sub = user.subscription;
       if (sub) {
-        const remaining = sub.remainingDays !== undefined ? sub.remainingDays : 0;
-        const statusBadge = sub.expired 
+        const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0)));
+        const isExpired = sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0));
+        const statusBadge = isExpired 
           ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30">منتهية الصلاحية</span>`
           : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">نشطة (${remaining} يوم متبقي)</span>`;
 

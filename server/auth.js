@@ -12,7 +12,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
 function getSubscriptionDetails(managerId) {
   const mgr = db.prepare('SELECT id, is_active, subscription_plan, subscription_expires_at, trial_days, created_at FROM users WHERE id = ?').get(managerId);
   if (!mgr) {
-    return { isExpired: false, daysRemaining: 14, plan: 'trial', expiresAt: null };
+    return {
+      isExpired: false,
+      expired: false,
+      daysRemaining: 14,
+      remainingDays: 14,
+      days_remaining: 14,
+      plan: 'trial',
+      expiresAt: null
+    };
   }
 
   let expiresAt;
@@ -30,7 +38,10 @@ function getSubscriptionDetails(managerId) {
 
   return {
     isExpired,
+    expired: isExpired,
     daysRemaining,
+    remainingDays: daysRemaining,
+    days_remaining: daysRemaining,
     plan: mgr.subscription_plan || 'trial',
     expiresAt: expiresAt.toISOString()
   };
@@ -247,6 +258,12 @@ router.post('/login', (req, res) => {
     safeUser.manager_id = effectiveManagerId;
     safeUser.subscription = subStatus;
 
+    let wpLogin = db.prepare('SELECT company_name FROM workplaces WHERE manager_id = ? LIMIT 1').get(effectiveManagerId);
+    if (!wpLogin && effectiveManagerId === 1) {
+      wpLogin = db.prepare('SELECT company_name FROM workplaces WHERE id = 1').get();
+    }
+    safeUser.company_name = (wpLogin && wpLogin.company_name) ? wpLogin.company_name : (user.role === 'manager' ? user.full_name : '');
+
     // Log login in audit
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(user.id, user.full_name, 'USER_LOGIN', 'users', user.id, null, null, 'تسجيل دخول ناجح للمنظومة', clientIp);
@@ -281,6 +298,13 @@ router.get('/me', authenticateToken, (req, res) => {
     }
 
     user.manager_id = user.role === 'manager' ? user.id : (user.manager_id || 1);
+
+    let wp = db.prepare('SELECT company_name FROM workplaces WHERE manager_id = ? LIMIT 1').get(user.manager_id);
+    if (!wp && user.manager_id === 1) {
+      wp = db.prepare('SELECT company_name FROM workplaces WHERE id = 1').get();
+    }
+    user.company_name = (wp && wp.company_name) ? wp.company_name : (user.role === 'manager' ? user.full_name : '');
+
     user.subscription = getSubscriptionDetails(user.manager_id);
 
     res.json({ success: true, user });

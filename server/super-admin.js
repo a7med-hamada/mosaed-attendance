@@ -543,6 +543,61 @@ router.put('/tickets/:id/status', authenticateSuperAdmin, (req, res) => {
       WHERE id = ?
     `).run(status, admin_notes || null, resolvedAt, ticketId);
 
+    // Send in-app notification to the company / manager if status is in_progress or resolved
+    if (status === 'in_progress' || status === 'resolved') {
+      try {
+        let targetUserId = null;
+
+        // 1. Try find by email
+        if (ticket.sender_email && ticket.sender_email.trim()) {
+          const u = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(ticket.sender_email.trim());
+          if (u) targetUserId = u.id;
+        }
+
+        // 2. Try find by phone
+        if (!targetUserId && ticket.sender_phone && ticket.sender_phone.trim()) {
+          const rawPhone = ticket.sender_phone.trim().replace(/\D/g, '');
+          if (rawPhone.length >= 7) {
+            const lastDigits = rawPhone.slice(-8);
+            const u = db.prepare(`
+              SELECT id FROM users 
+              WHERE REPLACE(REPLACE(phone, ' ', ''), '+', '') LIKE ?
+            `).get(`%${lastDigits}%`);
+            if (u) targetUserId = u.id;
+          }
+        }
+
+        // 3. Try find by company name
+        if (!targetUserId && ticket.company_name && ticket.company_name.trim()) {
+          const wp = db.prepare('SELECT manager_id FROM workplaces WHERE LOWER(company_name) = LOWER(?) LIMIT 1').get(ticket.company_name.trim());
+          if (wp && wp.manager_id) {
+            targetUserId = wp.manager_id;
+          } else {
+            const u = db.prepare("SELECT id FROM users WHERE role = 'manager' AND LOWER(full_name) = LOWER(?) LIMIT 1").get(ticket.company_name.trim());
+            if (u) targetUserId = u.id;
+          }
+        }
+
+        const notifTitle = status === 'in_progress'
+          ? 'الدعم الفني: جاري متابعة مشكلتك 🛠️'
+          : 'الدعم الفني: تم حل المشكلة بنجاح ✅';
+
+        const notesText = admin_notes && admin_notes.trim() ? ` (ملاحظة الدعم: ${admin_notes.trim()})` : '';
+        const notifMsg = status === 'in_progress'
+          ? `فريق الدعم الفني يتابع مشكلتك المقدمة بعنوان ("${ticket.subject}") وجاري العمل على حلها.${notesText}`
+          : `تم حل المشكلة المقدمة بعنوان ("${ticket.subject}") بنجاح.${notesText}`;
+
+        const notifType = status === 'in_progress' ? 'info' : 'success';
+
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, message, type)
+          VALUES (?, ?, ?, ?)
+        `).run(targetUserId, notifTitle, notifMsg, notifType);
+      } catch (notifErr) {
+        console.error('Failed to create ticket notification:', notifErr);
+      }
+    }
+
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
       0,

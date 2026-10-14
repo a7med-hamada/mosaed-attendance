@@ -517,25 +517,37 @@
               <button onclick="extendSubscription(30, 'monthly')"
                 class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
                 <span class="block text-xs font-black text-emerald-400 group-hover:scale-105 transition-transform">+ شهر (30 يوم)</span>
+                <span class="text-xs font-bold text-emerald-300 block mt-1">75 ج.م</span>
                 <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">باقة شهرية</span>
               </button>
 
               <button onclick="extendSubscription(90, 'quarterly')"
                 class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
                 <span class="block text-xs font-black text-amber-400 group-hover:scale-105 transition-transform">+ 3 شهور (90 يوم)</span>
+                <span class="text-xs font-bold text-amber-300 block mt-1">180 ج.م</span>
                 <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">ربع سنوي</span>
               </button>
 
               <button onclick="extendSubscription(180, 'semi_annual')"
-                class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
-                <span class="block text-xs font-black text-purple-400 group-hover:scale-105 transition-transform">+ 6 شهور (180 يوم)</span>
-                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">نصف سنوي</span>
+                class="p-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-white border border-purple-500/30 hover:border-purple-500 transition-all text-center group relative overflow-hidden">
+                <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500/30 text-purple-300">خصم 25%</span>
+                <span class="block text-xs font-black text-purple-300 group-hover:scale-105 transition-transform">+ 6 شهور (180 يوم)</span>
+                <div class="flex items-center justify-center gap-1.5 mt-1">
+                  <span class="text-xs font-black text-purple-200">300 ج.م</span>
+                  <span class="text-[10px] text-slate-400 line-through">400</span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">نصف سنوي 🔥</span>
               </button>
 
               <button onclick="extendSubscription(365, 'annual')"
-                class="p-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-white border border-emerald-500/30 hover:border-emerald-500 transition-all text-center group">
+                class="p-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-white border-2 border-emerald-500/50 hover:border-emerald-400 transition-all text-center group relative overflow-hidden shadow-sm shadow-emerald-500/20">
+                <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-500/30 text-emerald-300">خصم 25%</span>
                 <span class="block text-xs font-black text-emerald-300 group-hover:scale-105 transition-transform">+ سنة (365 يوم) ⭐</span>
-                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">باقة سنوية</span>
+                <div class="flex items-center justify-center gap-1.5 mt-1">
+                  <span class="text-xs font-black text-emerald-200">600 ج.م</span>
+                  <span class="text-[10px] text-slate-400 line-through">800</span>
+                </div>
+                <span class="text-[10px] text-emerald-400/80 font-mono mt-0.5 block">أعلى توفير ⭐</span>
               </button>
             </div>
             <p class="text-[10px] text-slate-400 mt-1.5 font-medium">💡 ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وهكذا لجميع الباقات.</p>
@@ -701,22 +713,10 @@
             class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white font-mono text-left focus:outline-none focus:ring-1 focus:ring-emerald-500" />
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1">خطة الاشتراك</label>
-            <select id="edit-plan"
-              class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
-              <option value="trial">فترة تجريبية (Trial)</option>
-              <option value="pro">باقة احترافية (Pro)</option>
-              <option value="enterprise">باقة مؤسسات (Enterprise)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1">أيام التجربة المجانية</label>
-            <input type="number" id="edit-trial-days" min="0" max="365"
-              class="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" />
-          </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">أيام التجربة المجانية (المدة التجريبية المحددة للمنشأة)</label>
+          <input type="number" id="edit-trial-days" min="0" max="365"
+            class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono" />
         </div>
 
         <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
@@ -1193,7 +1193,6 @@
       document.getElementById('edit-company-name').value = c.company_name;
       document.getElementById('edit-manager-name').value = c.full_name;
       document.getElementById('edit-phone').value = c.phone || '';
-      document.getElementById('edit-plan').value = c.subscription_plan || 'trial';
       document.getElementById('edit-trial-days').value = c.trial_days_total || 14;
 
       document.getElementById('edit-company-modal').classList.remove('hidden');
@@ -1209,13 +1208,12 @@
       const company_name = document.getElementById('edit-company-name').value.trim();
       const manager_name = document.getElementById('edit-manager-name').value.trim();
       const phone = document.getElementById('edit-phone').value.trim();
-      const subscription_plan = document.getElementById('edit-plan').value;
       const trial_days = document.getElementById('edit-trial-days').value;
 
       try {
         const res = await apiRequest(`/api/super-admin/companies/${id}/details`, {
           method: 'PUT',
-          body: JSON.stringify({ company_name, manager_name, phone, subscription_plan, trial_days })
+          body: JSON.stringify({ company_name, manager_name, phone, trial_days })
         });
 
         if (res.success) {

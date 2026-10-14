@@ -8,7 +8,9 @@ const PACKAGES = [
     id: 'monthly',
     name: 'الباقة الشهرية',
     duration_days: 30,
-    price: 199,
+    price: 75,
+    original_price: null,
+    discount_label: null,
     currency: 'ج.م',
     period_label: 'شهرياً (30 يوم)',
     popular: false,
@@ -24,11 +26,13 @@ const PACKAGES = [
     id: 'quarterly',
     name: 'الباقة ربع السنوية',
     duration_days: 90,
-    price: 499,
+    price: 180,
+    original_price: null,
+    discount_label: null,
     currency: 'ج.م',
     period_label: 'كل 3 شهور (90 يوم)',
-    popular: true,
-    badge: 'الأكثر طلباً 🔥',
+    popular: false,
+    badge: null,
     features: [
       'جميع ميزات الباقة الشهرية كاملة',
       'نظام السلف والمكافآت وإدارة مسيرات الرواتب',
@@ -40,32 +44,36 @@ const PACKAGES = [
     id: 'semi_annual',
     name: 'الباقة نصف السنوية',
     duration_days: 180,
-    price: 899,
+    price: 300,
+    original_price: 400,
+    discount_label: 'خصم 25%',
     currency: 'ج.م',
     period_label: 'كل 6 شهور (180 يوم)',
     popular: false,
-    badge: 'توفير متميز ✨',
+    badge: 'عرض خاص - خصم 25% 🔥',
     features: [
       'جميع ميزات الباقة ربع السنوية',
       'مؤشرات أداء الموظفين ونسبة الانضباط الشهرية',
       'إشعارات وتقارير ذكية دورية',
-      'توفير ملحوظ مقارنة بالاشتراك الشهري'
+      'توفير 100 ج.م (بدل 400 ج.م)'
     ]
   },
   {
     id: 'annual',
     name: 'الباقة السنوية',
     duration_days: 365,
-    price: 1599,
+    price: 600,
+    original_price: 800,
+    discount_label: 'خصم 25%',
     currency: 'ج.م',
     period_label: 'سنوياً (365 يوم)',
-    popular: false,
-    badge: 'أعلى توفير ⭐',
+    popular: true,
+    badge: 'أعلى توفير - خصم 25% ⭐',
     features: [
       'سنة كاملة مستمرة بدون توقف',
       'كافة التحديثات والميزات الجديدة مجاناً',
       'دعم فني خاص على مدار الساعة VIP',
-      'أعلى نسبة توفير وضمان ثبات السعر'
+      'توفير 200 ج.م (بدل 800 ج.م)'
     ]
   }
 ];

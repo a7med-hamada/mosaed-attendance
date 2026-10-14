@@ -5275,8 +5275,8 @@ const ManagerUI = {
     } catch (_) {}
 
     const sub = user.subscription || {};
-    const remaining = sub.remainingDays !== undefined ? sub.remainingDays : 0;
-    const isExpired = sub.expired;
+    const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0)));
+    const isExpired = sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0));
     const company = user.company_name || 'شركتكم الموقرة';
     const waBase = "https://wa.me/201093320211?text=";
 
@@ -5334,7 +5334,7 @@ const ManagerUI = {
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة الشهرية</h4>
               <div class="my-4">
-                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">199</span>
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">75</span>
                 <span class="text-xs text-slate-500 font-bold">ج.م / 30 يوم</span>
               </div>
               <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
@@ -5344,7 +5344,7 @@ const ManagerUI = {
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> دعم فني مخصص</li>
               </ul>
             </div>
-            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في الباقة الشهرية (199 ج.م) لشركة ' + company)}" target="_blank"
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في الباقة الشهرية (75 ج.م) لشركة ' + company)}" target="_blank"
               class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
               <i data-lucide="message-circle" class="w-4 h-4"></i>
               <span>تفعيل الباقة الشهرية</span>
@@ -5356,11 +5356,11 @@ const ManagerUI = {
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">ربع سنوي</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">وفر 16%</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">وفر 20%</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة 3 أشهر</h4>
               <div class="my-4">
-                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">499</span>
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">180</span>
                 <span class="text-xs text-slate-500 font-bold">ج.م / 90 يوم</span>
               </div>
               <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
@@ -5370,7 +5370,7 @@ const ManagerUI = {
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> أولوية دعم فني</li>
               </ul>
             </div>
-            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة 3 أشهر (499 ج.م) لشركة ' + company)}" target="_blank"
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة 3 أشهر (180 ج.م) لشركة ' + company)}" target="_blank"
               class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
               <i data-lucide="message-circle" class="w-4 h-4"></i>
               <span>تفعيل باقة 3 أشهر</span>
@@ -5382,12 +5382,13 @@ const ManagerUI = {
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">نصف سنوي</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600">وفر 25%</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300">خصم 25% 🔥</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة 6 أشهر</h4>
-              <div class="my-4">
-                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">899</span>
+              <div class="flex items-baseline gap-2 my-4">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">300</span>
                 <span class="text-xs text-slate-500 font-bold">ج.م / 180 يوم</span>
+                <span class="line-through text-slate-400 text-sm font-mono mr-1">400</span>
               </div>
               <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كل مميزات النظام كاملة</li>
@@ -5396,27 +5397,28 @@ const ManagerUI = {
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> تدريب وإعداد مجاني للمنظومة</li>
               </ul>
             </div>
-            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة 6 أشهر (899 ج.م) لشركة ' + company)}" target="_blank"
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في عرض باقة 6 أشهر (300 ج.م بدل 400 ج.م) لشركة ' + company)}" target="_blank"
               class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
               <i data-lucide="message-circle" class="w-4 h-4"></i>
-              <span>تفعيل باقة 6 أشهر</span>
+              <span>تفعيل باقة 6 أشهر (عرض 300 ج.م)</span>
             </a>
           </div>
 
           <!-- 4. Annual (Featured) -->
           <div class="rounded-3xl p-6 bg-gradient-to-b from-emerald-500/10 via-white to-white dark:via-slate-900 dark:to-slate-900 border-2 border-emerald-500 shadow-md hover:shadow-2xl transition-all flex flex-col justify-between relative">
             <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md">
-              الأكثر توفيراً ⭐
+              الأكثر توفيراً - خصم 25% ⭐
             </div>
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">سنوي كامل</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">وفر 33%</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">خصم 25% 🏷️</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة السنوية (سنة)</h4>
-              <div class="my-4">
-                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">1599</span>
+              <div class="flex items-baseline gap-2 my-4">
+                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">600</span>
                 <span class="text-xs text-slate-500 font-bold">ج.م / 365 يوم</span>
+                <span class="line-through text-slate-400 text-sm font-mono mr-1">800</span>
               </div>
               <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> راحة بال لعام كامل بدون انقطاع</li>
@@ -5425,10 +5427,10 @@ const ManagerUI = {
                 <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كافة التحديثات والميزات مجاناً</li>
               </ul>
             </div>
-            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في الباقة السنوية (1599 ج.م) لشركة ' + company)}" target="_blank"
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في عرض الباقة السنوية (600 ج.م بدل 800 ج.م) لشركة ' + company)}" target="_blank"
               class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/25 transition-all">
               <i data-lucide="message-circle" class="w-4 h-4"></i>
-              <span>تفعيل الباقة السنوية الآن</span>
+              <span>تفعيل الباقة السنوية (عرض 600 ج.م)</span>
             </a>
           </div>
         </div>

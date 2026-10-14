@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { db, logAudit } = require('./database');
 
 const router = express.Router();
@@ -254,7 +255,7 @@ router.put('/companies/:id/status', authenticateSuperAdmin, (req, res) => {
 router.put('/companies/:id/details', authenticateSuperAdmin, (req, res) => {
   try {
     const managerId = parseInt(req.params.id, 10);
-    const { company_name, manager_name, phone, subscription_plan, trial_days } = req.body;
+    const { company_name, manager_name, phone, subscription_plan, trial_days, password } = req.body;
 
     const manager = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'manager'").get(managerId);
     if (!manager) {
@@ -279,6 +280,12 @@ router.put('/companies/:id/details', authenticateSuperAdmin, (req, res) => {
       );
     }
 
+    // Update password if provided
+    if (password && String(password).trim().length >= 4) {
+      const hashedPassword = bcrypt.hashSync(String(password).trim(), 10);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashedPassword, managerId);
+    }
+
     // Update workplace company_name
     if (company_name) {
       const existingWp = db.prepare('SELECT id FROM workplaces WHERE manager_id = ? LIMIT 1').get(managerId);
@@ -290,15 +297,57 @@ router.put('/companies/:id/details', authenticateSuperAdmin, (req, res) => {
     }
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logAudit(0, 'SuperAdmin', 'UPDATE_COMPANY_DETAILS', 'users', managerId, null, req.body, `تعديل بيانات المنشأة (${company_name || manager.full_name})`, clientIp);
+    logAudit(0, 'SuperAdmin', 'UPDATE_COMPANY_DETAILS', 'users', managerId, null, { ...req.body, password: password ? '***' : undefined }, `تعديل بيانات المنشأة (${company_name || manager.full_name})`, clientIp);
 
     res.json({
       success: true,
-      message: 'تم تحديث بيانات المنشأة بنجاح'
+      message: 'تم تحديث بيانات المنشأة بنجاح' + (password ? ' وتم تغيير كلمة المرور 🔑' : '')
     });
   } catch (error) {
     console.error('Super admin update company details error:', error);
     res.status(500).json({ success: false, error: 'فشل في تحديث بيانات المنشأة' });
+  }
+});
+
+// PUT /api/super-admin/companies/:id/password - Directly Reset/Change Company Manager Password
+router.put('/companies/:id/password', authenticateSuperAdmin, (req, res) => {
+  try {
+    const managerId = parseInt(req.params.id, 10);
+    const { password } = req.body;
+
+    if (!password || String(password).trim().length < 4) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة مرور صالحة (4 خانات على الأقل)' });
+    }
+
+    const manager = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'manager'").get(managerId);
+    if (!manager) {
+      return res.status(404).json({ success: false, error: 'الشركة غير موجودة' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(String(password).trim(), 10);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashedPassword, managerId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'CHANGE_COMPANY_PASSWORD',
+      'users',
+      managerId,
+      null,
+      null,
+      `تغيير كلمة مرور حساب شركة (${manager.full_name}) إلى كلمة مرور جديدة`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تم تغيير كلمة مرور حساب شركة (${manager.full_name}) بنجاح 🔑`,
+      email: manager.email
+    });
+  } catch (error) {
+    console.error('Super admin change company password error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تغيير كلمة المرور' });
   }
 });
 

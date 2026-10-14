@@ -116,8 +116,102 @@ function checkAndMarkAutoAbsences() {
   }
 }
 
+// Automatic checkout check logic (runs periodically and on-demand)
+function checkAndApplyAutoCheckouts() {
+  try {
+    const today = getTodayString();
+    const currentTime = getCurrentTimeString();
+    const currentMins = timeToMinutes(currentTime);
+
+    // 1. Process TODAY's records where check_in_time is present but check_out_time is null
+    const openRecordsToday = db.prepare(`
+      SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
+             COALESCE(s.end_time, '17:00') as scheduled_end,
+             u.full_name
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      LEFT JOIN schedules s ON u.schedule_id = s.id
+      WHERE ar.date = ? AND ar.check_in_time IS NOT NULL AND ar.check_out_time IS NULL
+    `).all(today);
+
+    for (const rec of openRecordsToday) {
+      const endMins = timeToMinutes(rec.scheduled_end || '17:00');
+      // If current time reached or passed the employee's scheduled end time (e.g. 17:00 / 5 PM)
+      if (currentMins >= endMins) {
+        const checkOutTime = rec.scheduled_end.length === 5 ? `${rec.scheduled_end}:00` : rec.scheduled_end;
+        
+        let workedHours = 8.0;
+        if (rec.check_in_time) {
+          const inMins = timeToMinutes(rec.check_in_time);
+          workedHours = Math.max(0, Math.round(((endMins - inMins) / 60) * 10) / 10);
+        }
+
+        const autoNote = 'تم الانصراف التلقائي بنهاية مواعيد العمل الرسمية';
+        const finalNotes = rec.notes ? `${rec.notes} | ${autoNote}` : autoNote;
+
+        db.prepare(`
+          UPDATE attendance_records SET
+            check_out_time = ?,
+            worked_hours = ?,
+            verification_status = 'system_auto_checkout',
+            notes = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(checkOutTime, workedHours, finalNotes, rec.id);
+
+        createNotification(
+          rec.employee_id,
+          'انصراف تلقائي',
+          `تم تسجيل انصرافك تلقائياً بحلول نهاية مواعيد العمل المقررة (${rec.scheduled_end}).`,
+          'info'
+        );
+      }
+    }
+
+    // 2. Process PAST unclosed shifts (date < today)
+    const openRecordsPast = db.prepare(`
+      SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
+             COALESCE(s.end_time, '17:00') as scheduled_end,
+             u.full_name
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      LEFT JOIN schedules s ON u.schedule_id = s.id
+      WHERE ar.date < ? AND ar.check_in_time IS NOT NULL AND ar.check_out_time IS NULL
+    `).all(today);
+
+    for (const rec of openRecordsPast) {
+      const checkOutTime = rec.scheduled_end.length === 5 ? `${rec.scheduled_end}:00` : rec.scheduled_end;
+      const endMins = timeToMinutes(rec.scheduled_end || '17:00');
+      let workedHours = 8.0;
+      if (rec.check_in_time) {
+        const inMins = timeToMinutes(rec.check_in_time);
+        workedHours = Math.max(0, Math.round(((endMins - inMins) / 60) * 10) / 10);
+      }
+
+      const autoNote = 'تم الانصراف التلقائي بنهاية مواعيد العمل الرسمية';
+      const finalNotes = rec.notes ? `${rec.notes} | ${autoNote}` : autoNote;
+
+      db.prepare(`
+        UPDATE attendance_records SET
+          check_out_time = ?,
+          worked_hours = ?,
+          verification_status = 'system_auto_checkout',
+          notes = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(checkOutTime, workedHours, finalNotes, rec.id);
+    }
+  } catch (err) {
+    console.error('Auto checkout check error:', err);
+  }
+}
+
 // Run auto absence check on server interval (every 10 minutes)
 setInterval(checkAndMarkAutoAbsences, 10 * 60 * 1000);
+// Run auto checkout check on server interval (every 1 minute)
+setInterval(checkAndApplyAutoCheckouts, 60 * 1000);
+// Initial check on startup
+checkAndApplyAutoCheckouts();
 
 // ==========================================
 // 1. Employee Check-in (POST /api/attendance/check-in)
@@ -571,6 +665,7 @@ router.post('/check-out', authenticateToken, (req, res) => {
 // ==========================================
 router.get('/my-today', authenticateToken, (req, res) => {
   try {
+    checkAndApplyAutoCheckouts();
     const today = getTodayString();
     const record = db.prepare(`
       SELECT * FROM attendance_records WHERE employee_id = ? AND date = ?
@@ -628,8 +723,9 @@ router.get('/live-today', authenticateToken, requireManager, (req, res) => {
     const today = getTodayString();
     const managerId = req.user.id;
 
-    // Trigger auto-absence check
+    // Trigger auto-absence & auto-checkout checks
     checkAndMarkAutoAbsences();
+    checkAndApplyAutoCheckouts();
 
     // Query active employees for this manager with today's record (LEFT JOIN)
     const records = db.prepare(`
@@ -729,6 +825,7 @@ router.get('/live-today', authenticateToken, requireManager, (req, res) => {
 // ==========================================
 router.get('/history', authenticateToken, (req, res) => {
   try {
+    checkAndApplyAutoCheckouts();
     const isManager = req.user.role === 'manager';
     const { date_from, date_to, employee_id, department_id, status, verification_status, search } = req.query;
 

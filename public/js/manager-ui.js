@@ -456,7 +456,11 @@ const ManagerUI = {
                   ${r.check_out_time ? `
                     <div>
                       <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_out_time)}</span>
-                      ${r.check_out_distance !== null && r.check_out_distance !== undefined ? `
+                      ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? `
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 mt-1">
+                          🤖 تم الانصراف التلقائي
+                        </span>
+                      ` : (r.check_out_distance !== null && r.check_out_distance !== undefined ? `
                         <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                           📍 من المقر (${r.check_out_distance}م)
                         </span>
@@ -464,7 +468,7 @@ const ManagerUI = {
                         <a href="https://www.google.com/maps?q=${r.check_out_lat},${r.check_out_lng}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline font-mono">
                           📍 خريطة الانصراف
                         </a>
-                      ` : '<span class="text-[11px] text-slate-400">موقع مسجل</span>')}
+                      ` : '<span class="text-[11px] text-slate-400">موقع مسجل</span>'))}
                       ${r.early_leave_minutes > 0 ? `
                         <span class="text-[10px] text-purple-400 font-bold block mt-0.5">انصراف مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>
                       ` : ''}
@@ -2561,7 +2565,10 @@ const ManagerUI = {
                         ${r.check_in_time ? formatTime12(r.check_in_time) : '<span class="text-slate-400 font-normal">—</span>'}
                       </td>
                       <td class="py-3 px-3 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                        ${r.check_out_time ? formatTime12(r.check_out_time) : '<span class="text-slate-400 font-normal">—</span>'}
+                        ${r.check_out_time ? `
+                          <span class="block">${formatTime12(r.check_out_time)}</span>
+                          ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? '<span class="text-[9px] font-bold text-amber-500 block mt-0.5">انصراف تلقائي 🤖</span>' : ''}
+                        ` : '<span class="text-slate-400 font-normal">—</span>'}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${getStatusBadge(r.status)}
@@ -3152,6 +3159,8 @@ const ManagerUI = {
     const modal = document.getElementById('record-inspect-modal');
     if (!modal) return;
 
+    const isAutoCheckout = record.verification_status === 'system_auto_checkout' || (record.notes && record.notes.includes('تلقائي'));
+
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[90vh] flex flex-col">
@@ -3217,12 +3226,23 @@ const ManagerUI = {
                   <span class="font-extrabold text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
                     <i data-lucide="log-out" class="w-4 h-4"></i> تسجيل الانصراف
                   </span>
-                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">${record.check_out_time ? formatTime12(record.check_out_time) : 'قيد العمل'}</span>
+                  <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">
+                    ${record.check_out_time ? formatTime12(record.check_out_time) : 'قيد العمل'}
+                    ${isAutoCheckout ? '<span class="inline-block text-[10px] text-amber-500 font-bold mr-1">(تلقائي 🤖)</span>' : ''}
+                  </span>
                 </div>
 
                 <div>
                   <span class="text-[11px] text-slate-500 block mb-1 font-semibold">صورة إثبات الانصراف:</span>
-                  ${record.check_out_photo ? `
+                  ${isAutoCheckout ? `
+                    <div class="w-full h-44 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300/50 dark:border-amber-600/40 flex flex-col items-center justify-center text-amber-800 dark:text-amber-200 p-4 text-center">
+                      <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                      </div>
+                      <span class="font-extrabold text-xs mb-1 text-amber-700 dark:text-amber-300">🤖 تم الانصراف التلقائي</span>
+                      <span class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed max-w-xs">تم تسجيل الانصراف تلقائياً بواسطة المنظومة بنهاية مواعيد العمل الرسمية</span>
+                    </div>
+                  ` : record.check_out_photo ? `
                     <img src="${record.check_out_photo}" class="w-full h-44 rounded-xl object-cover bg-slate-950 border border-slate-200 dark:border-slate-700 shadow-inner" />
                   ` : `
                     <div class="w-full h-44 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
@@ -3235,7 +3255,7 @@ const ManagerUI = {
                 <div class="space-y-1.5 pt-1 text-[11px]">
                   <div class="flex justify-between">
                     <span class="text-slate-500">المسافة عند الانصراف:</span>
-                    <strong class="text-slate-800 dark:text-white font-mono">${record.check_out_distance !== null && record.check_out_distance !== undefined ? record.check_out_distance + ' متر' : '—'}</strong>
+                    <strong class="text-slate-800 dark:text-white font-mono">${record.check_out_distance !== null && record.check_out_distance !== undefined ? record.check_out_distance + ' متر' : (isAutoCheckout ? 'تم بنظام الآلي' : '—')}</strong>
                   </div>
                   ${record.check_out_lat ? `
                     <div class="flex justify-between items-center">
@@ -3254,12 +3274,18 @@ const ManagerUI = {
               </div>
             </div>
 
+            ${record.notes ? `
+              <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                <span><strong>ملاحظات السجل:</strong> ${record.notes}</span>
+              </div>
+            ` : ''}
+
             <!-- Total Worked Hours Summary Bar -->
             <div class="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/90 flex items-center justify-between font-semibold">
               <span class="text-slate-600 dark:text-slate-300">ساعات العمل المعتمدة لهذا اليوم:</span>
               <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-sm">${record.worked_hours || 0} ساعة</span>
             </div>
-          </div>
         </div>
       </div>
     `;

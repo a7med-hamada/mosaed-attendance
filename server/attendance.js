@@ -126,20 +126,63 @@ function checkAndApplyAutoCheckouts() {
     // 1. Process TODAY's records where check_in_time is present but check_out_time is null
     const openRecordsToday = db.prepare(`
       SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
-             COALESCE(ar.scheduled_end, s.end_time, '17:00') as scheduled_end,
-             u.full_name
+             ar.scheduled_start, ar.scheduled_end, ar.shift_id, ar.shift_name,
+             u.full_name, u.manager_id
       FROM attendance_records ar
       JOIN users u ON ar.employee_id = u.id
-      LEFT JOIN schedules s ON u.schedule_id = s.id
       WHERE ar.date = ? AND ar.check_in_time IS NOT NULL AND ar.check_out_time IS NULL
     `).all(today);
 
     for (const rec of openRecordsToday) {
-      const endMins = timeToMinutes(rec.scheduled_end || '17:00');
-      // If current time reached or passed the employee's scheduled end time (e.g. 17:00 / 5 PM)
+      const mgrId = rec.manager_id || 1;
+      let wp = db.prepare(`SELECT schedule_mode FROM workplaces WHERE manager_id = ? LIMIT 1`).get(mgrId);
+      if (!wp && mgrId === 1) wp = db.prepare(`SELECT schedule_mode FROM workplaces WHERE id = 1 LIMIT 1`).get();
+      const schedMode = wp ? (wp.schedule_mode || 'normal') : 'normal';
+
+      let effectiveEnd = rec.scheduled_end;
+      let matchedShift = null;
+
+      if (schedMode === 'shifts') {
+        const shifts = db.prepare('SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(mgrId);
+        if (rec.shift_id) {
+          matchedShift = shifts.find(s => s.id === rec.shift_id);
+        }
+        if (!matchedShift && shifts.length > 0) {
+          matchedShift = shifts.find(s => {
+            if (!s.assigned_employee_ids) return false;
+            try {
+              const ids = typeof s.assigned_employee_ids === 'string'
+                ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+                : s.assigned_employee_ids;
+              return Array.isArray(ids) && ids.includes(rec.employee_id);
+            } catch(e) { return false; }
+          });
+        }
+        if (!matchedShift && shifts.length > 0) {
+          const refMins = timeToMinutes(rec.check_in_time || rec.scheduled_start || currentTime);
+          matchedShift = shifts.reduce((closest, s) => {
+            const diff1 = Math.abs(timeToMinutes(s.start_time) - refMins);
+            const diff2 = Math.abs(timeToMinutes(closest.start_time) - refMins);
+            return diff1 < diff2 ? s : closest;
+          }, shifts[0]);
+        }
+        if (matchedShift) {
+          effectiveEnd = matchedShift.end_time;
+        }
+      } else {
+        if (!effectiveEnd) {
+          let s = db.prepare(`SELECT end_time FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(mgrId);
+          if (!s && mgrId === 1) s = db.prepare(`SELECT end_time FROM schedules WHERE id = 1 LIMIT 1`).get();
+          effectiveEnd = (s && s.end_time) || '17:00';
+        }
+      }
+
+      if (!effectiveEnd) effectiveEnd = '17:00';
+      const endMins = timeToMinutes(effectiveEnd);
+
+      // If current time reached or passed the employee's scheduled end time
       if (currentMins >= endMins) {
-        const checkOutTime = rec.scheduled_end.length === 5 ? `${rec.scheduled_end}:00` : rec.scheduled_end;
-        
+        const checkOutTime = effectiveEnd.length === 5 ? `${effectiveEnd}:00` : effectiveEnd;
         let workedHours = 8.0;
         if (rec.check_in_time) {
           const inMins = timeToMinutes(rec.check_in_time);
@@ -153,16 +196,28 @@ function checkAndApplyAutoCheckouts() {
           UPDATE attendance_records SET
             check_out_time = ?,
             worked_hours = ?,
+            early_leave_minutes = 0,
             verification_status = 'system_auto_checkout',
             notes = ?,
+            scheduled_start = COALESCE(?, scheduled_start),
+            scheduled_end = COALESCE(?, scheduled_end),
+            shift_id = COALESCE(?, shift_id),
+            shift_name = COALESCE(?, shift_name),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(checkOutTime, workedHours, finalNotes, rec.id);
+        `).run(
+          checkOutTime, workedHours, finalNotes,
+          matchedShift ? matchedShift.start_time : null,
+          matchedShift ? matchedShift.end_time : null,
+          matchedShift ? matchedShift.id : null,
+          matchedShift ? matchedShift.name : null,
+          rec.id
+        );
 
         createNotification(
           rec.employee_id,
           'انصراف تلقائي',
-          `تم تسجيل انصرافك تلقائياً بحلول نهاية مواعيد العمل المقررة (${rec.scheduled_end}).`,
+          `تم تسجيل انصرافك تلقائياً بحلول نهاية مواعيد العمل المقررة (${effectiveEnd}).`,
           'info'
         );
       }
@@ -654,15 +709,56 @@ router.post('/check-out', authenticateToken, (req, res) => {
     const workedMinutes = Math.max(0, outMins - inMins);
     const workedHours = parseFloat((workedMinutes / 60).toFixed(2));
 
-    // Lookup schedule for early leave calculation
-    let schedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
-    if (!schedule && managerId === 1) {
-      schedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 LIMIT 1`).get();
-    }
-    const earlyGraceMins = schedule ? (schedule.early_leave_grace_minutes || 0) : 0;
-    const scheduledEnd = (schedule && schedule.end_time) || record.scheduled_end || '17:00';
-    const scheduledEndMins = timeToMinutes(scheduledEnd);
+    // Determine company schedule mode (mutually exclusive: shifts vs normal)
+    const scheduleMode = (workplace && workplace.schedule_mode) || 'normal';
+    let scheduledEnd = '17:00';
+    let earlyGraceMins = 0;
+    let matchedShift = null;
 
+    if (scheduleMode === 'shifts') {
+      const activeShifts = db.prepare(`SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC`).all(managerId);
+
+      if (record.shift_id) {
+        matchedShift = activeShifts.find(s => s.id === record.shift_id);
+      }
+      if (!matchedShift && activeShifts.length > 0) {
+        matchedShift = activeShifts.find(s => {
+          if (!s.assigned_employee_ids) return false;
+          try {
+            const ids = typeof s.assigned_employee_ids === 'string'
+              ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+              : s.assigned_employee_ids;
+            return Array.isArray(ids) && ids.includes(employeeId);
+          } catch(e) { return false; }
+        });
+      }
+      if (!matchedShift && activeShifts.length > 0) {
+        const refMins = timeToMinutes(record.check_in_time || record.scheduled_start || currentTime);
+        matchedShift = activeShifts.reduce((closest, s) => {
+          const diff1 = Math.abs(timeToMinutes(s.start_time) - refMins);
+          const diff2 = Math.abs(timeToMinutes(closest.start_time) - refMins);
+          return diff1 < diff2 ? s : closest;
+        }, activeShifts[0]);
+      }
+
+      if (matchedShift) {
+        scheduledEnd = matchedShift.end_time;
+        earlyGraceMins = (matchedShift.early_leave_grace_minutes !== undefined && matchedShift.early_leave_grace_minutes !== null)
+          ? matchedShift.early_leave_grace_minutes : 15;
+      } else if (record.scheduled_end) {
+        scheduledEnd = record.scheduled_end;
+      }
+    } else {
+      // Normal schedule mode
+      let schedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
+      if (!schedule && managerId === 1) {
+        schedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 LIMIT 1`).get();
+      }
+      earlyGraceMins = schedule ? (schedule.early_leave_grace_minutes || 0) : 0;
+      scheduledEnd = (schedule && schedule.end_time) || record.scheduled_end || '17:00';
+    }
+
+    const scheduledEndMins = timeToMinutes(scheduledEnd);
     let earlyLeaveMinutes = 0;
     let status = record.status;
     let deduction = record.estimated_deduction || 0;
@@ -688,6 +784,11 @@ router.post('/check-out', authenticateToken, (req, res) => {
           deduction += parseFloat(earlyLeaveRateSetting.value);
         }
       }
+    } else {
+      earlyLeaveMinutes = 0;
+      if (status === 'Early Leave') {
+        status = (record.late_minutes && record.late_minutes > 0) ? 'Late' : 'On Time';
+      }
     }
 
     // Update attendance record
@@ -695,11 +796,21 @@ router.post('/check-out', authenticateToken, (req, res) => {
       UPDATE attendance_records SET
         check_out_time = ?, check_out_lat = ?, check_out_lng = ?, check_out_distance = ?,
         check_out_accuracy = ?, check_out_photo = ?, worked_hours = ?,
-        early_leave_minutes = ?, status = ?, estimated_deduction = ?, updated_at = CURRENT_TIMESTAMP
+        early_leave_minutes = ?, status = ?, estimated_deduction = ?,
+        scheduled_start = COALESCE(?, scheduled_start),
+        scheduled_end = COALESCE(?, scheduled_end),
+        shift_id = COALESCE(?, shift_id),
+        shift_name = COALESCE(?, shift_name),
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
       currentTime, latitude || null, longitude || null, distanceMeters,
-      clientAccuracy, photoUrl, workedHours, earlyLeaveMinutes, status, deduction, record.id
+      clientAccuracy, photoUrl, workedHours, earlyLeaveMinutes, status, deduction,
+      matchedShift ? matchedShift.start_time : null,
+      matchedShift ? matchedShift.end_time : null,
+      matchedShift ? matchedShift.id : null,
+      matchedShift ? matchedShift.name : null,
+      record.id
     );
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -772,6 +883,64 @@ router.get('/my-today', authenticateToken, (req, res) => {
         } catch(e) { empIds = []; }
         return { ...s, assigned_employee_ids: empIds };
       });
+
+      // Synchronize employee's record with active shift if not yet tagged or mismatched
+      if (record && shifts.length > 0) {
+        let matchedShift = null;
+        if (record.shift_id) {
+          matchedShift = shifts.find(s => s.id === record.shift_id);
+        }
+        if (!matchedShift) {
+          matchedShift = shifts.find(s => Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(req.user.id));
+        }
+        if (!matchedShift) {
+          const refMins = timeToMinutes(record.check_in_time || record.scheduled_start || '09:00');
+          matchedShift = shifts.reduce((closest, s) => {
+            const diff1 = Math.abs(timeToMinutes(s.start_time) - refMins);
+            const diff2 = Math.abs(timeToMinutes(closest.start_time) - refMins);
+            return diff1 < diff2 ? s : closest;
+          }, shifts[0]);
+        }
+        if (matchedShift && (record.shift_id !== matchedShift.id || record.scheduled_end !== matchedShift.end_time || (record.check_out_time && record.early_leave_minutes > 0))) {
+          let earlyLeaveMinutes = record.early_leave_minutes || 0;
+          let status = record.status;
+          let deduction = record.estimated_deduction || 0;
+
+          if (record.check_out_time) {
+            const outMins = timeToMinutes(record.check_out_time);
+            const shiftEndMins = timeToMinutes(matchedShift.end_time);
+            const grace = matchedShift.early_leave_grace_minutes !== undefined ? matchedShift.early_leave_grace_minutes : 15;
+
+            if (outMins < (shiftEndMins - grace)) {
+              earlyLeaveMinutes = shiftEndMins - outMins;
+              if (status === 'On Time') status = 'Early Leave';
+            } else {
+              earlyLeaveMinutes = 0;
+              if (status === 'Early Leave') {
+                status = (record.late_minutes && record.late_minutes > 0) ? 'Late' : 'On Time';
+                const earlyLeaveRateSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'deduction_early_leave_rate'`).get();
+                if (earlyLeaveRateSetting && deduction >= parseFloat(earlyLeaveRateSetting.value)) {
+                  deduction = Math.max(0, deduction - parseFloat(earlyLeaveRateSetting.value));
+                }
+              }
+            }
+          }
+
+          db.prepare(`
+            UPDATE attendance_records SET
+              shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
+              early_leave_minutes = ?, status = ?, estimated_deduction = ?
+            WHERE id = ?
+          `).run(matchedShift.id, matchedShift.name, matchedShift.start_time, matchedShift.end_time, earlyLeaveMinutes, status, deduction, record.id);
+          record.shift_id = matchedShift.id;
+          record.shift_name = matchedShift.name;
+          record.scheduled_start = matchedShift.start_time;
+          record.scheduled_end = matchedShift.end_time;
+          record.early_leave_minutes = earlyLeaveMinutes;
+          record.status = status;
+          record.estimated_deduction = deduction;
+        }
+      }
     }
 
     // Get employee schedule for this manager

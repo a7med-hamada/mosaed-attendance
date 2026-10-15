@@ -260,12 +260,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_att_emp_date ON attendance_records(employee_id, date);
   CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
   CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
+  CREATE INDEX IF NOT EXISTS idx_att_checkout ON attendance_records(date, check_out_time);
+  CREATE INDEX IF NOT EXISTS idx_users_manager ON users(manager_id);
+  CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
   CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_leave_emp ON leave_requests(employee_id, status);
   CREATE INDEX IF NOT EXISTS idx_leave_dates ON leave_requests(start_date, end_date, status);
   CREATE INDEX IF NOT EXISTS idx_perm_emp_date ON permission_requests(employee_id, date, status);
   CREATE INDEX IF NOT EXISTS idx_wa_phone ON whatsapp_logs(recipient_phone);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);
+  CREATE INDEX IF NOT EXISTS idx_shifts_mgr_active ON company_shifts(manager_id, is_active);
 `);
 
 // Safe migrations for multi-manager workspace separation & setup states

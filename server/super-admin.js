@@ -138,7 +138,7 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
 
       if (isLifetime) {
         expiresAt = new Date('2099-12-31T23:59:59.000Z');
-        trialDaysRemaining = 99999;
+        trialDaysRemaining = null;
         isTrialExpired = false;
       } else {
         if (mgr.subscription_expires_at) {
@@ -172,6 +172,7 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
         subscription_plan: mgr.subscription_plan || 'trial',
         subscription_expires_at: expiresAt.toISOString(),
         subscription_expires_date: isLifetime ? 'دائم (مدى الحياة)' : expiresAt.toISOString().split('T')[0],
+        is_lifetime: isLifetime,
         trial_days_total: mgr.trial_days || 14,
         trial_days_remaining: trialDaysRemaining,
         is_trial_expired: isTrialExpired,
@@ -461,7 +462,7 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
     if (plan === 'lifetime' || plan === 'open') {
       newExpiresAt = '2099-12-31T23:59:59.000Z';
       newPlan = 'lifetime';
-      remainingDays = 99999;
+      remainingDays = null;
     } else {
       // Determine current expiration base date
       let baseDate = new Date();
@@ -492,7 +493,7 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
       managerId,
       { old_expires: manager.subscription_expires_at },
       { new_expires: newExpiresAt, added_days: addDays, plan: newPlan },
-      `تمديد اشتراك منشأة (${manager.full_name}) - (باقة: ${newPlan}). المتبقي الجديد: ${remainingDays} يوم`,
+      `تمديد اشتراك منشأة (${manager.full_name}) - (باقة: ${newPlan}). المتبقي الجديد: ${newPlan === 'lifetime' ? 'مدى الحياة (مفتوح ♾️)' : remainingDays + ' يوم'}`,
       clientIp
     );
 
@@ -503,7 +504,7 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
         : `تم تمديد الاشتراك بنجاح! تم إضافة ${addDays} يوم. إجمالي الأيام المتبقية الآن: ${remainingDays} يوم ✅`,
       subscription_expires_at: newExpiresAt,
       subscription_expires_date: newPlan === 'lifetime' ? 'دائم (مدى الحياة)' : newExpiresAt.split('T')[0],
-      days_remaining: remainingDays,
+      days_remaining: newPlan === 'lifetime' ? null : remainingDays,
       plan: newPlan
     });
   } catch (error) {
@@ -531,12 +532,14 @@ router.put('/companies/:id/subscription/set-days', authenticateSuperAdmin, (req,
 
     // Set expiration to (Now + targetDays)
     const newExpiresAt = new Date(Date.now() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+    const updatedPlan = manager.subscription_plan === 'lifetime' ? 'custom' : manager.subscription_plan;
 
     db.prepare(`
       UPDATE users SET
-        subscription_expires_at = ?
+        subscription_expires_at = ?,
+        subscription_plan = ?
       WHERE id = ?
-    `).run(newExpiresAt, managerId);
+    `).run(newExpiresAt, updatedPlan, managerId);
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(

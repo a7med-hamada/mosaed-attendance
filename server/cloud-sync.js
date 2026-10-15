@@ -24,7 +24,9 @@ const SYNC_TABLES = [
   'leave_requests',
   'permission_requests',
   'whatsapp_logs',
-  'notifications'
+  'notifications',
+  'company_shifts',
+  'support_tickets'
 ];
 
 let initialLoadDone = false;
@@ -84,6 +86,98 @@ function applySnapshotToDatabase(snapshot) {
     console.error('[CloudSync] Failed to apply snapshot:', err.message);
   } finally {
     try { db.exec('PRAGMA foreign_keys = ON;'); } catch (_) {}
+    postSyncShiftAlignment();
+  }
+}
+
+function postSyncShiftAlignment() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const shifts = db.prepare(`SELECT * FROM company_shifts WHERE is_active = 1`).all();
+    if (!shifts || shifts.length === 0) return;
+
+    const timeToMinutes = (t) => {
+      if (!t) return 0;
+      const [h, m] = t.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const records = db.prepare(`
+      SELECT ar.*, u.manager_id, w.schedule_mode
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      LEFT JOIN workplaces w ON (w.manager_id = u.manager_id OR (u.manager_id IS NULL AND w.manager_id = 1))
+      WHERE ar.date = ? AND ar.check_out_time IS NOT NULL
+    `).all(today);
+
+    const updateStmt = db.prepare(`
+      UPDATE attendance_records
+      SET scheduled_start = ?, scheduled_end = ?, shift_id = ?, shift_name = ?, early_leave_minutes = ?, status = ?
+      WHERE id = ?
+    `);
+
+    for (const rec of records) {
+      if (rec.schedule_mode !== 'shifts' && !rec.shift_id) continue;
+
+      let matched = null;
+      if (rec.shift_id) {
+        matched = shifts.find(s => s.id === rec.shift_id);
+      }
+      if (!matched && rec.shift_name) {
+        matched = shifts.find(s => s.name === rec.shift_name);
+      }
+      if (!matched) {
+        matched = shifts.find(s => {
+          if (!s.assigned_employee_ids) return false;
+          try {
+            const ids = typeof s.assigned_employee_ids === 'string'
+              ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+              : s.assigned_employee_ids;
+            return Array.isArray(ids) && ids.includes(rec.employee_id);
+          } catch(e) { return false; }
+        });
+      }
+      if (!matched) {
+        const refMins = timeToMinutes(rec.check_in_time || rec.scheduled_start || '09:00');
+        const mgrShifts = shifts.filter(s => s.manager_id === rec.manager_id || (rec.manager_id === 1 && !s.manager_id));
+        const pool = mgrShifts.length > 0 ? mgrShifts : shifts;
+        matched = pool.reduce((closest, s) => {
+          const diff1 = Math.abs(timeToMinutes(s.start_time) - refMins);
+          const diff2 = Math.abs(timeToMinutes(closest.start_time) - refMins);
+          return diff1 < diff2 ? s : closest;
+        }, pool[0]);
+      }
+
+      if (!matched) continue;
+
+      const outMins = timeToMinutes(rec.check_out_time);
+      const shiftEndMins = timeToMinutes(matched.end_time);
+      const grace = matched.early_leave_grace_minutes || 0;
+
+      let earlyLeave = 0;
+      let status = rec.status;
+      if (outMins < (shiftEndMins - grace)) {
+        earlyLeave = shiftEndMins - outMins;
+        if (status === 'On Time') status = 'Early Leave';
+      } else {
+        earlyLeave = 0;
+        if (status === 'Early Leave') {
+          status = (rec.late_minutes && rec.late_minutes > 0) ? 'Late' : 'On Time';
+        }
+      }
+
+      updateStmt.run(
+        matched.start_time,
+        matched.end_time,
+        matched.id,
+        matched.name,
+        earlyLeave,
+        status,
+        rec.id
+      );
+    }
+  } catch (err) {
+    console.warn('[CloudSync] postSyncShiftAlignment warning:', err.message);
   }
 }
 

@@ -421,9 +421,13 @@ router.get('/export/csv', authenticateToken, (req, res) => {
     if (!isManager) {
       query += ` AND ar.employee_id = ? `;
       params.push(req.user.id);
-    } else if (employee_id) {
-      query += ` AND ar.employee_id = ? `;
-      params.push(employee_id);
+    } else {
+      query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      params.push(req.user.id, req.user.id);
+      if (employee_id) {
+        query += ` AND ar.employee_id = ? `;
+        params.push(employee_id);
+      }
     }
 
     if (date_from) {

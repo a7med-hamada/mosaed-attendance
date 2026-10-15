@@ -550,7 +550,7 @@
                 <span class="text-[10px] text-emerald-400/80 font-mono mt-0.5 block">أعلى توفير ⭐</span>
               </button>
 
-              <button onclick="extendSubscription(36500, 'lifetime')"
+              <button onclick="extendSubscription(0, 'lifetime')"
                 class="p-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-white border-2 border-amber-500/50 hover:border-amber-400 transition-all text-center group relative overflow-hidden shadow-sm shadow-amber-500/20 col-span-2 sm:col-span-1">
                 <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500/30 text-amber-300">غير محدود</span>
                 <span class="block text-xs font-black text-amber-300 group-hover:scale-105 transition-transform">باقة مفتوحة ⭐</span>
@@ -1164,30 +1164,36 @@
               <a href="mailto:${c.email}" class="hover:text-emerald-400 hover:underline transition-colors">${c.email}</a>
             </td>
 
-            <!-- 5. Employees Count -->
+            <!-- 5. Employees & Shifts Count -->
             <td class="py-3.5 px-4 text-center">
               <button onclick="openEmployeesModal(${c.id}, '${c.company_name}', '${c.full_name}')"
                 class="px-2.5 py-1 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 font-bold font-mono text-xs inline-flex items-center gap-1 transition-all" title="عرض موظفي الشركة">
                 <i data-lucide="users" class="w-3.5 h-3.5"></i>
                 <span>${c.employee_count} موظف</span>
               </button>
+              <div class="mt-1">
+                ${c.schedule_mode === 'shifts'
+                  ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"><i data-lucide="layers" class="w-3 h-3"></i> ${c.shift_count || 0} ورديات</span>`
+                  : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700/60"><i data-lucide="clock" class="w-3 h-3"></i> دوام عادي</span>`
+                }
+              </div>
             </td>
 
             <!-- 6. Subscription / Trial Status -->
             <td class="py-3.5 px-4 text-center whitespace-nowrap">
               ${(c.subscription_plan === 'lifetime' || c.subscription_plan === 'open') ? `
-                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10">
                   باقة مفتوحة (مدى الحياة) ⭐
                 </span>
               ` : c.subscription_plan === 'trial' ? `
                 <div class="inline-flex flex-col items-center">
-                  <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${c.is_trial_expired ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'}">
-                    ${c.is_trial_expired ? 'انتهت التجربة ⚠️' : `تجريبي (باقي ${c.trial_days_remaining} يوم)`}
+                  <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${c.is_trial_expired ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}">
+                    ${c.is_trial_expired ? 'انتهت التجربة ⚠️' : `تجريبي (${c.trial_days_remaining} يوم)`}
                   </span>
                 </div>
               ` : `
-                <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                  ${planLabels[c.subscription_plan] || c.subscription_plan}
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                  ${planLabels[c.subscription_plan] || c.subscription_plan} (${c.trial_days_remaining || 0} يوم)
                 </span>
               `}
             </td>
@@ -1645,7 +1651,15 @@
       }
 
       if (customDaysInput) {
-        customDaysInput.value = isLifetime ? 99999 : (c.trial_days_remaining || 0);
+        if (isLifetime) {
+          customDaysInput.value = '';
+          customDaysInput.placeholder = 'دائم ♾️';
+          customDaysInput.disabled = true;
+        } else {
+          customDaysInput.disabled = false;
+          customDaysInput.placeholder = '30';
+          customDaysInput.value = (c.trial_days_remaining !== undefined && c.trial_days_remaining !== null) ? c.trial_days_remaining : 0;
+        }
       }
     }
 

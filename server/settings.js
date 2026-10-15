@@ -478,6 +478,11 @@ router.post('/shifts', authenticateToken, requireManager, (req, res) => {
       }
     }
 
+    // 4. If shifts mode is active, retroactively align today's records with matched shifts
+    if (mode === 'shifts') {
+      syncTodayAttendanceWithShifts(managerId);
+    }
+
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
       req.user.id,
@@ -503,6 +508,93 @@ router.post('/shifts', authenticateToken, requireManager, (req, res) => {
     res.status(500).json({ success: false, error: 'فشل في حفظ إعدادات الشيفتات' });
   }
 });
+
+// Helper: Synchronize today's attendance records with active shifts
+function syncTodayAttendanceWithShifts(managerId) {
+  try {
+    const today = getTodayString();
+    const activeShifts = db.prepare(`SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC`).all(managerId);
+    if (!activeShifts || activeShifts.length === 0) return;
+
+    const records = db.prepare(`
+      SELECT ar.*, u.id as emp_id
+      FROM attendance_records ar
+      JOIN users u ON ar.employee_id = u.id
+      WHERE ar.date = ? AND (u.manager_id = ? OR (? = 1 AND u.manager_id IS NULL))
+    `).all(today, managerId, managerId);
+
+    const updateStmt = db.prepare(`
+      UPDATE attendance_records SET
+        shift_id = ?,
+        shift_name = ?,
+        scheduled_start = ?,
+        scheduled_end = ?,
+        early_leave_minutes = ?,
+        status = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    for (const rec of records) {
+      let matched = null;
+      if (rec.shift_id) {
+        matched = activeShifts.find(s => s.id === rec.shift_id);
+      }
+      if (!matched) {
+        matched = activeShifts.find(s => {
+          if (!s.assigned_employee_ids) return false;
+          try {
+            const ids = typeof s.assigned_employee_ids === 'string'
+              ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+              : s.assigned_employee_ids;
+            return Array.isArray(ids) && ids.includes(rec.employee_id);
+          } catch(e) { return false; }
+        });
+      }
+      if (!matched) {
+        const refMins = timeToMinutes(rec.check_in_time || rec.scheduled_start || '09:00');
+        matched = activeShifts.reduce((closest, s) => {
+          const diff1 = Math.abs(timeToMinutes(s.start_time) - refMins);
+          const diff2 = Math.abs(timeToMinutes(closest.start_time) - refMins);
+          return diff1 < diff2 ? s : closest;
+        }, activeShifts[0]);
+      }
+
+      if (!matched) continue;
+
+      let earlyLeaveMinutes = 0;
+      let status = rec.status;
+
+      if (rec.check_out_time) {
+        const outMins = timeToMinutes(rec.check_out_time);
+        const shiftEndMins = timeToMinutes(matched.end_time);
+        const grace = matched.early_leave_grace_minutes || 0;
+
+        if (outMins < (shiftEndMins - grace)) {
+          earlyLeaveMinutes = shiftEndMins - outMins;
+          if (status === 'On Time') status = 'Early Leave';
+        } else {
+          earlyLeaveMinutes = 0;
+          if (status === 'Early Leave') {
+            status = (rec.late_minutes && rec.late_minutes > 0) ? 'Late' : 'On Time';
+          }
+        }
+      }
+
+      updateStmt.run(
+        matched.id,
+        matched.name,
+        matched.start_time,
+        matched.end_time,
+        earlyLeaveMinutes,
+        status,
+        rec.id
+      );
+    }
+  } catch (err) {
+    console.error('syncTodayAttendanceWithShifts error:', err);
+  }
+}
 
 // POST /api/settings/reset-attendance-system (Disabled to protect attendance records)
 router.post('/reset-attendance-system', authenticateToken, requireManager, (req, res) => {

@@ -3180,7 +3180,35 @@ const ManagerUI = {
   },
 
   async exportHistoryCsv() {
-    window.open('/api/reports/export/csv', '_blank');
+    try {
+      const token = (typeof API !== 'undefined' && API.getToken()) || localStorage.getItem('token') || '';
+      const url = `/api/reports/export/csv?token=${encodeURIComponent(token)}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Export error:', err);
+      window.open(`/api/reports/export/csv?token=${encodeURIComponent(localStorage.getItem('token') || '')}`, '_blank');
+    }
+  },
+
+  exportMonthCsv(month) {
+    try {
+      const token = (typeof API !== 'undefined' && API.getToken()) || localStorage.getItem('token') || '';
+      const url = `/api/reports/export/csv?token=${encodeURIComponent(token)}&date_from=${month}-01&date_to=${month}-31`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payroll_attendance_${month}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Export month error:', err);
+      window.open(`/api/reports/export/csv?token=${encodeURIComponent(localStorage.getItem('token') || '')}&date_from=${month}-01&date_to=${month}-31`, '_blank');
+    }
   },
 
   // ========================================================
@@ -4005,7 +4033,7 @@ const ManagerUI = {
             class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة وحذف ومراجعة السلف
           </button>
-          <button onclick="window.open('/api/reports/export/csv?date_from=${targetMonth}-01&date_to=${targetMonth}-31', '_blank')"
+          <button onclick="ManagerUI.exportMonthCsv('${targetMonth}')"
             class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="download" class="w-4 h-4"></i> تصدير Excel
           </button>
@@ -5656,8 +5684,9 @@ const ManagerUI = {
     } catch (_) {}
 
     const sub = user.subscription || {};
+    const isLifetime = sub.isLifetime || sub.plan === 'lifetime' || user.subscription_plan === 'lifetime';
     const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0)));
-    const isExpired = sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0));
+    const isExpired = !isLifetime && (sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0)));
     const company = user.company_name || 'شركتكم الموقرة';
     const waBase = "https://wa.me/201093320211?text=";
 
@@ -5671,7 +5700,7 @@ const ManagerUI = {
               <span>إدارة الاشتراكات والتجديد</span>
             </div>
             <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">باقات وأسعار نظام وقتي (WAQTY)</h2>
-            <p class="text-xs text-slate-500 mt-1">يمكنك ترقية أو تجديد اشتراك مؤسستك مباشرة عبر واتساب مع التفعيل الفوري</p>
+            <p class="text-xs text-slate-500 mt-1">${isLifetime ? 'حساب مؤسستكم مفعّل باشتراك دائم ومفتوح مدى الحياة بدون أي قيود زمنية' : 'يمكنك ترقية أو تجديد اشتراك مؤسستك مباشرة عبر واتساب مع التفعيل الفوري'}</p>
           </div>
           <button onclick="App.openSupportModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-2 self-start sm:self-auto transition-all">
             <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
@@ -5679,7 +5708,47 @@ const ManagerUI = {
           </button>
         </div>
 
-        <!-- Current Status Banner -->
+        ${isLifetime ? `
+        <!-- Current Status Banner: Lifetime Account -->
+        <div class="p-6 rounded-3xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-emerald-500/20 text-white border-2 border-amber-500/40 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/25 text-amber-300 border border-amber-500/40 flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-lg shadow-amber-500/20">
+              <i data-lucide="crown" class="w-7 h-7"></i>
+            </div>
+            <div>
+              <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-black mb-1">
+                ⭐ باقة مفتوحة مدى الحياة (Lifetime)
+              </div>
+              <h3 class="text-lg sm:text-xl font-black text-white">
+                حساب مؤسسة ${company} مفعّل باشتراك مفتوح ودائم ♾️
+              </h3>
+              <p class="text-xs text-slate-300 mt-1">
+                حالة الاشتراك: <span class="font-bold text-amber-300">دائم مدى الحياة بدون تاريخ انتهاء أو رسوم تجديد مطلوبة</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="App.openSupportModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 border border-slate-700 shadow-md">
+              <i data-lucide="headphones" class="w-4 h-4 text-emerald-400"></i>
+              <span>الدعم الفني VIP المباشر</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Lifetime Confirmation Box: All Packages and Renewals Hidden as Requested -->
+        <div class="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-sm">
+          <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
+            <i data-lucide="shield-check" class="w-8 h-8"></i>
+          </div>
+          <div class="max-w-lg mx-auto">
+            <h4 class="text-lg font-black text-slate-900 dark:text-white">كافة ميزات وخصائص المنظومة مفعلة بالكامل</h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              تم إزالة كروت التجديد والدفع من حسابك لأنك مشترك في الباقة المفتوحة مدى الحياة. يمكنك إضافة أي عدد من الموظفين والفروع والورديات واستخراج كافة التقارير والمسيرات في أي وقت دون أي انقطاع.
+            </p>
+          </div>
+        </div>
+        ` : `
+        <!-- Current Status Banner: Regular Account -->
         <div class="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl ${isExpired ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'} flex items-center justify-center font-bold text-xl flex-shrink-0">
@@ -5705,7 +5774,7 @@ const ManagerUI = {
         </div>
 
         <!-- Packages Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <!-- 1. Monthly -->
           <div class="rounded-3xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between">
             <div>
@@ -5814,7 +5883,37 @@ const ManagerUI = {
               <span>تفعيل الباقة السنوية (عرض 600 ج.م)</span>
             </a>
           </div>
+
+          <!-- 5. Lifetime / Open Package (6,000 EGP) -->
+          <div class="rounded-3xl p-6 bg-gradient-to-b from-amber-500/15 via-white to-white dark:via-slate-900 dark:to-slate-900 border-2 border-amber-500/60 shadow-lg hover:shadow-2xl transition-all flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-md">
+              باقة مدى الحياة ⭐
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">مفتوح دائم</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">بدون تجديد ♾️</span>
+              </div>
+              <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة مدى الحياة (مفتوحة)</h4>
+              <div class="my-4">
+                <span class="text-3xl font-black text-amber-600 dark:text-amber-400 font-mono">6,000</span>
+                <span class="text-xs text-slate-500 font-bold">ج.م / اشتراك دائم</span>
+              </div>
+              <ul class="text-xs text-slate-600 dark:text-slate-400 space-y-2.5 mb-6">
+                <li class="flex items-center gap-2"><i data-lucide="crown" class="w-4 h-4 text-amber-500 flex-shrink-0"></i> اشتراك دائم ومفتوح مدى الحياة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i> عدد غير محدود من الموظفين والفروع</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i> دعم فني VIP فوري وأولوية مطلقة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i> كافة التحديثات والتطويرات مجاناً</li>
+              </ul>
+            </div>
+            <a href="${waBase}${encodeURIComponent('مرحباً، أود الاشتراك في باقة مدى الحياة المفتوحة (6000 ج.م) لشركة ' + company)}" target="_blank"
+              class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>تفعيل باقة مدى الحياة (6,000 ج.م)</span>
+            </a>
+          </div>
         </div>
+        `}
 
         <!-- Direct Contact Banner -->
         <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">

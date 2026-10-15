@@ -615,7 +615,7 @@
       <div id="packages-current-status" class="my-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-3 text-xs"></div>
 
       <!-- Packages Cards Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4">
         <!-- 1. Monthly -->
         <div class="rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between">
           <div>
@@ -727,6 +727,35 @@
             <span>تفعيل الباقة السنوية الآن</span>
           </a>
         </div>
+
+        <!-- 5. Lifetime / Open Package (6,000 EGP) -->
+        <div class="rounded-2xl p-5 border-2 border-amber-500/60 bg-gradient-to-b from-amber-50/30 via-white to-white dark:from-amber-950/20 dark:via-slate-850 dark:to-slate-850 hover:shadow-xl transition-all flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -top-3 right-4 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-md">
+            باقة مدى الحياة ⭐
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">مفتوح دائم</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">بدون تجديد ♾️</span>
+            </div>
+            <h4 class="font-bold text-base text-slate-900 dark:text-white">باقة مدى الحياة (مفتوحة)</h4>
+            <div class="mt-3 mb-4 flex items-baseline gap-2">
+              <span class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">6,000</span>
+              <span class="text-xs text-slate-500 font-bold">ج.م / اشتراك دائم</span>
+            </div>
+            <ul class="text-[11px] text-slate-600 dark:text-slate-400 space-y-2 mb-6">
+              <li class="flex items-center gap-2"><i data-lucide="crown" class="w-3.5 h-3.5 text-amber-500"></i> اشتراك دائم ومفتوح مدى الحياة</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-500"></i> عدد لا نهائي من الموظفين والفروع</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-500"></i> دعم فني VIP فوري وأولوية مطلقة</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-500"></i> كافة التحديثات والتطويرات مجاناً</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/201093320211?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D8%BA%D8%A8%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20%D8%A8%D8%A7%D9%82%D8%A9%20%D9%85%D8%AF%D9%89%20%D8%A7%D9%84%D8%AD%D9%8A%D8%A7%D8%A9%20%D8%A7%D9%84%D9%85%D9%81%D8%AA%D9%88%D8%AD%D8%A9%20(6000%20%D8%AC.%D9%85)" target="_blank"
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-amber-500/25 transition-all">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>تفعيل باقة مدى الحياة (6,000 ج.م)</span>
+          </a>
+        </div>
       </div>
 
       <!-- Support hotline -->
@@ -764,8 +793,8 @@
         انتهت فترة الاشتراك أو التجربة المجانية لمؤسستك. للاستمرار في استخدام المنظومة ومتابعة حضور وانصراف الموظفين والتقارير والمسيرات دون توقف، يرجى اختيار إحدى الباقات التالية والتواصل معنا لتفعيل حسابك فوراً.
       </p>
 
-      <!-- 4 Packages Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-right mb-6">
+      <!-- 5 Packages Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 text-right mb-6">
         <!-- 1. Monthly -->
         <div class="rounded-2xl p-4 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex flex-col justify-between">
           <div>
@@ -852,6 +881,30 @@
             class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/25 transition-all">
             <i data-lucide="message-circle" class="w-4 h-4"></i>
             <span>تفعيل الباقة السنوية</span>
+          </a>
+        </div>
+
+        <!-- 5. Lifetime / Open Package (6,000 EGP) -->
+        <div class="rounded-2xl p-4 border-2 border-amber-500/60 bg-amber-500/10 dark:bg-amber-950/20 flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -top-3 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[9px] font-black uppercase shadow-sm">
+            باقة مدى الحياة ⭐
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold text-amber-500">مفتوح دائم</span>
+              <span class="text-[10px] font-bold text-amber-500">بدون تجديد ♾️</span>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">باقة مدى الحياة (مفتوحة)</h4>
+            <div class="my-2.5 flex items-baseline gap-1.5">
+              <span class="text-2xl font-black text-amber-500 font-mono">6,000</span>
+              <span class="text-[11px] text-slate-500 font-bold">ج.م</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3">اشتراك دائم ومفتوح مدى الحياة بدون أي رسوم تجديد</p>
+          </div>
+          <a href="https://wa.me/201093320211?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D9%86%D9%81%D8%B0%D8%AA%20%D8%A7%D9%84%D9%85%D8%AF%D8%A9%20%D8%A7%D9%84%D9%85%D8%AC%D8%A7%D9%86%D9%8A%D8%A9%20%D9%88%D8%A3%D8%B1%D8%BA%D8%A8%20%D9%81%D9%8A%20%D8%AA%D9%81%D8%B9%D9%8A%D9%84%20%D8%A8%D8%A7%D9%82%D8%A9%20%D9%85%D8%AF%D9%89%20%D8%A7%D9%84%D8%AD%D9%8A%D8%A7%D8%A9%20%D8%A7%D9%84%D9%85%D9%81%D8%AA%D9%88%D8%AD%D8%A9%20(6000%20%D8%AC.%D9%85)" target="_blank"
+            class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>تفعيل باقة مدى الحياة (6,000 ج.م)</span>
           </a>
         </div>
       </div>

@@ -28,9 +28,10 @@ function getSubscriptionDetails(managerId) {
     return {
       isExpired: false,
       expired: false,
-      daysRemaining: 99999,
-      remainingDays: 99999,
-      days_remaining: 99999,
+      isLifetime: true,
+      daysRemaining: null,
+      remainingDays: null,
+      days_remaining: null,
       plan: 'lifetime',
       expiresAt: null
     };
@@ -63,7 +64,10 @@ function getSubscriptionDetails(managerId) {
 // Middleware to authenticate JWT
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+  if (!token && req.query && req.query.token) {
+    token = req.query.token;
+  }
 
   if (!token) {
     return res.status(401).json({ success: false, error: 'غير مصرح: يرجى تسجيل الدخول أولاً' });

@@ -23,6 +23,19 @@ function getSubscriptionDetails(managerId) {
     };
   }
 
+  // Lifetime / Open Subscription Plan (مدى الحياة - بدون انتهاء)
+  if (mgr.subscription_plan === 'lifetime' || mgr.subscription_plan === 'open') {
+    return {
+      isExpired: false,
+      expired: false,
+      daysRemaining: 99999,
+      remainingDays: 99999,
+      days_remaining: 99999,
+      plan: 'lifetime',
+      expiresAt: null
+    };
+  }
+
   let expiresAt;
   if (mgr.subscription_expires_at) {
     expiresAt = new Date(mgr.subscription_expires_at);

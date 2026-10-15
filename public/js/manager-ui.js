@@ -1725,103 +1725,205 @@ const ManagerUI = {
 
     container.innerHTML = `
       <div class="space-y-6 w-full">
-        <div>
-          <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <i data-lucide="calendar-clock" class="w-5 h-5 text-emerald-500"></i> تحديد مواعيد وقواعد الدوام
-          </h2>
-          <p class="text-xs text-slate-500">ضبط وقت بدء وانتهاء العمل، فترة السماح، وحدود التأخير والغياب ونصف اليوم</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="calendar-clock" class="w-5 h-5 text-emerald-500"></i> تحديد مواعيد ونظام الدوام والورديات
+            </h2>
+            <p class="text-xs text-slate-500">اختر بين نظام الدوام العادي الثابت أو نظام الشيفتات والورديات المتعددة</p>
+          </div>
         </div>
 
-        <form onsubmit="ManagerUI.saveWorkingHours(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">موعد بدء العمل الرسمي (Start Time) *</label>
-              <input type="time" id="sched-start-time" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
+        <!-- Schedule Mode Selector Tabs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <button type="button" id="tab-btn-normal-mode" onclick="ManagerUI.setScheduleModeTab('normal')"
+            class="flex items-center gap-3 p-3.5 rounded-xl text-right transition-all">
+            <div id="tab-icon-normal" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+              <i data-lucide="clock" class="w-5 h-5"></i>
             </div>
             <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">موعد نهاية العمل الرسمي (End Time) *</label>
-              <input type="time" id="sched-end-time" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
+              <h4 class="font-bold text-xs sm:text-sm text-slate-800 dark:text-white">نظام الدوام العادي (فترة واحدة)</h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">موعد بدء ونهاية واحد ثابت لكافة موظفي المنشأة</p>
             </div>
-          </div>
+          </button>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          <button type="button" id="tab-btn-shifts-mode" onclick="ManagerUI.setScheduleModeTab('shifts')"
+            class="flex items-center gap-3 p-3.5 rounded-xl text-right transition-all">
+            <div id="tab-icon-shifts" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <i data-lucide="layers" class="w-5 h-5"></i>
+            </div>
             <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">فترة سماح الحضور (Grace Period) *</label>
-              <input type="number" id="sched-grace-period" min="0" max="60" value="15" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
-              <span class="text-[11px] text-slate-400 mt-1 block">مثال: 15 دقيقة (09:01 - 09:15 في الموعد)</span>
+              <h4 class="font-bold text-xs sm:text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
+                <span>نظام الشيفتات والورديات</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-300">متعدد الفترات 🔄</span>
+              </h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">فترات عمل متعددة (صباحي / مسائي / ليلي) وتناوب الموظفين</p>
             </div>
+          </button>
+        </div>
 
-            <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">سماح الانصراف المبكر بالدقائق *</label>
-              <input type="number" id="sched-early-leave-grace" min="0" max="180" value="15" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
-              <span class="text-[11px] text-slate-400 mt-1 block">إذا انصرف قبل وقت الانصراف بهذا المقدار، يُحسب خروج مبكر</span>
-            </div>
-
-            <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">حد نصف اليوم (Half-Day) *</label>
-              <input type="time" id="sched-half-day" value="12:00" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
-              <span class="text-[11px] text-slate-400 mt-1 block">حضور بعد هذا الوقت يُعتبر نصف يوم</span>
-            </div>
-
-            <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">حد الغياب الآلي (Absence) *</label>
-              <input type="time" id="sched-absence" value="13:00" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
-              <span class="text-[11px] text-slate-400 mt-1 block">تسجيل غياب آلي إذا لم يحضر بعده</span>
-            </div>
-          </div>
-
-          <!-- Weekend Days Configuration -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
-            <div class="flex items-center gap-2">
-              <i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i>
-              <label class="block text-slate-800 dark:text-white font-bold text-xs">أيام العطلة الأسبوعية الرسمية (Weekend Days) *</label>
-            </div>
-            <select id="sched-weekend-days" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
-              <option value="5">الجمعة فقط (الدوام: السبت إلى الخميس)</option>
-              <option value="5,6">الجمعة والسبت (الدوام: الأحد إلى الخميس)</option>
-              <option value="6,0">السبت والأحد (الدوام: الاثنين إلى الجمعة)</option>
-              <option value="4,5">الخميس والجمعة (الدوام: السبت إلى الأربعاء)</option>
-            </select>
-            <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5 pt-1">
-              <i data-lucide="shield-check" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span>أيام العطلة الأسبوعية المحددة معفاة تماماً ولا يتم احتسابها كغياب للموظفين ولا يُطبق عليها أي خصم.</span>
-            </p>
-          </div>
-
-          <!-- Live Rule Explanation Card -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
-            <h4 class="font-bold text-slate-800 dark:text-white">طريقة احتساب النظام تلقائياً للحضور والانصراف:</h4>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1 font-medium">
-              <div class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                09:00 - 09:15<br><strong class="font-bold">في الموعد</strong>
+        <!-- PANEL 1: NORMAL SCHEDULE (Single shift) -->
+        <div id="sched-panel-normal" class="hidden">
+          <form onsubmit="ManagerUI.saveWorkingHours(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">موعد بدء العمل الرسمي (Start Time) *</label>
+                <input type="time" id="sched-start-time" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
               </div>
-              <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
-                09:16 - 11:59<br><strong class="font-bold">متأخر</strong>
-              </div>
-              <div class="p-2 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">
-                12:00 أو بعدها<br><strong class="font-bold">نصف يوم</strong>
-              </div>
-              <div class="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
-                قبل نهاية الدوام<br><strong class="font-bold">انصراف مبكر</strong>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">موعد نهاية العمل الرسمي (End Time) *</label>
+                <input type="time" id="sched-end-time" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
               </div>
             </div>
-          </div>
 
-          <div class="flex justify-end pt-2">
-            <button type="submit" class="py-3 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/25 flex items-center gap-2 text-sm transition-all">
-              <i data-lucide="check" class="w-4 h-4"></i> حفظ مواعيد وقواعد العمل
-            </button>
-          </div>
-        </form>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">فترة سماح الحضور (Grace Period) *</label>
+                <input type="number" id="sched-grace-period" min="0" max="60" value="15" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+                <span class="text-[11px] text-slate-400 mt-1 block">مثال: 15 دقيقة (09:01 - 09:15 في الموعد)</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">سماح الانصراف المبكر بالدقائق *</label>
+                <input type="number" id="sched-early-leave-grace" min="0" max="180" value="15" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm" />
+                <span class="text-[11px] text-slate-400 mt-1 block">إذا انصرف قبل وقت الانصراف بهذا المقدار، يُحسب خروج مبكر</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">حد نصف اليوم (Half-Day) *</label>
+                <input type="time" id="sched-half-day" value="12:00" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
+                <span class="text-[11px] text-slate-400 mt-1 block">حضور بعد هذا الوقت يُعتبر نصف يوم</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">حد الغياب الآلي (Absence) *</label>
+                <input type="time" id="sched-absence" value="13:00" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm" />
+                <span class="text-[11px] text-slate-400 mt-1 block">تسجيل غياب آلي إذا لم يحضر بعده</span>
+              </div>
+            </div>
+
+            <!-- Weekend Days Configuration -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-emerald-500"></i>
+                <label class="block text-slate-800 dark:text-white font-bold text-xs">أيام العطلة الأسبوعية الرسمية (Weekend Days) *</label>
+              </div>
+              <select id="sched-weekend-days" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                <option value="5">الجمعة فقط (الدوام: السبت إلى الخميس)</option>
+                <option value="5,6">الجمعة والسبت (الدوام: الأحد إلى الخميس)</option>
+                <option value="6,0">السبت والأحد (الدوام: الاثنين إلى الجمعة)</option>
+                <option value="4,5">الخميس والجمعة (الدوام: السبت إلى الأربعاء)</option>
+              </select>
+              <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5 pt-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                <span>أيام العطلة الأسبوعية المحددة معفاة تماماً ولا يتم احتسابها كغياب للموظفين ولا يُطبق عليها أي خصم.</span>
+              </p>
+            </div>
+
+            <!-- Live Rule Explanation Card -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+              <h4 class="font-bold text-slate-800 dark:text-white">طريقة احتساب النظام تلقائياً للحضور والانصراف:</h4>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1 font-medium">
+                <div class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
+                  09:00 - 09:15<br><strong class="font-bold">في الموعد</strong>
+                </div>
+                <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+                  09:16 - 11:59<br><strong class="font-bold">متأخر</strong>
+                </div>
+                <div class="p-2 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300">
+                  12:00 أو بعدها<br><strong class="font-bold">نصف يوم</strong>
+                </div>
+                <div class="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
+                  قبل نهاية الدوام<br><strong class="font-bold">انصراف مبكر</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button type="submit" class="py-3 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/25 flex items-center gap-2 text-sm transition-all">
+                <i data-lucide="check" class="w-4 h-4"></i> حفظ وتفعيل نظام الدوام العادي
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANEL 2: MULTI-SHIFTS SYSTEM (نظام الشيفتات والورديات) -->
+        <div id="sched-panel-shifts" class="hidden">
+          <form onsubmit="ManagerUI.saveMultiShifts(event)" class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
+            <!-- Informational Banner -->
+            <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/50 space-y-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0"></i>
+                <h4 class="font-bold text-purple-900 dark:text-purple-200 text-xs">نظام إدارة الورديات والشيفتات المتعددة:</h4>
+              </div>
+              <ul class="text-[11px] text-purple-800 dark:text-purple-300 space-y-1 list-disc list-inside leading-relaxed">
+                <li><b>سريان فوري في نفس اليوم:</b> بمجرد الحفظ، يتفعل نظام الورديات فوراً على تسجيلات اليوم.</li>
+                <li><b>تخصيص الموظفين (اختياري):</b> يمكنك تخصيص موظف محدد لكل فترة، أو تركها متاحة للجميع ليتناوبوا عليها.</li>
+                <li><b>تسجيل الحضور الذكي:</b> إذا كان الموظف مخصصاً لوردية سيسجل فيها مباشرة. وإذا لم يكن مخصصاً، يختار ورديته عند الحضور، أو يختارها النظام تلقائياً إذا انتهت الورديات السابقة وتم انصراف موظفيها تلقائياً.</li>
+                <li><b>الانصراف التلقائي المستقل:</b> كل وردية ينصرف موظفوها تلقائياً عند موعد نهايتها الخاص بها.</li>
+              </ul>
+            </div>
+
+            <!-- Shifts Cards Container -->
+            <div id="shifts-cards-container" class="space-y-4">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Add Shift Button -->
+            <div class="flex items-center justify-between pt-2">
+              <button type="button" onclick="ManagerUI.addShiftRow()"
+                class="px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 flex items-center gap-2 transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>+ إضافة فترة عمل جديدة</span>
+              </button>
+              <span id="shifts-count-label" class="text-xs font-bold text-slate-500 font-mono"></span>
+            </div>
+
+            <!-- Weekend Days for Shifts Mode -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-purple-500"></i>
+                <label class="block text-slate-800 dark:text-white font-bold text-xs">أيام العطلة الأسبوعية الرسمية *</label>
+              </div>
+              <select id="sched-shifts-weekend-days" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                <option value="5">الجمعة فقط (الدوام: السبت إلى الخميس)</option>
+                <option value="5,6">الجمعة والسبت (الدوام: الأحد إلى الخميس)</option>
+                <option value="6,0">السبت والأحد (الدوام: الاثنين إلى الجمعة)</option>
+                <option value="4,5">الخميس والجمعة (الدوام: السبت إلى الأربعاء)</option>
+              </select>
+            </div>
+
+            <!-- Submit Shifts Button -->
+            <div class="flex justify-end pt-2">
+              <button type="submit" id="save-shifts-btn" class="py-3 px-8 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md shadow-purple-500/25 flex items-center gap-2 text-sm transition-all">
+                <i data-lucide="check-check" class="w-4 h-4"></i>
+                <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم 💾</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     `;
 
     if (window.lucide) lucide.createIcons();
 
+    // Load initial settings and shifts
     try {
+      // Ensure employees are loaded
+      if (!this.employeesList || this.employeesList.length === 0) {
+        try {
+          const empRes = await API.getEmployees();
+          this.employeesList = empRes.employees || [];
+        } catch(e) {}
+      }
+
       const res = await API.getSettings();
       const sched = res.schedule || {};
       const s = res.settings || {};
+      const currentMode = res.schedule_mode || 'normal';
+      this.scheduleMode = currentMode;
+
+      // Populate normal inputs
       document.getElementById('sched-start-time').value = sched.start_time || '09:00';
       document.getElementById('sched-end-time').value = sched.end_time || '17:00';
       document.getElementById('sched-grace-period').value = sched.grace_period_minutes || 15;
@@ -1830,8 +1932,261 @@ const ManagerUI = {
       document.getElementById('sched-absence').value = sched.absence_threshold || '13:00';
       const weekendEl = document.getElementById('sched-weekend-days');
       if (weekendEl) weekendEl.value = s.weekend_days || '5';
+
+      const shiftsWeekendEl = document.getElementById('sched-shifts-weekend-days');
+      if (shiftsWeekendEl) shiftsWeekendEl.value = s.weekend_days || '5';
+
+      // Load shifts
+      const loadedShifts = (res.shifts && res.shifts.length > 0) ? res.shifts : [
+        { name: 'فترة صباحية', start_time: '09:00', end_time: '15:00', grace_period_minutes: 15, early_leave_grace_minutes: 15, assigned_employee_ids: [] },
+        { name: 'فترة مسائية', start_time: '15:00', end_time: '21:00', grace_period_minutes: 15, early_leave_grace_minutes: 15, assigned_employee_ids: [] }
+      ];
+      this.shiftsData = JSON.parse(JSON.stringify(loadedShifts));
+
+      this.renderShiftsList();
+      this.setScheduleModeTab(currentMode);
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  setScheduleModeTab(mode) {
+    this.scheduleMode = mode;
+    const btnNormal = document.getElementById('tab-btn-normal-mode');
+    const btnShifts = document.getElementById('tab-btn-shifts-mode');
+    const iconNormal = document.getElementById('tab-icon-normal');
+    const iconShifts = document.getElementById('tab-icon-shifts');
+    const panelNormal = document.getElementById('sched-panel-normal');
+    const panelShifts = document.getElementById('sched-panel-shifts');
+
+    if (mode === 'shifts') {
+      if (panelNormal) panelNormal.classList.add('hidden');
+      if (panelShifts) panelShifts.classList.remove('hidden');
+
+      if (btnShifts) btnShifts.className = 'flex items-center gap-3 p-3.5 rounded-xl text-right transition-all bg-white dark:bg-slate-900 border-2 border-purple-500 shadow-sm';
+      if (btnNormal) btnNormal.className = 'flex items-center gap-3 p-3.5 rounded-xl text-right transition-all hover:bg-slate-200/50 dark:hover:bg-slate-700/50 border-2 border-transparent';
+      if (iconShifts) iconShifts.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-purple-600 text-white';
+      if (iconNormal) iconNormal.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+    } else {
+      if (panelNormal) panelNormal.classList.remove('hidden');
+      if (panelShifts) panelShifts.classList.add('hidden');
+
+      if (btnNormal) btnNormal.className = 'flex items-center gap-3 p-3.5 rounded-xl text-right transition-all bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-sm';
+      if (btnShifts) btnShifts.className = 'flex items-center gap-3 p-3.5 rounded-xl text-right transition-all hover:bg-slate-200/50 dark:hover:bg-slate-700/50 border-2 border-transparent';
+      if (iconNormal) iconNormal.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-emerald-600 text-white';
+      if (iconShifts) iconShifts.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+    }
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  renderShiftsList() {
+    const container = document.getElementById('shifts-cards-container');
+    const countLabel = document.getElementById('shifts-count-label');
+    if (!container) return;
+
+    if (!Array.isArray(this.shiftsData) || this.shiftsData.length === 0) {
+      this.shiftsData = [
+        { name: 'فترة صباحية', start_time: '09:00', end_time: '15:00', grace_period_minutes: 15, early_leave_grace_minutes: 15, assigned_employee_ids: [] },
+        { name: 'فترة مسائية', start_time: '15:00', end_time: '21:00', grace_period_minutes: 15, early_leave_grace_minutes: 15, assigned_employee_ids: [] }
+      ];
+    }
+
+    if (countLabel) {
+      countLabel.textContent = `إجمالي الفترات المحددة: ${this.shiftsData.length}`;
+    }
+
+    const employees = this.employeesList || [];
+
+    container.innerHTML = this.shiftsData.map((shift, idx) => {
+      const assignedEmpId = Array.isArray(shift.assigned_employee_ids) && shift.assigned_employee_ids.length > 0
+        ? shift.assigned_employee_ids[0]
+        : (shift.assigned_employee_id || '');
+
+      const safeName = (shift.name || '').replace(/"/g, '&quot;');
+
+      return `
+        <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3.5 relative group">
+          <!-- Shift Card Header -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-700/60">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-purple-600 text-white text-xs font-bold flex items-center justify-center font-mono">${idx + 1}</span>
+              <h4 class="font-bold text-slate-800 dark:text-white text-xs sm:text-sm">إعدادات الفترة / الوردية (${idx + 1})</h4>
+            </div>
+
+            ${this.shiftsData.length > 1 ? `
+              <button type="button" onclick="ManagerUI.removeShiftRow(${idx})"
+                class="px-2.5 py-1 rounded-lg text-rose-500 hover:bg-rose-500/10 text-xs font-bold flex items-center gap-1 transition-all border border-rose-500/20" title="حذف هذه الفترة">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>حذف الفترة</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Shift Card Fields Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <!-- Shift Name -->
+            <div class="lg:col-span-1">
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم الفترة / الوردية *</label>
+              <input type="text" value="${safeName}" placeholder="مثال: فترة صباحية أو مسائية" required
+                onchange="ManagerUI.updateShiftField(${idx}, 'name', this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white" />
+            </div>
+
+            <!-- Start Time -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">موعد بدء الحضور *</label>
+              <input type="time" value="${shift.start_time || '09:00'}" required
+                onchange="ManagerUI.updateShiftField(${idx}, 'start_time', this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs font-bold text-slate-800 dark:text-white" />
+            </div>
+
+            <!-- End Time -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">موعد نهاية الانصراف *</label>
+              <input type="time" value="${shift.end_time || '17:00'}" required
+                onchange="ManagerUI.updateShiftField(${idx}, 'end_time', this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs font-bold text-slate-800 dark:text-white" />
+            </div>
+
+            <!-- Grace Period -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">سماح الحضور بعد الموعد (دقيقة) *</label>
+              <input type="number" min="0" max="60" value="${shift.grace_period_minutes ?? 15}" required
+                onchange="ManagerUI.updateShiftField(${idx}, 'grace_period_minutes', this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs text-slate-800 dark:text-white" />
+              <span class="text-[10px] text-slate-400 mt-0.5 block">مثال: 15 دقيقة بعد موعد الحضور</span>
+            </div>
+
+            <!-- Early Leave Grace -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">المسموح للخروج قبل موعده (دقيقة) *</label>
+              <input type="number" min="0" max="180" value="${shift.early_leave_grace_minutes ?? 15}" required
+                onchange="ManagerUI.updateShiftField(${idx}, 'early_leave_grace_minutes', this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs text-slate-800 dark:text-white" />
+              <span class="text-[10px] text-slate-400 mt-0.5 block">سماح الانصراف المبكر بدون احتساب</span>
+            </div>
+
+            <!-- Optional Assigned Employee -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                <span>الموظف المخصص للفترة</span>
+                <span class="text-[10px] text-purple-500 font-normal mr-1">(اختياري - متاح للجميع إذا تُرك فارغاً)</span>
+              </label>
+              <select onchange="ManagerUI.updateShiftAssignedEmployee(${idx}, this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white">
+                <option value="">-- متاح للجميع / تناوب وتبديل حر --</option>
+                ${employees.map(e => `
+                  <option value="${e.id}" ${String(assignedEmpId) === String(e.id) ? 'selected' : ''}>
+                    ${e.full_name} (${e.employee_code})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  addShiftRow() {
+    if (!Array.isArray(this.shiftsData)) this.shiftsData = [];
+    const count = this.shiftsData.length + 1;
+    let defaultName = `فترة ${count}`;
+    if (count === 1) defaultName = 'فترة صباحية';
+    else if (count === 2) defaultName = 'فترة مسائية';
+    else if (count === 3) defaultName = 'فترة ليلية';
+
+    this.shiftsData.push({
+      name: defaultName,
+      start_time: '12:00',
+      end_time: '18:00',
+      grace_period_minutes: 15,
+      early_leave_grace_minutes: 15,
+      assigned_employee_ids: []
+    });
+
+    this.renderShiftsList();
+  },
+
+  removeShiftRow(index) {
+    if (!Array.isArray(this.shiftsData) || this.shiftsData.length <= 1) {
+      showToast('يجب الإبقاء على فترة عمل واحدة على الأقل في نظام الشيفتات', 'warning');
+      return;
+    }
+    this.shiftsData.splice(index, 1);
+    this.renderShiftsList();
+  },
+
+  updateShiftField(index, field, value) {
+    if (!this.shiftsData[index]) return;
+    if (field === 'grace_period_minutes' || field === 'early_leave_grace_minutes') {
+      this.shiftsData[index][field] = parseInt(value, 10) || 0;
+    } else {
+      this.shiftsData[index][field] = value;
+    }
+  },
+
+  updateShiftAssignedEmployee(index, empId) {
+    if (!this.shiftsData[index]) return;
+    if (empId) {
+      this.shiftsData[index].assigned_employee_ids = [parseInt(empId, 10)];
+    } else {
+      this.shiftsData[index].assigned_employee_ids = [];
+    }
+  },
+
+  async saveMultiShifts(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    if (!Array.isArray(this.shiftsData) || this.shiftsData.length === 0) {
+      showToast('يرجى إضافة فترة عمل واحدة على الأقل', 'warning');
+      return;
+    }
+
+    // Validation
+    for (let i = 0; i < this.shiftsData.length; i++) {
+      const s = this.shiftsData[i];
+      if (!s.name || !s.name.trim()) {
+        showToast(`يرجى كتابة اسم الفترة رقم (${i + 1})`, 'warning');
+        return;
+      }
+      if (!s.start_time || !s.end_time) {
+        showToast(`يرجى تحديد موعد الحضور والانصراف للفترة (${s.name})`, 'warning');
+        return;
+      }
+    }
+
+    const weekend_days = document.getElementById('sched-shifts-weekend-days')?.value || '5';
+    const btn = document.getElementById('save-shifts-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> جاري الحفظ والتفعيل...';
+    }
+
+    try {
+      const res = await API.saveShifts({
+        schedule_mode: 'shifts',
+        shifts: this.shiftsData,
+        weekend_days: weekend_days
+      });
+
+      if (res.success) {
+        showToast(res.message || 'تم تفعيل وحفظ نظام الشيفتات بنجاح وسريانه فوراً لهذا اليوم! 🔄', 'success');
+        this.scheduleMode = 'shifts';
+      } else {
+        showToast(res.error || 'فشل في حفظ إعدادات الشيفتات', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'حدث خطأ في الاتصال بالخادم', 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check-check" class="w-4 h-4"></i> <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم 💾</span>';
+        if (window.lucide) lucide.createIcons();
+      }
     }
   },
 

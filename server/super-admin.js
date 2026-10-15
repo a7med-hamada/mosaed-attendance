@@ -131,18 +131,32 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
       `).get(mgr.id, mgr.id).c;
 
       // Calculate subscription / trial expiration
+      const isLifetime = mgr.subscription_plan === 'lifetime' || mgr.subscription_plan === 'open';
       let expiresAt;
-      if (mgr.subscription_expires_at) {
-        expiresAt = new Date(mgr.subscription_expires_at);
+      let trialDaysRemaining;
+      let isTrialExpired;
+
+      if (isLifetime) {
+        expiresAt = new Date('2099-12-31T23:59:59.000Z');
+        trialDaysRemaining = 99999;
+        isTrialExpired = false;
       } else {
-        const regDate = new Date(mgr.created_at || Date.now());
-        const totalTrial = mgr.trial_days || 14;
-        expiresAt = new Date(regDate.getTime() + totalTrial * 24 * 60 * 60 * 1000);
+        if (mgr.subscription_expires_at) {
+          expiresAt = new Date(mgr.subscription_expires_at);
+        } else {
+          const regDate = new Date(mgr.created_at || Date.now());
+          const totalTrial = mgr.trial_days || 14;
+          expiresAt = new Date(regDate.getTime() + totalTrial * 24 * 60 * 60 * 1000);
+        }
+        const diffMs = expiresAt.getTime() - Date.now();
+        trialDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        isTrialExpired = diffMs <= 0;
       }
 
-      const diffMs = expiresAt.getTime() - Date.now();
-      const trialDaysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-      const isTrialExpired = diffMs <= 0;
+      // Check shift count & periods
+      const shiftCount = db.prepare('SELECT COUNT(*) as c FROM company_shifts WHERE manager_id = ? AND is_active = 1').get(mgr.id).c;
+      const scheduleMode = (wp && wp.schedule_mode) ? wp.schedule_mode : (shiftCount > 0 ? 'shifts' : 'normal');
+      const shifts = db.prepare('SELECT id, name, start_time, end_time, grace_period_minutes, early_leave_grace_minutes, assigned_employee_ids FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(mgr.id);
 
       return {
         id: mgr.id,
@@ -157,12 +171,15 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
         created_at: mgr.created_at,
         subscription_plan: mgr.subscription_plan || 'trial',
         subscription_expires_at: expiresAt.toISOString(),
-        subscription_expires_date: expiresAt.toISOString().split('T')[0],
+        subscription_expires_date: isLifetime ? 'دائم (مدى الحياة)' : expiresAt.toISOString().split('T')[0],
         trial_days_total: mgr.trial_days || 14,
         trial_days_remaining: trialDaysRemaining,
         is_trial_expired: isTrialExpired,
         employee_count: empCount,
-        attendance_count: attCount
+        attendance_count: attCount,
+        schedule_mode: scheduleMode,
+        shift_count: shiftCount,
+        shifts: shifts
       };
     });
 
@@ -437,17 +454,27 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
       return res.status(404).json({ success: false, error: 'الشركة غير موجودة' });
     }
 
-    // Determine current expiration base date
-    let baseDate = new Date();
-    if (manager.subscription_expires_at) {
-      const curExp = new Date(manager.subscription_expires_at);
-      if (curExp.getTime() > Date.now()) {
-        baseDate = curExp; // Add on top of existing remaining time!
-      }
-    }
+    let newExpiresAt;
+    let newPlan = plan || manager.subscription_plan || 'custom';
+    let remainingDays;
 
-    const newExpiresAt = new Date(baseDate.getTime() + addDays * 24 * 60 * 60 * 1000).toISOString();
-    const newPlan = plan || manager.subscription_plan || 'custom';
+    if (plan === 'lifetime' || plan === 'open') {
+      newExpiresAt = '2099-12-31T23:59:59.000Z';
+      newPlan = 'lifetime';
+      remainingDays = 99999;
+    } else {
+      // Determine current expiration base date
+      let baseDate = new Date();
+      if (manager.subscription_expires_at) {
+        const curExp = new Date(manager.subscription_expires_at);
+        if (curExp.getTime() > Date.now()) {
+          baseDate = curExp; // Add on top of existing remaining time!
+        }
+      }
+      newExpiresAt = new Date(baseDate.getTime() + addDays * 24 * 60 * 60 * 1000).toISOString();
+      const diffMs = new Date(newExpiresAt).getTime() - Date.now();
+      remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    }
 
     db.prepare(`
       UPDATE users SET
@@ -455,9 +482,6 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
         subscription_plan = ?
       WHERE id = ?
     `).run(newExpiresAt, newPlan, managerId);
-
-    const diffMs = new Date(newExpiresAt).getTime() - Date.now();
-    const remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
@@ -468,15 +492,17 @@ router.post('/companies/:id/subscription/extend', authenticateSuperAdmin, (req, 
       managerId,
       { old_expires: manager.subscription_expires_at },
       { new_expires: newExpiresAt, added_days: addDays, plan: newPlan },
-      `تمديد اشتراك منشأة (${manager.full_name}) بإضافة ${addDays} يوم (باقة: ${newPlan}). المتبقي الجديد: ${remainingDays} يوم`,
+      `تمديد اشتراك منشأة (${manager.full_name}) - (باقة: ${newPlan}). المتبقي الجديد: ${remainingDays} يوم`,
       clientIp
     );
 
     res.json({
       success: true,
-      message: `تم تمديد الاشتراك بنجاح! تم إضافة ${addDays} يوم. إجمالي الأيام المتبقية الآن: ${remainingDays} يوم ✅`,
+      message: newPlan === 'lifetime'
+        ? `تم تفعيل باقة مدى الحياة (اشتراك دائم ومفتوح بدون انتهاء) للمنشأة بنجاح ⭐`
+        : `تم تمديد الاشتراك بنجاح! تم إضافة ${addDays} يوم. إجمالي الأيام المتبقية الآن: ${remainingDays} يوم ✅`,
       subscription_expires_at: newExpiresAt,
-      subscription_expires_date: newExpiresAt.split('T')[0],
+      subscription_expires_date: newPlan === 'lifetime' ? 'دائم (مدى الحياة)' : newExpiresAt.split('T')[0],
       days_remaining: remainingDays,
       plan: newPlan
     });

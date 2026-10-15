@@ -126,7 +126,7 @@ function checkAndApplyAutoCheckouts() {
     // 1. Process TODAY's records where check_in_time is present but check_out_time is null
     const openRecordsToday = db.prepare(`
       SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
-             COALESCE(s.end_time, '17:00') as scheduled_end,
+             COALESCE(ar.scheduled_end, s.end_time, '17:00') as scheduled_end,
              u.full_name
       FROM attendance_records ar
       JOIN users u ON ar.employee_id = u.id
@@ -171,7 +171,7 @@ function checkAndApplyAutoCheckouts() {
     // 2. Process PAST unclosed shifts (date < today)
     const openRecordsPast = db.prepare(`
       SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
-             COALESCE(s.end_time, '17:00') as scheduled_end,
+             COALESCE(ar.scheduled_end, s.end_time, '17:00') as scheduled_end,
              u.full_name
       FROM attendance_records ar
       JOIN users u ON ar.employee_id = u.id
@@ -320,10 +320,80 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       verificationStatus = 'poor_gps';
     }
 
-    const startTime = userSchedule ? userSchedule.start_time : '09:00';
-    const endTime = userSchedule ? userSchedule.end_time : '17:00';
-    const gracePeriod = userSchedule ? userSchedule.grace_period_minutes : 15;
-    const halfDayThreshold = userSchedule ? userSchedule.half_day_threshold : '12:00';
+    // ----------------------------------------------------
+    // Shift & Schedule Resolution (Normal vs Multi-Shift)
+    // ----------------------------------------------------
+    let startTime = userSchedule ? userSchedule.start_time : '09:00';
+    let endTime = userSchedule ? userSchedule.end_time : '17:00';
+    let gracePeriod = userSchedule ? userSchedule.grace_period_minutes : 15;
+    let halfDayThreshold = userSchedule ? userSchedule.half_day_threshold : '12:00';
+    let matchedShiftId = null;
+    let matchedShiftName = null;
+
+    const isShiftsMode = workplace && workplace.schedule_mode === 'shifts';
+    if (isShiftsMode) {
+      const activeShifts = db.prepare(`
+        SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC
+      `).all(managerId);
+
+      if (activeShifts.length > 0) {
+        let chosenShift = null;
+
+        // 1. Explicit shift_id requested from employee UI
+        if (req.body.shift_id) {
+          chosenShift = activeShifts.find(s => s.id === parseInt(req.body.shift_id, 10));
+        }
+
+        // 2. If not specified, check if employee is pre-assigned to a specific shift
+        if (!chosenShift) {
+          chosenShift = activeShifts.find(s => {
+            if (!s.assigned_employee_ids) return false;
+            try {
+              const ids = typeof s.assigned_employee_ids === 'string'
+                ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+                : s.assigned_employee_ids;
+              return Array.isArray(ids) && ids.includes(employeeId);
+            } catch(e) { return false; }
+          });
+        }
+
+        // 3. Smart Fallback: Check active/upcoming shifts where currentMins <= shift.end_time
+        const currentMinsNow = timeToMinutes(currentTime);
+        if (!chosenShift) {
+          const openShifts = activeShifts.filter(s => currentMinsNow <= timeToMinutes(s.end_time));
+          if (openShifts.length === 1) {
+            // Previous shift already ended and closed, so this is unambiguously the active shift!
+            chosenShift = openShifts[0];
+          } else if (openShifts.length > 1) {
+            // Pick the one closest to current time
+            chosenShift = openShifts.reduce((closest, s) => {
+              const diff1 = Math.abs(timeToMinutes(s.start_time) - currentMinsNow);
+              const diff2 = Math.abs(timeToMinutes(closest.start_time) - currentMinsNow);
+              return diff1 < diff2 ? s : closest;
+            }, openShifts[0]);
+          } else {
+            // All shifts ended today, fallback to latest or first
+            chosenShift = activeShifts[activeShifts.length - 1];
+          }
+        }
+
+        if (chosenShift) {
+          matchedShiftId = chosenShift.id;
+          matchedShiftName = chosenShift.name;
+          startTime = chosenShift.start_time;
+          endTime = chosenShift.end_time;
+          gracePeriod = chosenShift.grace_period_minutes !== undefined ? chosenShift.grace_period_minutes : 15;
+
+          // Midpoint for half day
+          const sMins = timeToMinutes(startTime);
+          const eMins = timeToMinutes(endTime);
+          const midMins = sMins + Math.round((eMins - sMins) / 2);
+          const midH = String(Math.floor(midMins / 60)).padStart(2, '0');
+          const midM = String(midMins % 60).padStart(2, '0');
+          halfDayThreshold = `${midH}:${midM}`;
+        }
+      }
+    }
 
     // Calculate late status
     const currentMins = timeToMinutes(currentTime);
@@ -334,7 +404,7 @@ router.post('/check-in', authenticateToken, async (req, res) => {
     let status = 'On Time';
     let lateMinutes = 0;
     let deduction = 0;
-    let notes = 'تم تسجيل الحضور بنجاح مع التحقق الجغرافي والصورة الشخصية';
+    let notes = matchedShiftName ? `فترة العمل: ${matchedShiftName}` : 'تم تسجيل الحضور بنجاح مع التحقق الجغرافي والصورة الشخصية';
 
     // Get deduction rules
     const settingsRows = db.prepare(`SELECT key, value FROM company_settings`).all();
@@ -431,12 +501,14 @@ router.post('/check-in', authenticateToken, async (req, res) => {
         UPDATE attendance_records SET
           check_in_time = ?, check_in_lat = ?, check_in_lng = ?, check_in_distance = ?, check_in_accuracy = ?,
           check_in_photo = ?, status = ?, scheduled_start = ?, scheduled_end = ?, late_minutes = ?,
-          estimated_deduction = ?, verification_status = ?, ip_address = ?, user_agent = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+          estimated_deduction = ?, verification_status = ?, ip_address = ?, user_agent = ?, notes = ?,
+          shift_id = ?, shift_name = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
         currentTime, latitude, longitude, distanceMeters, clientAccuracy,
         photoUrl, status, startTime, endTime, lateMinutes,
-        deduction, verificationStatus, clientIp, userAgent, notes, existingRecord.id
+        deduction, verificationStatus, clientIp, userAgent, notes,
+        matchedShiftId, matchedShiftName, existingRecord.id
       );
       recordId = existingRecord.id;
     } else {
@@ -444,13 +516,15 @@ router.post('/check-in', authenticateToken, async (req, res) => {
         INSERT INTO attendance_records (
           employee_id, date, check_in_time, check_in_lat, check_in_lng, check_in_distance, check_in_accuracy,
           check_in_photo, status, scheduled_start, scheduled_end, late_minutes,
-          estimated_deduction, verification_status, ip_address, user_agent, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          estimated_deduction, verification_status, ip_address, user_agent, notes,
+          shift_id, shift_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       recordId = insertStmt.run(
         employeeId, today, currentTime, latitude, longitude, distanceMeters, clientAccuracy,
         photoUrl, status, startTime, endTime, lateMinutes,
-        deduction, verificationStatus, clientIp, userAgent, notes
+        deduction, verificationStatus, clientIp, userAgent, notes,
+        matchedShiftId, matchedShiftName
       ).lastInsertRowid;
     }
 
@@ -683,19 +757,38 @@ router.get('/my-today', authenticateToken, (req, res) => {
     const settings = {};
     db.prepare(`SELECT key, value FROM company_settings`).all().forEach(r => settings[r.key] = r.value);
 
+    const scheduleMode = workplace ? (workplace.schedule_mode || 'normal') : 'normal';
+    let shifts = [];
+    if (scheduleMode === 'shifts') {
+      const rawShifts = db.prepare('SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(managerId);
+      shifts = rawShifts.map(s => {
+        let empIds = [];
+        try {
+          if (s.assigned_employee_ids) {
+            empIds = typeof s.assigned_employee_ids === 'string'
+              ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+              : s.assigned_employee_ids;
+          }
+        } catch(e) { empIds = []; }
+        return { ...s, assigned_employee_ids: empIds };
+      });
+    }
+
     // Get employee schedule for this manager
     let schedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
     if (!schedule && managerId === 1) {
       schedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 AND is_configured = 1 LIMIT 1`).get();
     }
 
-    const isFullyConfigured = !!workplace && !!schedule;
+    const isFullyConfigured = !!workplace && (scheduleMode === 'shifts' ? shifts.length > 0 : !!schedule);
 
     res.json({
       success: true,
       today,
       record: record || null,
       notConfigured: !isFullyConfigured,
+      schedule_mode: scheduleMode,
+      shifts: shifts,
       workplace: workplace ? {
         company_name: workplace.company_name,
         name: workplace.name,

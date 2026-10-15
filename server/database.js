@@ -343,6 +343,35 @@ try {
     db.exec(`ALTER TABLE departments ADD COLUMN manager_id INTEGER;`);
     db.exec(`UPDATE departments SET manager_id = 1;`);
   }
+
+  if (!wpCols.includes('schedule_mode')) {
+    db.exec(`ALTER TABLE workplaces ADD COLUMN schedule_mode TEXT DEFAULT 'normal';`);
+  }
+
+  // Company Shifts table (multi-shift periods)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS company_shifts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      manager_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      grace_period_minutes INTEGER DEFAULT 15,
+      early_leave_grace_minutes INTEGER DEFAULT 15,
+      assigned_employee_ids TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_shifts_mgr ON company_shifts(manager_id);
+  `);
+
+  const attCols = db.prepare('PRAGMA table_info(attendance_records)').all().map(c => c.name);
+  if (!attCols.includes('shift_id')) {
+    db.exec(`ALTER TABLE attendance_records ADD COLUMN shift_id INTEGER;`);
+  }
+  if (!attCols.includes('shift_name')) {
+    db.exec(`ALTER TABLE attendance_records ADD COLUMN shift_name TEXT;`);
+  }
 } catch (migErr) {
   console.error('Migration error:', migErr);
 }

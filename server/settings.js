@@ -139,10 +139,26 @@ router.get('/', authenticateToken, (req, res) => {
       isFullyConfigured: empCount > 0 && !!workplace && workplace.is_configured === 1 && !!schedule && schedule.is_configured === 1
     };
 
+    const currentMode = workplace ? (workplace.schedule_mode || 'normal') : 'normal';
+    const rawShifts = db.prepare('SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(managerId);
+    const shifts = rawShifts.map(s => {
+      let empIds = [];
+      try {
+        if (s.assigned_employee_ids) {
+          empIds = typeof s.assigned_employee_ids === 'string'
+            ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+            : s.assigned_employee_ids;
+        }
+      } catch(e) { empIds = []; }
+      return { ...s, assigned_employee_ids: empIds };
+    });
+
     res.json({
       success: true,
       workplace: workplace || null,
       schedule: schedule || null,
+      schedule_mode: currentMode,
+      shifts,
       settings: settingsMap,
       checklist
     });
@@ -270,6 +286,9 @@ router.put('/working-hours', authenticateToken, requireManager, (req, res) => {
       `).run(start_time, end_time, graceMins, early_leave_grace_minutes, halfDay, absence, working_days, managerId);
     }
 
+    // Reset schedule_mode to normal
+    db.prepare(`UPDATE workplaces SET schedule_mode = 'normal' WHERE manager_id = ? OR (manager_id IS NULL AND ? = 1)`).run(managerId, managerId);
+
     // Apply Scope: If manager chose retroactive from start of current month
     if (apply_scope === 'from_month_start') {
       recalculateMonthAttendance(managerId);
@@ -354,6 +373,134 @@ router.put('/company', authenticateToken, requireManager, (req, res) => {
   } catch (error) {
     console.error('Update company settings error:', error);
     res.status(500).json({ success: false, error: 'فشل في تحديث الإعدادات' });
+  }
+});
+
+// GET /api/settings/shifts (Retrieve shifts for current manager or employee)
+router.get('/shifts', authenticateToken, (req, res) => {
+  try {
+    const user = req.user;
+    const managerId = user.role === 'manager' ? user.id : (user.manager_id || 1);
+
+    let workplace = db.prepare('SELECT schedule_mode FROM workplaces WHERE manager_id = ? LIMIT 1').get(managerId);
+    if (!workplace && managerId === 1) {
+      workplace = db.prepare('SELECT schedule_mode FROM workplaces WHERE id = 1 LIMIT 1').get();
+    }
+    const scheduleMode = workplace ? (workplace.schedule_mode || 'normal') : 'normal';
+
+    const rawShifts = db.prepare(`
+      SELECT id, manager_id, name, start_time, end_time,
+             grace_period_minutes, early_leave_grace_minutes,
+             assigned_employee_ids, is_active, created_at
+      FROM company_shifts
+      WHERE manager_id = ? AND is_active = 1
+      ORDER BY start_time ASC
+    `).all(managerId);
+
+    const shifts = rawShifts.map(s => {
+      let empIds = [];
+      try {
+        if (s.assigned_employee_ids) {
+          empIds = typeof s.assigned_employee_ids === 'string'
+            ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+            : s.assigned_employee_ids;
+        }
+      } catch(e) { empIds = []; }
+      return { ...s, assigned_employee_ids: empIds };
+    });
+
+    res.json({
+      success: true,
+      schedule_mode: scheduleMode,
+      shifts
+    });
+  } catch (error) {
+    console.error('Get shifts error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تحميل الورديات' });
+  }
+});
+
+// POST /api/settings/shifts (Save schedule mode and multi-shift periods)
+router.post('/shifts', authenticateToken, requireManager, (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const { schedule_mode, shifts, weekend_days } = req.body;
+
+    const mode = schedule_mode === 'shifts' ? 'shifts' : 'normal';
+
+    // 1. Update schedule_mode in workplace
+    let currentWp = db.prepare('SELECT id FROM workplaces WHERE manager_id = ? LIMIT 1').get(managerId);
+    if (currentWp) {
+      db.prepare('UPDATE workplaces SET schedule_mode = ? WHERE id = ?').run(mode, currentWp.id);
+    } else if (managerId === 1) {
+      db.prepare('UPDATE workplaces SET schedule_mode = ? WHERE id = 1').run(mode);
+    }
+
+    // 2. Handle weekend days if provided
+    if (weekend_days !== undefined && weekend_days !== null) {
+      const working_days = getWorkdaysFromWeekendDays(weekend_days);
+      db.prepare(`UPDATE schedules SET working_days = ? WHERE manager_id = ? OR (manager_id IS NULL AND ? = 1)`).run(working_days, managerId, managerId);
+      db.prepare(`
+        INSERT INTO company_settings (key, value) VALUES ('weekend_days', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `).run(String(weekend_days));
+    }
+
+    // 3. Save shifts if provided
+    if (Array.isArray(shifts)) {
+      db.prepare('DELETE FROM company_shifts WHERE manager_id = ?').run(managerId);
+
+      const insertStmt = db.prepare(`
+        INSERT INTO company_shifts (
+          manager_id, name, start_time, end_time,
+          grace_period_minutes, early_leave_grace_minutes, assigned_employee_ids, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+      `);
+
+      for (const s of shifts) {
+        if (!s.name || !s.start_time || !s.end_time) continue;
+        let assignedStr = null;
+        if (Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.length > 0) {
+          assignedStr = JSON.stringify(s.assigned_employee_ids.map(Number));
+        } else if (typeof s.assigned_employee_ids === 'string' && s.assigned_employee_ids.trim()) {
+          assignedStr = JSON.stringify(s.assigned_employee_ids.split(',').map(x => Number(x.trim())));
+        }
+
+        insertStmt.run(
+          managerId,
+          s.name.trim(),
+          s.start_time.trim(),
+          s.end_time.trim(),
+          parseInt(s.grace_period_minutes, 10) || 15,
+          parseInt(s.early_leave_grace_minutes, 10) || 15,
+          assignedStr
+        );
+      }
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'UPDATE_SHIFTS_CONFIG',
+      'company_shifts',
+      null,
+      null,
+      { schedule_mode: mode, shifts_count: (shifts || []).length },
+      `تحديث وضبط نظام مواعيد العمل (${mode === 'shifts' ? 'نظام الشيفتات المتعددة' : 'نظام الدوام العادي'}) وسريانه فوراً اليوم`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: mode === 'shifts'
+        ? 'تم تفعيل وحفظ نظام الشيفتات بنجاح وسريانه فوراً لهذا اليوم! 🔄'
+        : 'تم حفظ وتفعيل نظام الدوام العادي بنجاح! ⏱️',
+      schedule_mode: mode
+    });
+  } catch (error) {
+    console.error('Save shifts error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حفظ إعدادات الشيفتات' });
   }
 });
 

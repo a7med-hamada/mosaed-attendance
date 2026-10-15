@@ -513,7 +513,7 @@
             <label class="block text-xs font-bold text-slate-300 mb-2">
               تفعيل وتجديد الباقات (يتم تمديد الأيام فوراً وبشكل تراكمي):
             </label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
               <button onclick="extendSubscription(30, 'monthly')"
                 class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/50 transition-all text-center group">
                 <span class="block text-xs font-black text-emerald-400 group-hover:scale-105 transition-transform">+ شهر (30 يوم)</span>
@@ -549,8 +549,18 @@
                 </div>
                 <span class="text-[10px] text-emerald-400/80 font-mono mt-0.5 block">أعلى توفير ⭐</span>
               </button>
+
+              <button onclick="extendSubscription(36500, 'lifetime')"
+                class="p-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-white border-2 border-amber-500/50 hover:border-amber-400 transition-all text-center group relative overflow-hidden shadow-sm shadow-amber-500/20 col-span-2 sm:col-span-1">
+                <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500/30 text-amber-300">غير محدود</span>
+                <span class="block text-xs font-black text-amber-300 group-hover:scale-105 transition-transform">باقة مفتوحة ⭐</span>
+                <div class="flex items-center justify-center gap-1.5 mt-1">
+                  <span class="text-xs font-black text-amber-200">مدى الحياة</span>
+                </div>
+                <span class="text-[10px] text-amber-400/80 font-mono mt-0.5 block">اشتراك دائم ♾️</span>
+              </button>
             </div>
-            <p class="text-[10px] text-slate-400 mt-1.5 font-medium">💡 ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وهكذا لجميع الباقات.</p>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-medium">💡 ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وباقة مدى الحياة تجعل الحساب مفتوحاً بشكل دائم بدون انتهاء.</p>
           </div>
 
           <!-- Fine-tuning Days Control (+ / - / Custom Input) -->
@@ -572,6 +582,21 @@
                 حفظ
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Row 2b: Shifts Configuration (فترات العمل والورديات) -->
+        <div class="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-black text-white flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+              <span>نظام مواعيد العمل والورديات:</span>
+              <span id="cd-shifts-mode-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold"></span>
+            </h5>
+            <span id="cd-shifts-count" class="text-[11px] font-bold text-purple-300 font-mono"></span>
+          </div>
+          <div id="cd-shifts-list" class="space-y-1.5 pt-0.5">
+            <!-- Injected via JS -->
           </div>
         </div>
 
@@ -1094,7 +1119,18 @@
                 </div>
                 <div>
                   <span class="block text-sm font-black text-white">${c.company_name}</span>
-                  <span class="text-[10px] text-slate-400 font-mono">${c.workplace_name} • ${c.employee_code}</span>
+                  <div class="flex items-center gap-1.5 mt-0.5">
+                    <span class="text-[10px] text-slate-400 font-mono">${c.workplace_name} • ${c.employee_code}</span>
+                    ${c.schedule_mode === 'shifts' ? `
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        🔄 ${c.shift_count || 0} فترات
+                      </span>
+                    ` : `
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400">
+                        فترة واحدة
+                      </span>
+                    `}
+                  </div>
                 </div>
               </div>
             </td>
@@ -1139,7 +1175,11 @@
 
             <!-- 6. Subscription / Trial Status -->
             <td class="py-3.5 px-4 text-center whitespace-nowrap">
-              ${c.subscription_plan === 'trial' ? `
+              ${(c.subscription_plan === 'lifetime' || c.subscription_plan === 'open') ? `
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  باقة مفتوحة (مدى الحياة) ⭐
+                </span>
+              ` : c.subscription_plan === 'trial' ? `
                 <div class="inline-flex flex-col items-center">
                   <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${c.is_trial_expired ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'}">
                     ${c.is_trial_expired ? 'انتهت التجربة ⚠️' : `تجريبي (باقي ${c.trial_days_remaining} يوم)`}
@@ -1468,6 +1508,58 @@
         activeBadge.textContent = 'موقوف / مجمد';
       }
 
+      // Shifts info
+      const shiftsModeBadge = document.getElementById('cd-shifts-mode-badge');
+      const shiftsCountEl = document.getElementById('cd-shifts-count');
+      const shiftsListEl = document.getElementById('cd-shifts-list');
+
+      const isShiftsMode = c.schedule_mode === 'shifts';
+      if (shiftsModeBadge) {
+        if (isShiftsMode) {
+          shiftsModeBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30';
+          shiftsModeBadge.textContent = 'نظام الورديات والشيفتات';
+        } else {
+          shiftsModeBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/50 text-slate-300 border border-slate-600/40';
+          shiftsModeBadge.textContent = 'نظام دوام عادي (فترة واحدة)';
+        }
+      }
+
+      const shifts = Array.isArray(c.shifts) ? c.shifts : [];
+      if (shiftsCountEl) {
+        shiftsCountEl.textContent = `${c.shift_count || shifts.length || (isShiftsMode ? 0 : 1)} فترات`;
+      }
+
+      if (shiftsListEl) {
+        if (shifts.length === 0) {
+          shiftsListEl.innerHTML = `
+            <div class="text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+              <span>دوام عادي قياسي (09:00 ص - 05:00 م)</span>
+              <span class="text-slate-500 font-mono text-[10px]">فترة واحدة أساسية</span>
+            </div>`;
+        } else {
+          shiftsListEl.innerHTML = shifts.map((s, idx) => `
+            <div class="text-xs bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold flex items-center justify-center font-mono">${idx + 1}</span>
+                <span class="font-bold text-white">${s.name || `فترة ${idx + 1}`}</span>
+                ${s.assigned_employee_ids && s.assigned_employee_ids.length > 0 ? `
+                  <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/20">
+                    ${s.assigned_employee_ids.length} موظف مخصص
+                  </span>
+                ` : `
+                  <span class="text-[10px] text-slate-500">(متاحة للجميع/تناوب)</span>
+                `}
+              </div>
+              <div class="flex items-center gap-3 text-[11px] font-mono">
+                <span class="text-emerald-400">حضور: <b>${s.start_time || '--:--'}</b></span>
+                <span class="text-amber-400">انصراف: <b>${s.end_time || '--:--'}</b></span>
+                <span class="text-slate-400 text-[10px]">سماح: ${s.grace_period_minutes || 0} د</span>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
       // Subscription badge & days
       updateCompanyDetailsModalSubscriptionUI(c);
 
@@ -1520,29 +1612,40 @@
       const daysRemainingEl = document.getElementById('cd-days-remaining');
       const customDaysInput = document.getElementById('cd-custom-days-input');
 
+      const isLifetime = c.subscription_plan === 'lifetime' || c.subscription_plan === 'open' || c.trial_days_remaining >= 90000;
+
       const planLabels = {
         trial: 'فترة تجريبية (14 يوم)',
         monthly: 'باقة شهرية',
         quarterly: 'باقة ربع سنوية (3 شهور)',
         semi_annual: 'باقة نصف سنوية (6 شهور)',
         annual: 'باقة سنوية (سنة كاملة)',
+        lifetime: 'باقة مفتوحة (مدى الحياة) ⭐',
+        open: 'باقة مفتوحة (مدى الحياة) ⭐',
         pro: 'باقة احترافية ⭐',
         custom: 'باقة مخصصة'
       };
 
-      planBadge.textContent = planLabels[c.subscription_plan] || c.subscription_plan;
-      planBadge.className = `px-3 py-1 rounded-full text-xs font-bold font-mono ${c.is_trial_expired ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'}`;
-
-      if (c.is_trial_expired) {
-        daysRemainingEl.textContent = 'منتهي (0 يوم)';
-        daysRemainingEl.className = 'text-base font-black font-mono text-rose-400';
+      if (isLifetime) {
+        planBadge.textContent = 'باقة مفتوحة (مدى الحياة) ⭐';
+        planBadge.className = 'px-3 py-1 rounded-full text-xs font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10';
+        daysRemainingEl.innerHTML = '<span class="text-amber-300">اشتراك دائم ♾️ (مفتوح)</span>';
+        daysRemainingEl.className = 'text-base font-black font-mono text-amber-300';
       } else {
-        daysRemainingEl.textContent = `${c.trial_days_remaining} يوم`;
-        daysRemainingEl.className = 'text-base font-black font-mono text-emerald-400';
+        planBadge.textContent = planLabels[c.subscription_plan] || c.subscription_plan;
+        planBadge.className = `px-3 py-1 rounded-full text-xs font-bold font-mono ${c.is_trial_expired ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'}`;
+
+        if (c.is_trial_expired) {
+          daysRemainingEl.textContent = 'منتهي (0 يوم)';
+          daysRemainingEl.className = 'text-base font-black font-mono text-rose-400';
+        } else {
+          daysRemainingEl.textContent = `${c.trial_days_remaining} يوم`;
+          daysRemainingEl.className = 'text-base font-black font-mono text-emerald-400';
+        }
       }
 
       if (customDaysInput) {
-        customDaysInput.value = c.trial_days_remaining || 0;
+        customDaysInput.value = isLifetime ? 99999 : (c.trial_days_remaining || 0);
       }
     }
 

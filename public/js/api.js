@@ -115,10 +115,12 @@ const API = {
   },
 
   // Attendance
-  checkIn(latitude, longitude, accuracy, photo) {
+  checkIn(latitude, longitude, accuracy, photo, shift_id = null) {
+    const body = { latitude, longitude, accuracy, photo };
+    if (shift_id) body.shift_id = shift_id;
     return this.request('/attendance/check-in', {
       method: 'POST',
-      body: { latitude, longitude, accuracy, photo }
+      body
     });
   },
 
@@ -286,6 +288,14 @@ const API = {
 
   updateWorkingHours(data) {
     return this.request('/settings/working-hours', { method: 'PUT', body: data });
+  },
+
+  getShifts() {
+    return this.request('/settings/shifts');
+  },
+
+  saveShifts(data) {
+    return this.request('/settings/shifts', { method: 'POST', body: data });
   },
 
   updateCompanySettings(data) {

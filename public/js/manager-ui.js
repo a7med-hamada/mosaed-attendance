@@ -52,7 +52,7 @@ const ManagerUI = {
         <button onclick="ManagerUI.switchSection('${s.id}')"
           class="flex items-center gap-3 px-3.5 py-2.5 lg:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all w-full text-right ${
             this.activeSection === s.id
-              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-600/25 font-bold'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
           }">
           <i data-lucide="${s.icon}" class="w-4.5 h-4.5 flex-shrink-0"></i>
@@ -147,10 +147,10 @@ const ManagerUI = {
             <p id="mgr-today-label" class="text-xs text-slate-500 mt-0.5"></p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button onclick="ManagerUI.openMorningBriefingModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all">
-              <i data-lucide="message-circle" class="w-4 h-4 text-emerald-500"></i> تقرير الصباح للواتساب 📲
+            <button onclick="ManagerUI.openMorningBriefingModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap transition-all">
+              <i data-lucide="message-circle" class="w-4 h-4"></i> تقرير الصباح للواتساب 📲
             </button>
-            <button onclick="ManagerUI.openAddEmployeeModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-600/30 flex items-center gap-1.5 whitespace-nowrap transition-all">
+            <button onclick="ManagerUI.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5 whitespace-nowrap">
               <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
             </button>
             <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl whitespace-nowrap">
@@ -363,16 +363,15 @@ const ManagerUI = {
     card.classList.remove('hidden');
 
     card.innerHTML = `
-      <div class="bg-gradient-to-br from-[#032d4f] via-[#063c69] to-[#0a4d82] text-white rounded-3xl p-6 border border-white/10 shadow-xl shadow-navy-950/20 relative overflow-hidden">
-        <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-emerald-500/15 blur-2xl"></div>
-        <div class="relative z-10 flex items-center justify-between pb-4 border-b border-white/15">
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-850 rounded-3xl p-6 border border-blue-200/80 dark:border-blue-900 shadow-sm">
+        <div class="flex items-center justify-between pb-4 border-b border-blue-200/50 dark:border-slate-800">
           <div>
-            <h3 class="font-extrabold text-base text-white flex items-center gap-2">
-              <i data-lucide="list-checks" class="w-5 h-5 text-emerald-400"></i> إعداد النظام (Setup Checklist)
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="list-checks" class="w-5 h-5 text-blue-600"></i> إعداد النظام (Setup Checklist)
             </h3>
-            <p class="text-xs text-blue-100 mt-0.5">أكمل الخطوات التالية لتفعيل تسجيل الحضور لموظفيك:</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">أكمل الخطوات التالية لتفعيل تسجيل الحضور لموظفيك:</p>
           </div>
-          <span class="text-xs font-bold text-emerald-300 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+          <span class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-3 py-1 rounded-full">
             قيد الإعداد
           </span>
         </div>

@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString } = require('./database');
+const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 const {
   sendWhatsAppMessage,
@@ -9,6 +9,7 @@ const {
   getWhatsAppSettings,
   generateWhatsAppLink
 } = require('./whatsapp');
+const { syncMissingAbsencesForMonth, syncAbsencesForDateRange } = require('./absence-sync');
 
 const router = express.Router();
 
@@ -46,6 +47,7 @@ function saveBase64Image(base64Data, prefix = 'att') {
 // Automatic absence check logic
 function checkAndMarkAutoAbsences() {
   try {
+    syncMissingAbsencesForMonth(getCurrentMonthString());
     const today = getTodayString();
     const currentTime = getCurrentTimeString();
     const currentMins = timeToMinutes(currentTime);
@@ -789,6 +791,9 @@ router.post('/check-out', authenticateToken, (req, res) => {
       if (status === 'Early Leave') {
         status = (record.late_minutes && record.late_minutes > 0) ? 'Late' : 'On Time';
       }
+      if (!record.late_minutes || record.late_minutes === 0) {
+        deduction = 0;
+      }
     }
 
     // Update attendance record
@@ -1110,6 +1115,8 @@ router.get('/history', authenticateToken, (req, res) => {
     const isManager = req.user.role === 'manager';
     const { date_from, date_to, employee_id, department_id, status, verification_status, search } = req.query;
 
+    syncAbsencesForDateRange(date_from, date_to, isManager ? req.user.id : null);
+
     let query = `
       SELECT
         ar.*,
@@ -1122,13 +1129,17 @@ router.get('/history', authenticateToken, (req, res) => {
     `;
     const params = [];
 
-    // Security: Employee can ONLY view their own records
+    // Security: Employee can ONLY view their own records, Manager views their company's records
     if (!isManager) {
       query += ` AND ar.employee_id = ? `;
       params.push(req.user.id);
-    } else if (employee_id) {
-      query += ` AND ar.employee_id = ? `;
-      params.push(employee_id);
+    } else {
+      query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      params.push(req.user.id, req.user.id);
+      if (employee_id) {
+        query += ` AND ar.employee_id = ? `;
+        params.push(employee_id);
+      }
     }
 
     if (date_from) {

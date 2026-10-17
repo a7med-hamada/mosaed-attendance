@@ -195,7 +195,7 @@ async function loadFromCloud(force = false) {
     try {
       const token = getSyncToken();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 7000);
+      const timeout = setTimeout(() => controller.abort(), 25000);
 
       const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${now}`, {
         headers: {
@@ -247,9 +247,7 @@ async function loadFromCloud(force = false) {
 
 async function saveToCloud() {
   try {
-    if (!initialLoadDone) {
-      await loadFromCloud(true);
-    }
+    initialLoadDone = true;
     const token = getSyncToken();
     const updatedAt = new Date().toISOString();
     const snapshot = {
@@ -268,7 +266,7 @@ async function saveToCloud() {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
     const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'PATCH',

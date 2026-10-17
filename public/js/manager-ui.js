@@ -2925,7 +2925,14 @@ const ManagerUI = {
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
                 ${records.map(r => {
-                  const lateText = r.late_minutes > 0 ? `${r.late_minutes} دقيقة (${r.estimated_deduction || 0} ج.م)` : 'لا يوجد';
+                  let deductionDisplay = '<span class="text-slate-400">لا يوجد</span>';
+                  if (r.status === 'Absent') {
+                    deductionDisplay = `<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold">خصم غياب: -${r.estimated_deduction || 0} ج.م</span>`;
+                  } else if (r.late_minutes > 0) {
+                    deductionDisplay = `<span class="text-amber-600 dark:text-amber-400 font-bold">${r.late_minutes} دقيقة (${r.estimated_deduction || 0} ج.م)</span>`;
+                  } else if (r.estimated_deduction > 0) {
+                    deductionDisplay = `<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold">خصم: -${r.estimated_deduction} ج.م</span>`;
+                  }
                   const safeName = (r.full_name || '').replace(/'/g, "\\'");
                   return `
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
@@ -2955,8 +2962,8 @@ const ManagerUI = {
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${getStatusBadge(r.status)}
                       </td>
-                      <td class="py-3 px-3 text-center font-mono text-[11px] whitespace-nowrap ${r.late_minutes > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-slate-400'}">
-                        ${lateText}
+                      <td class="py-3 px-3 text-center font-mono text-[11px] whitespace-nowrap">
+                        ${deductionDisplay}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         <div class="flex items-center justify-center gap-1.5">

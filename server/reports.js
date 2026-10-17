@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
+const { syncMissingAbsencesForMonth, syncAbsencesForDateRange } = require('./absence-sync');
 
 const router = express.Router();
 
@@ -393,6 +394,8 @@ router.get('/export/csv', authenticateToken, (req, res) => {
     const isManager = req.user.role === 'manager';
     const { date_from, date_to, employee_id, department_id, status } = req.query;
 
+    syncAbsencesForDateRange(date_from, date_to, isManager ? req.user.id : null);
+
     let query = `
       SELECT
         ar.date,
@@ -516,91 +519,6 @@ router.get('/export/csv', authenticateToken, (req, res) => {
 router.post('/reset-archive', authenticateToken, requireManager, (req, res) => {
   return res.status(400).json({ success: false, error: 'تم تعطيل تصفير الأرشيف لحماية سجلات وتقارير الحضور من الحذف غير المقصود' });
 });
-
-// Helper: Sync missing absences for a given month while skipping official weekends
-function syncMissingAbsencesForMonth(month, managerId = null) {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const [yearStr, monthStr] = month.split('-');
-    const year = parseInt(yearStr, 10);
-    const mNum = parseInt(monthStr, 10);
-    const daysInMonth = new Date(year, mNum, 0).getDate();
-
-    // Get company settings
-    const settingsRows = db.prepare(`SELECT key, value FROM company_settings`).all();
-    const settings = {};
-    settingsRows.forEach(r => settings[r.key] = r.value);
-
-    const weekendDaysStr = settings['weekend_days'] || '5';
-    const weekendDays = (weekendDaysStr === 'none' || !weekendDaysStr) ? [] : weekendDaysStr.split(',').map(s => s.trim());
-    const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');
-
-    // Get active employees
-    let empQuery = `SELECT id, full_name, hire_date FROM users WHERE role = 'employee' AND is_active = 1`;
-    const empParams = [];
-    if (managerId) {
-      empQuery += ` AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))`;
-      empParams.push(managerId, managerId);
-    }
-    const employees = db.prepare(empQuery).all(...empParams);
-
-    const now = new Date();
-    const currentHours = String(now.getHours()).padStart(2, '0');
-    const currentMins = String(now.getMinutes()).padStart(2, '0');
-    const currentTimeStr = `${currentHours}:${currentMins}`;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${yearStr}-${monthStr}-${String(day).padStart(2, '0')}`;
-      if (dateStr > today) break;
-
-      // If today, only mark absent if passed threshold
-      if (dateStr === today && currentTimeStr < '13:00') {
-        continue;
-      }
-
-      // Check day of week
-      const dayOfWeek = String(new Date(dateStr + 'T12:00:00').getDay());
-      if (weekendDays.includes(dayOfWeek)) {
-        continue; // Weekend is exempt!
-      }
-
-      for (const emp of employees) {
-        if (emp.hire_date && emp.hire_date > dateStr) continue;
-
-        // Check if employee has an approved leave
-        const leave = db.prepare(`
-          SELECT id, leave_type FROM leave_requests
-          WHERE employee_id = ? AND status = 'approved' AND ? BETWEEN start_date AND end_date
-        `).get(emp.id, dateStr);
-
-        const existing = db.prepare(`SELECT id, status FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, dateStr);
-
-        if (!existing) {
-          if (leave) {
-            const leaveLabel = leave.leave_type === 'sick' ? 'إجازة مرضية معتمدة' :
-                               leave.leave_type === 'annual' ? 'إجازة سنوية معتمدة' :
-                               leave.leave_type === 'casual' ? 'إجازة عارضة معتمدة' : 'إجازة رسمية معتمدة';
-            db.prepare(`
-              INSERT INTO attendance_records (
-                employee_id, date, status, scheduled_start, scheduled_end,
-                worked_hours, estimated_deduction, verification_status, notes
-              ) VALUES (?, ?, 'On Leave', '09:00', '17:00', 0, 0, 'approved_leave', ?)
-            `).run(emp.id, dateStr, leaveLabel);
-          } else {
-            db.prepare(`
-              INSERT INTO attendance_records (
-                employee_id, date, status, scheduled_start, scheduled_end,
-                worked_hours, estimated_deduction, verification_status, notes
-              ) VALUES (?, ?, 'Absent', '09:00', '17:00', 0, ?, 'system_auto', 'تسجيل غياب آلي - تخلف عن تسجيل الحضور')
-            `).run(emp.id, dateStr, absenceRate);
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error syncing missing absences:', err);
-  }
-}
 
 // ==========================================
 // 8. Gamification & Attendance Score (مؤشر أداء الالتزام ولوحة شرف موظف الشهر)
@@ -954,5 +872,7 @@ router.get('/my-score', authenticateToken, (req, res) => {
 
 router.calculateEmployeeScore = calculateEmployeeScore;
 router.getLeaderboardData = getLeaderboardData;
+router.syncMissingAbsencesForMonth = syncMissingAbsencesForMonth;
+router.syncAbsencesForDateRange = syncAbsencesForDateRange;
 
 module.exports = router;

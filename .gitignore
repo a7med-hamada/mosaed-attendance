@@ -2,6 +2,7 @@ node_modules
 cloudflared.exe
 *.db-wal
 *.db-shm
+tests/
 test-*.js
 .DS_Store
 public/uploads/*

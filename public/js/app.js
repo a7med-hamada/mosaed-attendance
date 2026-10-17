@@ -563,11 +563,14 @@ const App = {
     if (statusContainer) {
       const sub = user.subscription;
       if (sub) {
+        const isLifetime = !!(sub.isLifetime || sub.plan === 'lifetime' || user.subscription_plan === 'lifetime' || user.subscription_plan === 'open');
         const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0)));
-        const isExpired = sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0));
-        const statusBadge = isExpired 
-          ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30">منتهية الصلاحية</span>`
-          : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">نشطة (${remaining} يوم متبقي)</span>`;
+        const isExpired = !isLifetime && (sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0)));
+        const statusBadge = isLifetime 
+          ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5"><i data-lucide="crown" class="w-3.5 h-3.5"></i> نشطة (اشتراك دائم ومفتوح ♾️)</span>`
+          : (isExpired 
+            ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30">منتهية الصلاحية</span>`
+            : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">نشطة (${remaining} يوم متبقي)</span>`);
 
         statusContainer.innerHTML = `
           <div class="flex items-center gap-3">
@@ -576,7 +579,7 @@ const App = {
             </div>
             <div>
               <div class="font-bold text-slate-800 dark:text-white text-sm">حالة اشتراك المنظومة: ${user.company_name || 'حسابك'}</div>
-              <div class="text-[11px] text-slate-500">تاريخ الانتهاء: ${sub.expiresAt ? formatDateTime12(sub.expiresAt) : 'غير محدد'}</div>
+              <div class="text-[11px] text-slate-500">تاريخ الانتهاء: ${isLifetime ? '<span class="font-bold text-amber-500">دائم مدى الحياة (غير مقيد بأيام)</span>' : (sub.expiresAt ? formatDateTime12(sub.expiresAt) : 'غير محدد')}</div>
             </div>
           </div>
           <div class="flex items-center gap-2">

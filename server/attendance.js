@@ -871,7 +871,7 @@ router.get('/my-today', authenticateToken, (req, res) => {
     const scheduleMode = workplace ? (workplace.schedule_mode || 'normal') : 'normal';
     let shifts = [];
     if (scheduleMode === 'shifts') {
-      const rawShifts = db.prepare('SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(managerId);
+      const rawShifts = db.prepare('SELECT id, manager_id, name, start_time, end_time, grace_period_minutes, early_leave_grace_minutes, COALESCE(early_checkin_minutes, 60) as early_checkin_minutes, assigned_employee_ids, is_active FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(managerId);
       shifts = rawShifts.map(s => {
         let empIds = [];
         try {
@@ -881,7 +881,7 @@ router.get('/my-today', authenticateToken, (req, res) => {
               : s.assigned_employee_ids;
           }
         } catch(e) { empIds = []; }
-        return { ...s, assigned_employee_ids: empIds };
+        return { ...s, early_checkin_minutes: s.early_checkin_minutes || 60, assigned_employee_ids: empIds };
       });
 
       // Synchronize employee's record with active shift if not yet tagged or mismatched
@@ -951,6 +951,21 @@ router.get('/my-today', authenticateToken, (req, res) => {
 
     const isFullyConfigured = !!workplace && (scheduleMode === 'shifts' ? shifts.length > 0 : !!schedule);
 
+    // Check if today is an official weekend day or registered holiday for this company
+    const dayOfWeek = String(new Date(today + 'T12:00:00').getDay());
+    const weekendDaysStr = settings['weekend_days'] || (schedule && schedule.working_days ? (function(wStr) {
+      const workdays = (wStr || '0,1,2,3,4').split(',').map(s => s.trim());
+      const allDays = ['0', '1', '2', '3', '4', '5', '6'];
+      return allDays.filter(d => !workdays.includes(d)).join(',') || 'none';
+    })(schedule.working_days) : '5');
+    const isWeekend = (weekendDaysStr !== 'none' && weekendDaysStr) ? weekendDaysStr.split(',').map(s => s.trim()).includes(dayOfWeek) : false;
+    let holiday = null;
+    try {
+      holiday = db.prepare('SELECT name FROM holidays WHERE (manager_id = ? OR manager_id IS NULL) AND date = ? LIMIT 1').get(managerId, today);
+    } catch (_) {}
+    const isOffDay = isWeekend || !!holiday;
+    const offDayReason = holiday ? `عطلة رسمية: ${holiday.name}` : (isWeekend ? 'عطلة أسبوعية رسمية للمنشأة' : null);
+
     res.json({
       success: true,
       today,
@@ -958,6 +973,8 @@ router.get('/my-today', authenticateToken, (req, res) => {
       notConfigured: !isFullyConfigured,
       schedule_mode: scheduleMode,
       shifts: shifts,
+      is_off_day: isOffDay,
+      off_day_reason: offDayReason,
       workplace: workplace ? {
         company_name: workplace.company_name,
         name: workplace.name,
@@ -994,7 +1011,9 @@ router.get('/live-today', authenticateToken, requireManager, (req, res) => {
       SELECT
         u.id as employee_id, u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo,
         d.name as department_name,
-        s.start_time as scheduled_start, s.end_time as scheduled_end,
+        COALESCE(ar.scheduled_start, s.start_time) as scheduled_start,
+        COALESCE(ar.scheduled_end, s.end_time) as scheduled_end,
+        ar.shift_id, ar.shift_name,
         ar.id as record_id, ar.date, ar.check_in_time, ar.check_out_time,
         ar.check_in_lat, ar.check_in_lng, ar.check_in_distance, ar.check_in_accuracy, ar.check_in_photo,
         ar.check_out_lat, ar.check_out_lng, ar.check_out_distance, ar.check_out_accuracy, ar.check_out_photo,

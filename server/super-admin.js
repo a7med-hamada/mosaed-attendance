@@ -156,7 +156,7 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
       // Check shift count & periods
       const shiftCount = db.prepare('SELECT COUNT(*) as c FROM company_shifts WHERE manager_id = ? AND is_active = 1').get(mgr.id).c;
       const scheduleMode = (wp && wp.schedule_mode) ? wp.schedule_mode : (shiftCount > 0 ? 'shifts' : 'normal');
-      const shifts = db.prepare('SELECT id, name, start_time, end_time, grace_period_minutes, early_leave_grace_minutes, assigned_employee_ids FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(mgr.id);
+      const shifts = db.prepare('SELECT id, name, start_time, end_time, grace_period_minutes, early_leave_grace_minutes, COALESCE(early_checkin_minutes, 60) as early_checkin_minutes, assigned_employee_ids FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(mgr.id);
 
       return {
         id: mgr.id,

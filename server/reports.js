@@ -532,7 +532,7 @@ function syncMissingAbsencesForMonth(month, managerId = null) {
     settingsRows.forEach(r => settings[r.key] = r.value);
 
     const weekendDaysStr = settings['weekend_days'] || '5';
-    const weekendDays = weekendDaysStr.split(',').map(s => s.trim());
+    const weekendDays = (weekendDaysStr === 'none' || !weekendDaysStr) ? [] : weekendDaysStr.split(',').map(s => s.trim());
     const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');
 
     // Get active employees

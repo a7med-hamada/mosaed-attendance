@@ -363,12 +363,18 @@ try {
       end_time TEXT NOT NULL,
       grace_period_minutes INTEGER DEFAULT 15,
       early_leave_grace_minutes INTEGER DEFAULT 15,
+      early_checkin_minutes INTEGER DEFAULT 60,
       assigned_employee_ids TEXT,
       is_active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_shifts_mgr ON company_shifts(manager_id);
   `);
+
+  const shiftCols = db.prepare('PRAGMA table_info(company_shifts)').all().map(c => c.name);
+  if (!shiftCols.includes('early_checkin_minutes')) {
+    db.exec(`ALTER TABLE company_shifts ADD COLUMN early_checkin_minutes INTEGER DEFAULT 60;`);
+  }
 
   const attCols = db.prepare('PRAGMA table_info(attendance_records)').all().map(c => c.name);
   if (!attCols.includes('shift_id')) {

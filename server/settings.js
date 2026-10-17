@@ -4,7 +4,10 @@ const { authenticateToken, requireManager } = require('./auth');
 const { evaluateAttendanceStatusAndDeduction } = require('./attendance');
 
 function getWorkdaysFromWeekendDays(weekendDaysStr) {
-  const weekends = (weekendDaysStr !== undefined && weekendDaysStr !== null ? String(weekendDaysStr) : '5').split(',').map(s => s.trim());
+  if (!weekendDaysStr || weekendDaysStr === 'none' || weekendDaysStr === 'null') {
+    return '0,1,2,3,4,5,6';
+  }
+  const weekends = String(weekendDaysStr).split(',').map(s => s.trim());
   const allDays = ['0', '1', '2', '3', '4', '5', '6'];
   return allDays.filter(d => !weekends.includes(d)).join(',');
 }
@@ -12,7 +15,8 @@ function getWorkdaysFromWeekendDays(weekendDaysStr) {
 function getWeekendDaysFromWorkdays(workingDaysStr) {
   const workdays = (workingDaysStr || '0,1,2,3,4').split(',').map(s => s.trim());
   const allDays = ['0', '1', '2', '3', '4', '5', '6'];
-  return allDays.filter(d => !workdays.includes(d)).join(',');
+  const res = allDays.filter(d => !workdays.includes(d)).join(',');
+  return res || 'none';
 }
 
 // Recalculates current month attendance records when scope is 'from_month_start'
@@ -391,6 +395,7 @@ router.get('/shifts', authenticateToken, (req, res) => {
     const rawShifts = db.prepare(`
       SELECT id, manager_id, name, start_time, end_time,
              grace_period_minutes, early_leave_grace_minutes,
+             COALESCE(early_checkin_minutes, 60) as early_checkin_minutes,
              assigned_employee_ids, is_active, created_at
       FROM company_shifts
       WHERE manager_id = ? AND is_active = 1
@@ -453,8 +458,8 @@ router.post('/shifts', authenticateToken, requireManager, (req, res) => {
       const insertStmt = db.prepare(`
         INSERT INTO company_shifts (
           manager_id, name, start_time, end_time,
-          grace_period_minutes, early_leave_grace_minutes, assigned_employee_ids, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+          grace_period_minutes, early_leave_grace_minutes, early_checkin_minutes, assigned_employee_ids, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
       `);
 
       for (const s of shifts) {
@@ -473,6 +478,7 @@ router.post('/shifts', authenticateToken, requireManager, (req, res) => {
           s.end_time.trim(),
           parseInt(s.grace_period_minutes, 10) || 15,
           parseInt(s.early_leave_grace_minutes, 10) || 15,
+          parseInt(s.early_checkin_minutes, 10) || 60,
           assignedStr
         );
       }

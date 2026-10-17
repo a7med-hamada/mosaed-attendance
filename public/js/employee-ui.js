@@ -102,6 +102,8 @@ const EmployeeUI = {
       this.notConfigured = res.notConfigured;
       this.scheduleMode = res.schedule_mode || 'normal';
       this.shifts = res.shifts || [];
+      this.isOffDay = !!res.is_off_day;
+      this.offDayReason = res.off_day_reason || null;
       if (this.activeTab === 'attendance') {
         this.renderAttendanceTab();
       }
@@ -371,7 +373,8 @@ const EmployeeUI = {
           ` : ''}
         </div>
       `;
-      if (checkInBtn) checkInBtn.disabled = false;
+      const canCheckIn = this.scheduleMode !== 'shifts' || !!this.selectedShiftId;
+      if (checkInBtn) checkInBtn.disabled = !canCheckIn;
       if (checkOutBtn) checkOutBtn.disabled = false;
     } else {
       statusContainer.innerHTML = `
@@ -470,6 +473,26 @@ const EmployeeUI = {
             </div>
           </div>
         </div>
+
+        ${this.isOffDay ? `
+        <!-- Off-Day Vacation Notice Banner -->
+        <div class="p-4 sm:p-5 rounded-3xl bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/30 text-amber-950 dark:text-amber-200 flex items-start gap-3.5 shadow-sm text-right">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i data-lucide="palmtree" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <h4 class="font-extrabold text-sm text-amber-900 dark:text-amber-100">
+                اليوم عطلة رسمية للمنشأة (${this.offDayReason || 'عطلة أسبوعية'}) 🌴
+              </h4>
+            </div>
+            <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+              اليوم غير مسجل كعمل إلزامي، ولن يُحتسب عليك أي غياب أو تأخير. إذا كان لديك عمل إضافي بتكليف من الإدارة يمكنك تسجيل الحضور.
+            </p>
+          </div>
+        </div>
+        ` : ''}
 
         <!-- Attendance Score Card -->
         <div id="emp-score-card"></div>
@@ -623,6 +646,29 @@ const EmployeeUI = {
 
     if (assigned) {
       this.selectedShiftId = assigned.id;
+      const startMins = timeToMins(assigned.start_time);
+      const earlyCheckin = assigned.early_checkin_minutes !== undefined ? assigned.early_checkin_minutes : 60;
+      const unlockMins = startMins - earlyCheckin;
+      const endMins = timeToMins(assigned.end_time);
+
+      if (currentMins < unlockMins) {
+        this.selectedShiftId = null;
+        const waitMins = unlockMins - currentMins;
+        return `
+          <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-500/30 text-right space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900 dark:text-amber-100 flex items-center gap-1.5">
+                <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i> الوردية المخصصة لك: <b>${assigned.name}</b>
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">لم يبدأ الحضور بعد</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              يبدأ تسجيل حضور ورديتك (${formatTime12(assigned.start_time)} - ${formatTime12(assigned.end_time)}) في تمام الساعة <b class="text-amber-700 dark:text-amber-300 font-bold">${formatTime12(String(Math.floor(unlockMins/60)).padStart(2,'0') + ':' + String(unlockMins%60).padStart(2,'0'))}</b> (متبقي ${waitMins} دقيقة) وفقاً للوقت المحدد من الإدارة.
+            </p>
+          </div>
+        `;
+      }
+
       return `
         <div class="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-right space-y-1">
           <div class="flex items-center justify-between">
@@ -639,62 +685,131 @@ const EmployeeUI = {
       `;
     }
 
-    // 2. Not assigned: check remaining active shifts (where end_time > currentMins)
-    const activeShifts = shifts.filter(s => timeToMins(s.end_time) > currentMins);
+    // 2. Unassigned: calculate unlock window for each shift
+    const unlockedShifts = [];
+    const upcomingShifts = [];
 
-    // Smart auto-selection: if earlier shifts have ended, and only 1 shift is remaining
-    if (activeShifts.length === 1) {
-      this.selectedShiftId = activeShifts[0].id;
-      return `
-        <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-right space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-              <i data-lucide="check-circle" class="w-4 h-4"></i> الوردية المتاحة حالياً:
-            </span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white font-mono">تحديد آلي</span>
+    shifts.forEach(s => {
+      const startMins = timeToMins(s.start_time);
+      const earlyCheckin = s.early_checkin_minutes !== undefined ? s.early_checkin_minutes : 60;
+      const unlockMins = startMins - earlyCheckin;
+      const endMins = timeToMins(s.end_time);
+
+      if (currentMins >= unlockMins && currentMins < endMins) {
+        unlockedShifts.push({ ...s, unlockMins, endMins });
+      } else if (currentMins < unlockMins) {
+        upcomingShifts.push({ ...s, unlockMins, endMins, waitMins: unlockMins - currentMins });
+      }
+    });
+
+    const formatMinsClock = (m) => {
+      const hh = Math.floor(m / 60) % 24;
+      const mm = m % 60;
+      return formatTime12(`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`);
+    };
+
+    let upcomingNoticeHtml = '';
+    if (upcomingShifts.length > 0) {
+      upcomingNoticeHtml = `
+        <div class="mt-2.5 p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-right space-y-1.5 text-xs">
+          <div class="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300 text-[11px]">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-blue-500"></i>
+            <span>مواعيد فتح تسجيل الحضور للورديات القادمة اليوم:</span>
           </div>
-          <div class="font-black text-sm text-slate-800 dark:text-white">${activeShifts[0].name}</div>
-          <div class="text-xs font-mono text-emerald-600 dark:text-emerald-400">
-            من ${formatTime12(activeShifts[0].start_time)} إلى ${formatTime12(activeShifts[0].end_time)}
-          </div>
-          <p class="text-[10px] text-slate-500 dark:text-slate-400">تم تحديد هذه الفترة تلقائياً نظراً لانتهاء مواعيد الفترات السابقة.</p>
+          ${upcomingShifts.map(up => `
+            <div class="text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between pr-2">
+              <span><b>${up.name}</b> (${formatTime12(up.start_time)} - ${formatTime12(up.end_time)})</span>
+              <span class="font-bold text-blue-600 dark:text-blue-400">يُتاح الحضور: ${formatMinsClock(up.unlockMins)} (بعد ${up.waitMins} د)</span>
+            </div>
+          `).join('')}
         </div>
       `;
     }
 
-    // 3. Multiple shifts: employee chooses
-    if (!this.selectedShiftId || !shifts.find(s => s.id === this.selectedShiftId)) {
-      this.selectedShiftId = (activeShifts[0] ? activeShifts[0].id : shifts[0].id);
+    // Case A: Exactly 1 shift is unlocked right now
+    if (unlockedShifts.length === 1) {
+      this.selectedShiftId = unlockedShifts[0].id;
+      return `
+        <div class="space-y-2 text-right">
+          <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-right space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> الوردية المتاحة حالياً للحضور:
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white font-mono">نشطة الآن</span>
+            </div>
+            <div class="font-black text-sm text-slate-800 dark:text-white">${unlockedShifts[0].name}</div>
+            <div class="text-xs font-mono text-emerald-600 dark:text-emerald-400">
+              من ${formatTime12(unlockedShifts[0].start_time)} إلى ${formatTime12(unlockedShifts[0].end_time)}
+            </div>
+          </div>
+          ${upcomingNoticeHtml}
+        </div>
+      `;
     }
 
-    return `
-      <div class="text-right space-y-2 pt-1">
-        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-          <i data-lucide="layers" class="w-4 h-4 text-purple-600"></i>
-          <span>اختر الوردية / الفترة التي ستحضر فيها اليوم: *</span>
-        </label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          ${shifts.map(s => {
-            const isSelected = this.selectedShiftId === s.id;
-            const isPast = timeToMins(s.end_time) <= currentMins;
-            return `
-              <button type="button" onclick="EmployeeUI.selectShift(${s.id})"
-                class="p-3 rounded-2xl border text-right transition-all flex flex-col justify-between ${
-                  isSelected
-                    ? 'border-2 border-purple-600 bg-purple-50 dark:bg-purple-950/40 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-purple-300 bg-white dark:bg-slate-800/60'
-                }">
-                <div class="flex items-center justify-between w-full">
-                  <span class="font-bold text-xs ${isSelected ? 'text-purple-700 dark:text-purple-300' : 'text-slate-800 dark:text-white'}">${s.name}</span>
-                  ${isSelected ? '<span class="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">✓</span>' : (isPast ? '<span class="text-[9px] text-slate-400 font-medium">انتهت</span>' : '')}
-                </div>
-                <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1">
-                  ${formatTime12(s.start_time)} — ${formatTime12(s.end_time)}
-                </div>
-              </button>
-            `;
-          }).join('')}
+    // Case B: Multiple shifts unlocked (e.g. shift handover window)
+    if (unlockedShifts.length > 1) {
+      if (!this.selectedShiftId || !unlockedShifts.find(s => s.id === this.selectedShiftId)) {
+        this.selectedShiftId = unlockedShifts[0].id;
+      }
+
+      return `
+        <div class="text-right space-y-2 pt-1">
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-4 h-4 text-purple-600"></i>
+            <span>اختر الوردية / الفترة التي ستحضر فيها الآن: *</span>
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            ${unlockedShifts.map(s => {
+              const isSelected = this.selectedShiftId === s.id;
+              return `
+                <button type="button" onclick="EmployeeUI.selectShift(${s.id})"
+                  class="p-3 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+                    isSelected
+                      ? 'border-2 border-purple-600 bg-purple-50 dark:bg-purple-950/40 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-purple-300 bg-white dark:bg-slate-800/60'
+                  }">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-bold text-xs ${isSelected ? 'text-purple-700 dark:text-purple-300' : 'text-slate-800 dark:text-white'}">${s.name}</span>
+                    ${isSelected ? '<span class="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">✓</span>' : ''}
+                  </div>
+                  <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1">
+                    ${formatTime12(s.start_time)} — ${formatTime12(s.end_time)}
+                  </div>
+                </button>
+              `;
+            }).join('')}
+          </div>
+          ${upcomingNoticeHtml}
         </div>
+      `;
+    }
+
+    // Case C: No shifts currently unlocked
+    this.selectedShiftId = null;
+    if (upcomingShifts.length > 0) {
+      const nextShift = upcomingShifts[0];
+      return `
+        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-right space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i> الوردية القادمة: <b>${nextShift.name}</b>
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">لم يبدأ الحضور بعد</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+            يبدأ تسجيل حضور <b>${nextShift.name}</b> (${formatTime12(nextShift.start_time)} - ${formatTime12(nextShift.end_time)}) في تمام الساعة <b class="text-amber-700 dark:text-amber-300 font-bold">${formatMinsClock(nextShift.unlockMins)}</b> (متبقي ${nextShift.waitMins} دقيقة) وفقاً لوقت الحضور المحدد من الإدارة.
+          </p>
+        </div>
+      `;
+    }
+
+    // Case D: All shifts for today have finished
+    return `
+      <div class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-right space-y-1">
+        <span class="text-xs font-bold text-slate-600 dark:text-slate-300 block">انتهت مواعيد جميع ورديات اليوم</span>
+        <span class="text-[11px] text-slate-500 block">لقد انتهت فترات العمل المحددة لليوم وفق جدول الشيفتات.</span>
       </div>
     `;
   },
@@ -706,6 +821,7 @@ const EmployeeUI = {
       container.innerHTML = this.getShiftSelectionHtml();
       if (window.lucide) lucide.createIcons();
     }
+    this.updateGpsCard();
   },
 
   // Handle Checkout Click: checks if photo is required

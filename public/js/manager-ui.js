@@ -52,7 +52,7 @@ const ManagerUI = {
         <button onclick="ManagerUI.switchSection('${s.id}')"
           class="flex items-center gap-3 px-3.5 py-2.5 lg:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all w-full text-right ${
             this.activeSection === s.id
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-bold'
+              ? 'bg-emerald-grad text-white shadow-md shadow-emerald-500/30 font-bold ring-1 ring-emerald-400/30'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
           }">
           <i data-lucide="${s.icon}" class="w-4.5 h-4.5 flex-shrink-0"></i>
@@ -150,7 +150,7 @@ const ManagerUI = {
             <button onclick="ManagerUI.openMorningBriefingModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap transition-all">
               <i data-lucide="message-circle" class="w-4 h-4"></i> تقرير الصباح للواتساب 📲
             </button>
-            <button onclick="ManagerUI.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-1.5 whitespace-nowrap">
+            <button onclick="ManagerUI.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-emerald-grad hover:opacity-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 flex items-center gap-1.5 whitespace-nowrap">
               <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
             </button>
             <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl whitespace-nowrap">

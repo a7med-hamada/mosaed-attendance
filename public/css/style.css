@@ -1,198 +1,435 @@
-/* Custom Styles & RTL Enhancements */
+/* ========================================================
+   WAQTY ATTENDANCE SYSTEM - QASEATLY FINTECH THEME
+   Inspired by qasetly.com visual design system & palette
+   ======================================================== */
+
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
   --font-ar: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-en: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bg-dark-base: #060e18;
-  --bg-dark-card: #0a1827;
-  --bg-dark-surface: #0d2135;
-  --accent-emerald: #00c288;
-  --accent-emerald-hover: #05a875;
+
+  /* Qasetly Color Tokens */
+  --q-navy-950: #032d4f;
+  --q-navy-900: #063c69;
+  --q-navy-850: #084577;
+  --q-navy-800: #0a4d82;
+  --q-blue-600: #0f69d8;
+  --q-green-700: #008d57;
+  --q-green-600: #00a866;
+  --q-green-500: #12b878;
+  --q-green-400: #00e59b;
+  --q-teal-500: #0aa9a4;
+  --q-text-ink: #10243b;
+  --q-muted: #64748b;
+  --q-line: #dbe6ef;
+  --q-surface: #ffffff;
+  --q-soft: #f4f8fb;
+  --q-danger: #d92d4f;
 }
 
+/* Global Font Enforcement */
 *, body, button, input, select, textarea, span, h1, h2, h3, h4, h5, h6 {
-  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-family: var(--font-ar) !important;
 }
 
 body {
   font-family: var(--font-ar) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--q-soft);
+  color: var(--q-text-ink);
 }
 
-.dark body, body.dark {
-  background-color: var(--bg-dark-base);
-}
-
-/* Qasetly theme enhancements */
-.bg-qasetly-dark {
-  background-color: #060e18;
-}
-
-.bg-qasetly-card {
-  background-color: #0a1827;
-  border-color: #15304a;
-}
-
-.bg-emerald-grad {
-  background: linear-gradient(135deg, #00c288 0%, #059669 100%);
-}
-
-.bg-emerald-grad:hover {
-  background: linear-gradient(135deg, #05d697 0%, #047857 100%);
-}
-
-.shadow-emerald-glow {
-  box-shadow: 0 4px 20px -2px rgba(0, 194, 136, 0.4);
-}
-
-.badge-emerald-pill {
-  background: rgba(0, 194, 136, 0.12);
-  color: #00e59b;
-  border: 1px solid rgba(0, 194, 136, 0.35);
-}
-
-.dark .bg-slate-900 {
-  background-color: #091726 !important;
-  border-color: #142e47 !important;
-}
-
-.dark .bg-slate-800 {
-  background-color: #0d2238 !important;
-  border-color: #173857 !important;
+/* ========================================================
+   DARK THEME (Deep Navy Fintech Palette - qasetly.com dark)
+   ======================================================== */
+html.dark, html.dark body, body.dark {
+  background-color: #040e18 !important;
+  color: #e2eaf1 !important;
 }
 
 .dark .bg-slate-950 {
-  background-color: #050d17 !important;
+  background-color: #040e18 !important;
 }
 
-body[dir="ltr"] {
-  font-family: var(--font-en);
+.dark .bg-slate-900 {
+  background-color: #081a2b !important;
+  border-color: #14334f !important;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+.dark .bg-slate-850 {
+  background-color: #0a1f33 !important;
+  border-color: #163857 !important;
 }
 
-/* Pulse animation for live indicators */
-@keyframes live-pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+.dark .bg-slate-800 {
+  background-color: #0c2236 !important;
+  border-color: #193d5e !important;
 }
 
-.live-indicator {
-  animation: live-pulse 2s infinite;
+.dark .bg-slate-50 {
+  background-color: #071726 !important;
 }
 
-/* Glassmorphism subtle effects */
-.glass-panel {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.dark .border-slate-800,
+.dark .border-slate-700 {
+  border-color: #14334f !important;
 }
 
-/* Status Badges */
-.badge-present {
-  background-color: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+.dark .border-slate-200 {
+  border-color: #14334f !important;
 }
+
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #ffffff !important;
+}
+
+.dark .text-slate-400,
+.dark .text-slate-500 {
+  color: #7d96ab !important;
+}
+
+/* ========================================================
+   HEADER & NAVBAR
+   ======================================================== */
+header {
+  background: #051626 !important;
+  border-bottom: 1px solid #14334f !important;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+html:not(.dark) header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #dbe6ef !important;
+  box-shadow: 0 4px 20px rgba(3, 45, 79, 0.05) !important;
+}
+
+/* ========================================================
+   PRIMARY BUTTONS & CTA (Vibrant Emerald Gradient)
+   ======================================================== */
+.bg-blue-600,
+button.bg-blue-600,
+a.bg-blue-600,
+#login-submit-btn,
+.btn-primary {
+  background: linear-gradient(135deg, #00a866 0%, #008d57 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 18px rgba(0, 168, 102, 0.35) !important;
+  font-weight: 700 !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.bg-blue-600:hover,
+button.bg-blue-600:hover,
+a.bg-blue-600:hover,
+#login-submit-btn:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, #00c288 0%, #009e62 100%) !important;
+  box-shadow: 0 6px 24px rgba(0, 168, 102, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+.bg-blue-600:active,
+button.bg-blue-600:active {
+  transform: translateY(0);
+}
+
+.bg-emerald-grad {
+  background: linear-gradient(135deg, #00a866 0%, #008d57 100%) !important;
+}
+
+.bg-emerald-grad:hover {
+  background: linear-gradient(135deg, #00c288 0%, #009e62 100%) !important;
+}
+
+.shadow-emerald-glow {
+  box-shadow: 0 4px 20px -2px rgba(0, 168, 102, 0.4) !important;
+}
+
+/* ========================================================
+   SIDEBAR & NAVIGATION
+   ======================================================== */
+aside > div {
+  background: #081a2b !important;
+  border: 1px solid #14334f !important;
+  border-radius: 20px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25) !important;
+}
+
+html:not(.dark) aside > div {
+  background: #ffffff !important;
+  border: 1px solid #dbe6ef !important;
+  box-shadow: 0 16px 40px rgba(3, 45, 79, 0.05) !important;
+}
+
+#manager-nav-list button.bg-blue-600,
+#employee-subnav button.bg-blue-600 {
+  background: linear-gradient(135deg, #00a866 0%, #008d57 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 18px rgba(0, 168, 102, 0.4) !important;
+  border-radius: 14px !important;
+}
+
+#manager-nav-list button:not(.bg-blue-600):hover,
+#employee-subnav button:not(.bg-blue-600):hover {
+  background-color: rgba(15, 105, 216, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* ========================================================
+   STAT / METRIC CARDS (Dashboard Widgets)
+   ======================================================== */
+#mgr-metrics-grid > div {
+  background: #091e32 !important;
+  border: 1px solid #163857 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#mgr-metrics-grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+html:not(.dark) #mgr-metrics-grid > div {
+  background: #ffffff !important;
+  border: 1px solid #dbe6ef !important;
+  box-shadow: 0 8px 25px rgba(3, 45, 79, 0.06) !important;
+}
+
+/* ========================================================
+   TABLES & LISTS
+   ======================================================== */
+.dark table thead,
+thead.bg-slate-50,
+thead {
+  background-color: #051321 !important;
+  border-bottom: 1px solid #14334f !important;
+}
+
+html:not(.dark) thead {
+  background-color: #f5f8fb !important;
+  border-bottom: 1px solid #dbe6ef !important;
+}
+
+thead th {
+  color: #7b94a8 !important;
+  font-weight: 700 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.5px;
+  padding: 14px 16px !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid #0e253a !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.dark tbody tr:hover,
+tbody tr:hover {
+  background-color: #0c243a !important;
+}
+
+html:not(.dark) tbody tr {
+  border-bottom: 1px solid #eef2f6 !important;
+}
+
+html:not(.dark) tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+tbody td {
+  padding: 14px 16px !important;
+}
+
+/* ========================================================
+   STATUS BADGES & PILLS
+   ======================================================== */
+/* On Time / Present - Signature Qasetly Emerald */
+.badge-ontime,
+.badge-present,
+.dark .badge-ontime,
 .dark .badge-present {
-  background-color: rgba(22, 101, 52, 0.3);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.2);
+  background: rgba(0, 168, 102, 0.14) !important;
+  color: #00e59b !important;
+  border: 1px solid rgba(0, 168, 102, 0.4) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
 }
 
-.badge-ontime {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-.dark .badge-ontime {
-  background-color: rgba(30, 58, 138, 0.3);
-  color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.2);
+html:not(.dark) .badge-ontime,
+html:not(.dark) .badge-present {
+  background: #effbf5 !important;
+  color: #008d57 !important;
+  border: 1px solid #a7f3d0 !important;
 }
 
-.badge-late {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
+/* Late Badge */
+.badge-late,
 .dark .badge-late {
-  background-color: rgba(120, 53, 15, 0.3);
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.2);
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
 }
 
-.badge-halfday {
-  background-color: #ffedd5;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
-}
+/* Half Day Badge */
+.badge-halfday,
 .dark .badge-halfday {
-  background-color: rgba(124, 45, 18, 0.3);
-  color: #fb923c;
-  border-color: rgba(251, 146, 60, 0.2);
+  background: rgba(249, 115, 22, 0.14) !important;
+  color: #fb923c !important;
+  border: 1px solid rgba(249, 115, 22, 0.4) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
 }
 
-.badge-absent {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
-}
+/* Absent Badge */
+.badge-absent,
 .dark .badge-absent {
-  background-color: rgba(127, 29, 29, 0.3);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.2);
+  background: rgba(217, 45, 79, 0.14) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(217, 45, 79, 0.4) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
 }
 
-.badge-earlyleave {
-  background-color: #f3e8ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
-}
+/* Early Leave Badge */
+.badge-earlyleave,
 .dark .badge-earlyleave {
-  background-color: rgba(88, 28, 135, 0.3);
-  color: #c084fc;
-  border-color: rgba(192, 132, 252, 0.2);
+  background: rgba(168, 85, 247, 0.14) !important;
+  color: #c084fc !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
 }
 
-.badge-outside {
-  background-color: #fdf2f8;
-  color: #be185d;
-  border: 1px solid #fbcfe8;
-}
-.dark .badge-outside {
-  background-color: rgba(131, 24, 67, 0.3);
-  color: #f472b6;
-  border-color: rgba(244, 114, 182, 0.2);
-}
-
-/* Leaflet container fixes */
-#workplace-map, #preview-map, #employee-checkin-map {
-  width: 100%;
-  height: 100%;
-  border-radius: 0.75rem;
-  z-index: 10;
+/* Shift Badge (فترة صباحية / فترة مسائية) - Qasetly Cyan / Navy */
+.dark span.bg-purple-500\/10,
+span.bg-purple-500\/10,
+span:has(i[data-lucide="layers"]) {
+  background: rgba(15, 105, 216, 0.14) !important;
+  color: #83c4ef !important;
+  border: 1px solid rgba(15, 105, 216, 0.35) !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
 }
 
-/* Modal animation */
+/* Auto-checkout Badge */
+span.bg-amber-500\/10 {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.32) !important;
+  border-radius: 8px !important;
+}
+
+/* Inspection Action Button "معاينة التوثيق" */
+button:has(i[data-lucide="eye"]) {
+  background: rgba(0, 168, 102, 0.09) !important;
+  border: 1px solid rgba(0, 168, 102, 0.35) !important;
+  color: #00e59b !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+button:has(i[data-lucide="eye"]):hover {
+  background: rgba(0, 168, 102, 0.22) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.badge-emerald-pill {
+  background: rgba(0, 168, 102, 0.12) !important;
+  color: #00e59b !important;
+  border: 1px solid rgba(0, 168, 102, 0.35) !important;
+}
+
+/* ========================================================
+   FORM INPUTS & SELECTS
+   ======================================================== */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark select,
+.dark textarea {
+  background-color: #061524 !important;
+  border: 1px solid #163654 !important;
+  color: #ffffff !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #00a866 !important;
+  box-shadow: 0 0 0 3px rgba(0, 168, 102, 0.25) !important;
+  outline: none !important;
+}
+
+html:not(.dark) input[type="text"],
+html:not(.dark) input[type="email"],
+html:not(.dark) input[type="password"],
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #f8fafc;
+  border: 1px solid #dbe6ef;
+  color: #10243b;
+}
+
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
+  border-color: #00a866;
+  box-shadow: 0 0 0 3px rgba(0, 168, 102, 0.2);
+  outline: none;
+}
+
+/* ========================================================
+   MODALS
+   ======================================================== */
 .modal-enter {
   animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border-radius: 26px !important;
+}
+
+.dark .modal-enter {
+  border: 1px solid #183e63 !important;
+  background-color: #081a2b !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.6) !important;
+}
+
+html:not(.dark) .modal-enter {
+  background-color: #ffffff !important;
+  border: 1px solid #dbe6ef !important;
+  box-shadow: 0 28px 80px rgba(3, 45, 79, 0.15) !important;
 }
 
 @keyframes modalFadeIn {
@@ -204,6 +441,44 @@ body[dir="ltr"] {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+/* ========================================================
+   LIVE INDICATOR & ACCENTS
+   ======================================================== */
+@keyframes live-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 168, 102, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(0, 168, 102, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 168, 102, 0); }
+}
+
+.live-indicator {
+  animation: live-pulse 2s infinite;
+  background-color: #00a866 !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(131, 196, 239, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(131, 196, 239, 0.45);
+}
+
+/* Leaflet container fixes */
+#workplace-map, #preview-map, #employee-checkin-map {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+  z-index: 10;
 }
 
 /* Camera video mirror effect for selfies */
@@ -229,7 +504,6 @@ body[dir="ltr"] {
   header, nav, aside, #toast-container, .no-print, button, #camera-modal, #new-correction-modal, #register-manager-modal {
     display: none !important;
   }
-  /* When printing payslip modal */
   body.printing-payslip #login-view,
   body.printing-payslip #app-view,
   body.printing-payslip > *:not(#payslip-modal) {
@@ -272,7 +546,6 @@ body[dir="ltr"] {
   }
 }
 
-/* Hide scrollbar utility for mobile horizontal tabs */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -281,19 +554,15 @@ body[dir="ltr"] {
   scrollbar-width: none;
 }
 
-/* Mobile responsive adjustments */
 @media (max-width: 640px) {
   html, body {
     overflow-x: hidden;
   }
-
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
-
   .modal-enter {
     margin: auto 0.5rem;
     max-height: 92vh;
   }
 }
-

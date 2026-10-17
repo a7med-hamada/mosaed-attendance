@@ -1,5 +1,4 @@
-// Service Worker for WAQTY Attendance System PWA
-const CACHE_NAME = 'waqty-pwa-v3';
+const CACHE_NAME = 'waqty-qasetly-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

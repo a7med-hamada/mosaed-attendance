@@ -17,8 +17,18 @@ const ManagerUI = {
     const nav = document.getElementById('manager-nav-list');
     if (!nav) return;
 
+    const user = App.currentUser || API.getCurrentUser() || {};
+    const sub = user.subscription || {};
+    const isLifetime = !!(
+      sub.isLifetime ||
+      sub.plan === 'lifetime' ||
+      sub.plan === 'open' ||
+      user.subscription_plan === 'lifetime' ||
+      user.subscription_plan === 'open'
+    );
+
     const isEn = window.I18n && window.I18n.currentLang === 'en';
-    const sections = [
+    const allSections = [
       { id: 'dashboard', icon: 'layout-dashboard', label: isEn ? 'Dashboard' : 'لوحة التحكم' },
       { id: 'employees', icon: 'users', label: isEn ? 'Employees' : 'الموظفون' },
       { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
@@ -34,6 +44,8 @@ const ManagerUI = {
       { id: 'support', icon: 'headphones', label: isEn ? 'Technical Support' : 'الدعم الفني 🎧' },
       { id: 'profile', icon: 'user-cog', label: isEn ? 'Profile' : 'الملف الشخصي' }
     ];
+
+    const sections = isLifetime ? allSections.filter(s => s.id !== 'packages') : allSections;
 
     nav.innerHTML = sections.map(s => `
       <li class="flex-shrink-0 lg:flex-shrink w-auto lg:w-full">
@@ -53,6 +65,18 @@ const ManagerUI = {
   },
 
   async switchSection(sectionId) {
+    const user = App.currentUser || API.getCurrentUser() || {};
+    const sub = user.subscription || {};
+    const isLifetime = !!(
+      sub.isLifetime ||
+      sub.plan === 'lifetime' ||
+      sub.plan === 'open' ||
+      user.subscription_plan === 'lifetime' ||
+      user.subscription_plan === 'open'
+    );
+    if (sectionId === 'packages' && isLifetime) {
+      sectionId = 'dashboard';
+    }
     this.activeSection = sectionId;
     this.renderSidebar();
     this.stopLivePolling();

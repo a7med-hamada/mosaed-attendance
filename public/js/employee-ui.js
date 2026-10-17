@@ -60,7 +60,7 @@ const EmployeeUI = {
       <button onclick="EmployeeUI.switchTab('${tab.id}')"
         class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
           this.activeTab === tab.id
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+            ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-600/25 font-bold'
             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
         }">
         <i data-lucide="${tab.icon}" class="w-4 h-4"></i>
@@ -102,6 +102,7 @@ const EmployeeUI = {
       this.notConfigured = res.notConfigured;
       this.scheduleMode = res.schedule_mode || 'normal';
       this.shifts = res.shifts || [];
+      this.assignedShiftId = res.assigned_shift_id || null;
       this.isOffDay = !!res.is_off_day;
       this.offDayReason = res.off_day_reason || null;
       if (this.activeTab === 'attendance') {
@@ -413,9 +414,12 @@ const EmployeeUI = {
     if (this.notConfigured) {
       container.innerHTML = `
         <div class="max-w-2xl mx-auto space-y-6">
-          <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/10">
-            <h2 class="text-2xl font-extrabold">${t('greeting_morning')}، ${user.full_name || ''} 👋</h2>
-            <p id="emp-current-date" class="text-blue-100 text-xs mt-1"></p>
+          <div class="bg-gradient-to-br from-[#032d4f] via-[#063c69] to-[#0a4d82] rounded-3xl p-6 text-white shadow-xl shadow-navy-950/20 border border-white/10 relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-emerald-500/15 blur-2xl"></div>
+            <div class="relative z-10">
+              <h2 class="text-2xl font-extrabold">${t('greeting_morning')}، ${user.full_name || ''} 👋</h2>
+              <p id="emp-current-date" class="text-blue-100 text-xs mt-1"></p>
+            </div>
           </div>
 
           <div class="p-8 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-center space-y-3">
@@ -443,12 +447,14 @@ const EmployeeUI = {
     container.innerHTML = `
       <div class="max-w-2xl mx-auto space-y-6">
         <!-- Greeting Card -->
-        <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-3xl p-5 sm:p-6 md:p-8 text-white shadow-xl shadow-blue-500/10 relative overflow-hidden">
-          <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-white/10 blur-2xl"></div>
+        <div class="bg-gradient-to-br from-[#032d4f] via-[#063c69] to-[#0a4d82] rounded-3xl p-5 sm:p-6 md:p-8 text-white shadow-xl shadow-navy-950/20 relative overflow-hidden border border-white/10">
+          <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-emerald-500/15 blur-2xl"></div>
+          <div class="absolute top-0 left-0 w-32 h-32 rounded-full bg-teal-400/10 blur-xl"></div>
           <div class="relative z-10 flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-md mb-2">
-                <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i> مرحباً بك
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-md mb-2 border border-white/20">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>مرحباً بك</span>
               </span>
               <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
                 ${t('greeting_morning')}، ${user.full_name || 'زميلنا العزيز'} 👋
@@ -462,13 +468,13 @@ const EmployeeUI = {
           </div>
 
           <!-- Schedule Badge -->
-          <div class="mt-6 pt-5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs md:text-sm text-blue-100">
+          <div class="mt-6 pt-5 border-t border-white/15 flex flex-wrap items-center justify-between gap-3 text-xs md:text-sm text-blue-100">
             <div class="flex items-center gap-2">
-              <i data-lucide="calendar" class="w-4 h-4 text-amber-300"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i>
               <span>${displayShiftName ? `<b class="text-white bg-white/20 px-2 py-0.5 rounded-lg ml-1 font-mono">${displayShiftName}</b>: ` : `${t('work_schedule')}: `}<strong class="text-white">${formatTime12(startTime)} — ${formatTime12(endTime)}</strong></span>
             </div>
             <div class="flex items-center gap-2">
-              <i data-lucide="map-pin" class="w-4 h-4 text-emerald-300"></i>
+              <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
               <span>${currentWorkplace ? currentWorkplace.name : 'المقر الرئيسي'}</span>
             </div>
           </div>
@@ -509,7 +515,7 @@ const EmployeeUI = {
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 text-center">
           ${!isCheckedIn ? `
             <div class="max-w-md mx-auto space-y-5">
-              <div class="w-20 h-20 mx-auto rounded-3xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <div class="w-20 h-20 mx-auto rounded-3xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm">
                 <i data-lucide="fingerprint" class="w-10 h-10"></i>
               </div>
               <div>
@@ -528,7 +534,7 @@ const EmployeeUI = {
 
               <button id="emp-checkin-submit-btn" disabled
                 onclick="EmployeeUI.openCameraModal('check-in')"
-                class="w-full py-4 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg shadow-lg shadow-blue-500/25 transition-all transform active:scale-98 flex items-center justify-center gap-3">
+                class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg shadow-lg shadow-emerald-600/30 transition-all transform active:scale-98 flex items-center justify-center gap-3">
                 <i data-lucide="camera" class="w-6 h-6"></i>
                 <span>${t('check_in_btn')}</span>
               </button>
@@ -583,7 +589,7 @@ const EmployeeUI = {
                 </p>
                 <button id="emp-checkout-submit-btn" disabled
                   onclick="EmployeeUI.handleCheckOutClick()"
-                  class="w-full py-4 px-6 rounded-2xl bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white font-bold text-lg shadow-lg transition-all transform active:scale-98 flex items-center justify-center gap-3">
+                  class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-lg shadow-lg shadow-rose-600/25 transition-all transform active:scale-98 flex items-center justify-center gap-3">
                   <i data-lucide="log-out" class="w-5 h-5"></i>
                   <span>${t('check_out_btn')}</span>
                 </button>
@@ -641,7 +647,9 @@ const EmployeeUI = {
 
     // 1. Check if employee is pre-assigned to a specific shift
     const assigned = shifts.find(s =>
-      Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(user.id)
+      (this.assignedShiftId && s.id === this.assignedShiftId) ||
+      (user.shift_id && s.id === user.shift_id) ||
+      (Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(user.id))
     );
 
     if (assigned) {

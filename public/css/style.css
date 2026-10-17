@@ -1,74 +1,229 @@
-/* Custom Styles & RTL Enhancements */
+/* Custom Styles & RTL Enhancements - Qasetly Modern Design System */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --font-ar: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-en: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bg-dark-base: #060e18;
-  --bg-dark-card: #0a1827;
-  --bg-dark-surface: #0d2135;
-  --accent-emerald: #00c288;
-  --accent-emerald-hover: #05a875;
+  --font-ar: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-en: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Qasetly Light Theme Tokens */
+  --bg-light-base: #f5f8fb;
+  --bg-light-surface: #ffffff;
+  --bg-light-soft: #eff4f9;
+  --bg-soft-green: #effbf5;
+  --bg-soft-blue: #eff6ff;
+  --border-light: #dce5ee;
+  --border-light-subtle: #e8eef5;
+  --text-dark: #10243b;
+  --text-muted: #607086;
+  --text-subtle: #8fa4bb;
+
+  /* Brand Colors */
+  --navy-950: #032d4f;
+  --navy-900: #063c69;
+  --navy-850: #084577;
+  --navy-800: #0a4d82;
+  --navy-700: #0f62a4;
+
+  --emerald-700: #008d57;
+  --emerald-600: #00a866;
+  --emerald-500: #12b878;
+  --emerald-400: #34d399;
+  --emerald-100: #d4f6e6;
+  --emerald-50:  #effbf5;
+
+  --blue-600: #0f69d8;
+  --blue-500: #2563eb;
+
+  /* Shadows */
+  --shadow-qasetly: 0 20px 50px rgba(3, 45, 79, 0.08);
+  --shadow-hover: 0 24px 60px rgba(3, 45, 79, 0.12);
+  --shadow-emerald: 0 10px 25px -4px rgba(0, 168, 102, 0.35);
+  --shadow-navy: 0 10px 25px -4px rgba(3, 45, 79, 0.3);
+
+  /* Radius */
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 32px;
 }
 
 *, body, button, input, select, textarea, span, h1, h2, h3, h4, h5, h6 {
-  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 body {
   font-family: var(--font-ar) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-.dark body, body.dark {
-  background-color: var(--bg-dark-base);
-}
-
-/* Qasetly theme enhancements */
-.bg-qasetly-dark {
-  background-color: #060e18;
-}
-
-.bg-qasetly-card {
-  background-color: #0a1827;
-  border-color: #15304a;
-}
-
-.bg-emerald-grad {
-  background: linear-gradient(135deg, #00c288 0%, #059669 100%);
-}
-
-.bg-emerald-grad:hover {
-  background: linear-gradient(135deg, #05d697 0%, #047857 100%);
-}
-
-.shadow-emerald-glow {
-  box-shadow: 0 4px 20px -2px rgba(0, 194, 136, 0.4);
-}
-
-.badge-emerald-pill {
-  background: rgba(0, 194, 136, 0.12);
-  color: #00e59b;
-  border: 1px solid rgba(0, 194, 136, 0.35);
-}
-
-.dark .bg-slate-900 {
-  background-color: #091726 !important;
-  border-color: #142e47 !important;
-}
-
-.dark .bg-slate-800 {
-  background-color: #0d2238 !important;
-  border-color: #173857 !important;
-}
-
-.dark .bg-slate-950 {
-  background-color: #050d17 !important;
+  background-color: var(--bg-light-base);
+  color: var(--text-dark);
 }
 
 body[dir="ltr"] {
-  font-family: var(--font-en);
+  font-family: var(--font-en) !important;
+}
+
+/* ========================================================== */
+/* Qasetly Light & Dark Surfaces Overrides */
+/* ========================================================== */
+.dark body, body.dark {
+  background-color: #091925 !important;
+  color: #eaf4fc !important;
+}
+
+.dark .bg-slate-950 {
+  background-color: #091925 !important;
+}
+
+.dark .bg-slate-900 {
+  background-color: #0d1e2c !important;
+  border-color: #1d364a !important;
+}
+
+.dark .bg-slate-850 {
+  background-color: #10212f !important;
+  border-color: #1d364a !important;
+}
+
+.dark .bg-slate-800 {
+  background-color: #132838 !important;
+  border-color: #26435c !important;
+}
+
+.dark .border-slate-800 {
+  border-color: #1d364a !important;
+}
+
+.dark .border-slate-700 {
+  border-color: #26435c !important;
+}
+
+/* Light mode crisp contrast */
+.bg-slate-50 {
+  background-color: #f5f8fb !important;
+}
+
+.bg-slate-100 {
+  background-color: #eff4f9 !important;
+}
+
+.border-slate-200 {
+  border-color: #dce5ee !important;
+}
+
+.border-slate-100 {
+  border-color: #e8eef5 !important;
+}
+
+/* Smooth Inputs */
+input, select, textarea {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: #00a866 !important;
+  box-shadow: 0 0 0 3px rgba(0, 168, 102, 0.2) !important;
+}
+
+/* ========================================================== */
+/* Qasetly Signature Components */
+/* ========================================================== */
+
+/* Hero / Kiosk Pill Pulse Badge */
+.hero-badge-chip, .badge-emerald-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(0, 168, 102, 0.08);
+  color: #008d57;
+  border: 1px solid rgba(0, 168, 102, 0.25);
+  box-shadow: 0 2px 10px rgba(0, 168, 102, 0.06);
+}
+
+.dark .hero-badge-chip, .dark .badge-emerald-pill {
+  background: rgba(0, 168, 102, 0.12);
+  color: #12b878;
+  border-color: rgba(18, 184, 120, 0.3);
+}
+
+.hero-badge-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00a866;
+  position: relative;
+  display: inline-block;
+}
+
+.hero-badge-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: rgba(0, 168, 102, 0.45);
+  animation: qasetly-pulse 2s infinite ease-out;
+}
+
+@keyframes qasetly-pulse {
+  0% { transform: scale(0.9); opacity: 1; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Qasetly Emerald Action Buttons */
+.btn-qasetly-emerald {
+  background: linear-gradient(135deg, #00a866 0%, #008d57 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -4px rgba(0, 168, 102, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-qasetly-emerald:hover {
+  background: linear-gradient(135deg, #05b872 0%, #009c60 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -3px rgba(0, 168, 102, 0.45);
+}
+
+.btn-qasetly-emerald:active {
+  transform: translateY(0);
+}
+
+/* Qasetly Navy Action Buttons */
+.btn-qasetly-navy {
+  background: linear-gradient(135deg, #063c69 0%, #032d4f 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -4px rgba(3, 45, 79, 0.3);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-qasetly-navy:hover {
+  background: linear-gradient(135deg, #0a4d82 0%, #063c69 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -3px rgba(3, 45, 79, 0.4);
+}
+
+/* Glassmorphic Cards & Panels */
+.card-qasetly {
+  background: #ffffff;
+  border: 1px solid #dce5ee;
+  border-radius: 24px;
+  box-shadow: 0 16px 45px rgba(3, 45, 79, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .card-qasetly {
+  background: #0d1e2c;
+  border-color: #1d364a;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
 /* Custom scrollbar */
@@ -80,18 +235,18 @@ body[dir="ltr"] {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(143, 164, 187, 0.35);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+  background: rgba(143, 164, 187, 0.6);
 }
 
 /* Pulse animation for live indicators */
 @keyframes live-pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 168, 102, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(0, 168, 102, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 168, 102, 0); }
 }
 
 .live-indicator {
@@ -104,89 +259,112 @@ body[dir="ltr"] {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Status Badges */
+/* ========================================================== */
+/* Modern Status Badges */
+/* ========================================================== */
 .badge-present {
-  background-color: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background-color: #effbf5;
+  color: #008d57;
+  border: 1px solid #abecd0;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-present {
-  background-color: rgba(22, 101, 52, 0.3);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.2);
+  background-color: rgba(0, 168, 102, 0.18);
+  color: #12b878;
+  border-color: rgba(18, 184, 120, 0.35);
 }
 
 .badge-ontime {
-  background-color: #dbeafe;
-  color: #1d4ed8;
+  background-color: #eff6ff;
+  color: #0f69d8;
   border: 1px solid #bfdbfe;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-ontime {
-  background-color: rgba(30, 58, 138, 0.3);
+  background-color: rgba(15, 105, 216, 0.18);
   color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.3);
 }
 
 .badge-late {
-  background-color: #fef3c7;
+  background-color: #fffbeb;
   color: #b45309;
   border: 1px solid #fde68a;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-late {
-  background-color: rgba(120, 53, 15, 0.3);
+  background-color: rgba(180, 83, 9, 0.18);
   color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .badge-halfday {
-  background-color: #ffedd5;
+  background-color: #fff7ed;
   color: #c2410c;
   border: 1px solid #fed7aa;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-halfday {
-  background-color: rgba(124, 45, 18, 0.3);
+  background-color: rgba(194, 65, 12, 0.18);
   color: #fb923c;
-  border-color: rgba(251, 146, 60, 0.2);
+  border-color: rgba(251, 146, 60, 0.3);
 }
 
 .badge-absent {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background-color: #fef2f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-absent {
-  background-color: rgba(127, 29, 29, 0.3);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.2);
+  background-color: rgba(190, 18, 60, 0.18);
+  color: #fb7185;
+  border-color: rgba(251, 113, 133, 0.3);
 }
 
 .badge-earlyleave {
-  background-color: #f3e8ff;
+  background-color: #faf5ff;
   color: #7e22ce;
   border: 1px solid #e9d5ff;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-earlyleave {
-  background-color: rgba(88, 28, 135, 0.3);
+  background-color: rgba(126, 34, 206, 0.18);
   color: #c084fc;
-  border-color: rgba(192, 132, 252, 0.2);
+  border-color: rgba(192, 132, 252, 0.3);
 }
 
 .badge-outside {
   background-color: #fdf2f8;
   color: #be185d;
   border: 1px solid #fbcfe8;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 700;
 }
 .dark .badge-outside {
-  background-color: rgba(131, 24, 67, 0.3);
+  background-color: rgba(190, 24, 93, 0.18);
   color: #f472b6;
-  border-color: rgba(244, 114, 182, 0.2);
+  border-color: rgba(244, 114, 182, 0.3);
 }
 
 /* Leaflet container fixes */
 #workplace-map, #preview-map, #employee-checkin-map {
   width: 100%;
   height: 100%;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   z-index: 10;
 }
 
@@ -198,7 +376,7 @@ body[dir="ltr"] {
 @keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(10px);
+    transform: scale(0.97) translateY(8px);
   }
   to {
     opacity: 1;
@@ -229,7 +407,6 @@ body[dir="ltr"] {
   header, nav, aside, #toast-container, .no-print, button, #camera-modal, #new-correction-modal, #register-manager-modal {
     display: none !important;
   }
-  /* When printing payslip modal */
   body.printing-payslip #login-view,
   body.printing-payslip #app-view,
   body.printing-payslip > *:not(#payslip-modal) {
@@ -296,4 +473,3 @@ body[dir="ltr"] {
     max-height: 92vh;
   }
 }
-

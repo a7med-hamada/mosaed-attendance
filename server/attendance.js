@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString } = require('./database');
+const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 const {
   sendWhatsAppMessage,
@@ -9,6 +9,7 @@ const {
   getWhatsAppSettings,
   generateWhatsAppLink
 } = require('./whatsapp');
+const { syncMissingAbsencesForMonth, syncAbsencesForDateRange } = require('./absence-sync');
 
 const router = express.Router();
 
@@ -46,6 +47,7 @@ function saveBase64Image(base64Data, prefix = 'att') {
 // Automatic absence check logic
 function checkAndMarkAutoAbsences() {
   try {
+    syncMissingAbsencesForMonth(getCurrentMonthString());
     const today = getTodayString();
     const currentTime = getCurrentTimeString();
     const currentMins = timeToMinutes(currentTime);
@@ -127,7 +129,7 @@ function checkAndApplyAutoCheckouts() {
     const openRecordsToday = db.prepare(`
       SELECT ar.id, ar.employee_id, ar.date, ar.check_in_time, ar.notes, ar.status,
              ar.scheduled_start, ar.scheduled_end, ar.shift_id, ar.shift_name,
-             u.full_name, u.manager_id
+             u.full_name, u.manager_id, u.shift_id as emp_shift_id
       FROM attendance_records ar
       JOIN users u ON ar.employee_id = u.id
       WHERE ar.date = ? AND ar.check_in_time IS NOT NULL AND ar.check_out_time IS NULL
@@ -146,6 +148,9 @@ function checkAndApplyAutoCheckouts() {
         const shifts = db.prepare('SELECT * FROM company_shifts WHERE manager_id = ? AND is_active = 1 ORDER BY start_time ASC').all(mgrId);
         if (rec.shift_id) {
           matchedShift = shifts.find(s => s.id === rec.shift_id);
+        }
+        if (!matchedShift && rec.emp_shift_id) {
+          matchedShift = shifts.find(s => s.id === rec.emp_shift_id);
         }
         if (!matchedShift && shifts.length > 0) {
           matchedShift = shifts.find(s => {
@@ -277,8 +282,8 @@ router.post('/check-in', authenticateToken, async (req, res) => {
     const { latitude, longitude, accuracy } = req.body;
     const photo = req.body.photo || req.body.photo_data;
 
-    // Lookup employee's manager
-    const empUser = db.prepare('SELECT manager_id, schedule_id FROM users WHERE id = ?').get(employeeId);
+    // Lookup employee's manager and assigned shift
+    const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id FROM users WHERE id = ?').get(employeeId);
     const managerId = empUser ? (empUser.manager_id || 1) : 1;
 
     // Get active workplace location & allowed radius for this manager
@@ -399,7 +404,12 @@ router.post('/check-in', authenticateToken, async (req, res) => {
           chosenShift = activeShifts.find(s => s.id === parseInt(req.body.shift_id, 10));
         }
 
-        // 2. If not specified, check if employee is pre-assigned to a specific shift
+        // 2. Pre-assigned shift for this employee in users table (Solution 2)
+        if (!chosenShift && empUser && empUser.shift_id) {
+          chosenShift = activeShifts.find(s => s.id === empUser.shift_id);
+        }
+
+        // 3. Fallback: check legacy assigned_employee_ids
         if (!chosenShift) {
           chosenShift = activeShifts.find(s => {
             if (!s.assigned_employee_ids) return false;
@@ -674,7 +684,7 @@ router.post('/check-out', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: `تم تسجيل الانصراف مسبقاً لهذا اليوم في الساعة ${record.check_out_time}` });
     }
 
-    const empUser = db.prepare('SELECT manager_id FROM users WHERE id = ?').get(employeeId);
+    const empUser = db.prepare('SELECT manager_id, shift_id FROM users WHERE id = ?').get(employeeId);
     const managerId = empUser ? (empUser.manager_id || 1) : 1;
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
     if (!workplace && managerId === 1) {
@@ -720,6 +730,9 @@ router.post('/check-out', authenticateToken, (req, res) => {
 
       if (record.shift_id) {
         matchedShift = activeShifts.find(s => s.id === record.shift_id);
+      }
+      if (!matchedShift && empUser && empUser.shift_id) {
+        matchedShift = activeShifts.find(s => s.id === empUser.shift_id);
       }
       if (!matchedShift && activeShifts.length > 0) {
         matchedShift = activeShifts.find(s => {
@@ -789,6 +802,9 @@ router.post('/check-out', authenticateToken, (req, res) => {
       if (status === 'Early Leave') {
         status = (record.late_minutes && record.late_minutes > 0) ? 'Late' : 'On Time';
       }
+      if (!record.late_minutes || record.late_minutes === 0) {
+        deduction = 0;
+      }
     }
 
     // Update attendance record
@@ -856,8 +872,8 @@ router.get('/my-today', authenticateToken, (req, res) => {
       SELECT * FROM attendance_records WHERE employee_id = ? AND date = ?
     `).get(req.user.id, today);
 
-    // Get employee's manager
-    const empUser = db.prepare('SELECT manager_id, schedule_id FROM users WHERE id = ?').get(req.user.id);
+    // Get employee's manager and assigned shift
+    const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id FROM users WHERE id = ?').get(req.user.id);
     const managerId = empUser ? (empUser.manager_id || 1) : 1;
 
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
@@ -889,6 +905,9 @@ router.get('/my-today', authenticateToken, (req, res) => {
         let matchedShift = null;
         if (record.shift_id) {
           matchedShift = shifts.find(s => s.id === record.shift_id);
+        }
+        if (!matchedShift && empUser && empUser.shift_id) {
+          matchedShift = shifts.find(s => s.id === empUser.shift_id);
         }
         if (!matchedShift) {
           matchedShift = shifts.find(s => Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(req.user.id));
@@ -973,6 +992,7 @@ router.get('/my-today', authenticateToken, (req, res) => {
       notConfigured: !isFullyConfigured,
       schedule_mode: scheduleMode,
       shifts: shifts,
+      assigned_shift_id: empUser ? empUser.shift_id : null,
       is_off_day: isOffDay,
       off_day_reason: offDayReason,
       workplace: workplace ? {
@@ -1110,6 +1130,8 @@ router.get('/history', authenticateToken, (req, res) => {
     const isManager = req.user.role === 'manager';
     const { date_from, date_to, employee_id, department_id, status, verification_status, search } = req.query;
 
+    syncAbsencesForDateRange(date_from, date_to, isManager ? req.user.id : null);
+
     let query = `
       SELECT
         ar.*,
@@ -1122,13 +1144,17 @@ router.get('/history', authenticateToken, (req, res) => {
     `;
     const params = [];
 
-    // Security: Employee can ONLY view their own records
+    // Security: Employee can ONLY view their own records, Manager views their company's records
     if (!isManager) {
       query += ` AND ar.employee_id = ? `;
       params.push(req.user.id);
-    } else if (employee_id) {
-      query += ` AND ar.employee_id = ? `;
-      params.push(employee_id);
+    } else {
+      query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      params.push(req.user.id, req.user.id);
+      if (employee_id) {
+        query += ` AND ar.employee_id = ? `;
+        params.push(employee_id);
+      }
     }
 
     if (date_from) {

@@ -523,7 +523,7 @@ function syncTodayAttendanceWithShifts(managerId) {
     if (!activeShifts || activeShifts.length === 0) return;
 
     const records = db.prepare(`
-      SELECT ar.*, u.id as emp_id
+      SELECT ar.*, u.id as emp_id, u.shift_id as emp_shift_id
       FROM attendance_records ar
       JOIN users u ON ar.employee_id = u.id
       WHERE ar.date = ? AND (u.manager_id = ? OR (? = 1 AND u.manager_id IS NULL))
@@ -545,6 +545,9 @@ function syncTodayAttendanceWithShifts(managerId) {
       let matched = null;
       if (rec.shift_id) {
         matched = activeShifts.find(s => s.id === rec.shift_id);
+      }
+      if (!matched && rec.emp_shift_id) {
+        matched = activeShifts.find(s => s.id === rec.emp_shift_id);
       }
       if (!matched) {
         matched = activeShifts.find(s => {

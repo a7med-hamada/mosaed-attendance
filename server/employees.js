@@ -17,14 +17,16 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
     let query = `
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
-        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.is_active,
+        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
         u.profile_photo, u.created_at,
         d.name as department_name,
         s.name as schedule_name, s.start_time, s.end_time,
+        cs.name as shift_name,
         ar.status as today_status, ar.check_in_time as today_check_in, ar.check_out_time as today_check_out
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN schedules s ON u.schedule_id = s.id
+      LEFT JOIN company_shifts cs ON u.shift_id = cs.id
       LEFT JOIN attendance_records ar ON (u.id = ar.employee_id AND ar.date = ?)
       WHERE u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
       AND u.full_name NOT LIKE '%طارق النجار%'
@@ -66,13 +68,15 @@ router.get('/:id', authenticateToken, (req, res) => {
     const emp = db.prepare(`
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
-        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.is_active,
+        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
         u.profile_photo, u.created_at,
         d.name as department_name,
-        s.name as schedule_name, s.start_time, s.end_time, s.grace_period_minutes, s.half_day_threshold
+        s.name as schedule_name, s.start_time, s.end_time, s.grace_period_minutes, s.half_day_threshold,
+        cs.name as shift_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN schedules s ON u.schedule_id = s.id
+      LEFT JOIN company_shifts cs ON u.shift_id = cs.id
       WHERE u.id = ?
     `).get(targetId);
 
@@ -275,7 +279,7 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     const managerId = req.user.id;
     let {
       employee_code, full_name, email, password, confirm_password, department_id,
-      job_title, phone, hire_date, base_salary, schedule_id, is_active, profile_photo
+      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo
     } = req.body;
 
     if (!full_name || !email || !password) {
@@ -337,13 +341,14 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     }
 
     const activeStatus = is_active !== undefined ? parseInt(is_active, 10) : 1;
+    const parsedShiftId = shift_id ? parseInt(shift_id, 10) : null;
 
     const stmt = db.prepare(`
       INSERT INTO users (
         employee_code, full_name, email, password_hash, role, manager_id,
         department_id, job_title, phone, hire_date, base_salary,
-        schedule_id, is_active, profile_photo
-      ) VALUES (?, ?, ?, ?, 'employee', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        schedule_id, shift_id, is_active, profile_photo
+      ) VALUES (?, ?, ?, ?, 'employee', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -358,6 +363,7 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
       hire_date || getTodayString(),
       base_salary ? parseFloat(base_salary) : 5000,
       schedule_id || null,
+      parsedShiftId,
       activeStatus,
       photoPath
     );
@@ -404,7 +410,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const {
       full_name, email, password, confirm_password, department_id,
-      job_title, phone, hire_date, base_salary, schedule_id, is_active, profile_photo
+      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo
     } = req.body;
 
     if (email && email.trim().toLowerCase() !== oldEmp.email.toLowerCase()) {
@@ -449,11 +455,13 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       photoPath = profile_photo;
     }
 
+    const updatedShiftId = shift_id !== undefined ? (shift_id ? parseInt(shift_id, 10) : null) : oldEmp.shift_id;
+
     db.prepare(`
       UPDATE users SET
         full_name = ?, email = ?, password_hash = ?, department_id = ?,
         job_title = ?, phone = ?, hire_date = ?, base_salary = ?,
-        schedule_id = ?, is_active = ?, profile_photo = ?
+        schedule_id = ?, shift_id = ?, is_active = ?, profile_photo = ?
       WHERE id = ?
     `).run(
       full_name !== undefined && full_name.trim().length > 0 ? full_name.trim() : oldEmp.full_name,
@@ -465,6 +473,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       hire_date !== undefined ? hire_date : oldEmp.hire_date,
       base_salary !== undefined ? parseFloat(base_salary) : oldEmp.base_salary,
       schedule_id !== undefined ? (schedule_id ? parseInt(schedule_id, 10) : null) : oldEmp.schedule_id,
+      updatedShiftId,
       is_active !== undefined ? parseInt(is_active, 10) : oldEmp.is_active,
       photoPath,
       targetId

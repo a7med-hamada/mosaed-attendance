@@ -7,7 +7,7 @@
 
   <!-- PWA & Mobile Web App Meta Tags -->
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#080f20" />
+  <meta name="theme-color" content="#091925" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -30,49 +30,82 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Cairo', 'sans-serif'],
+            sans: ['Cairo', 'system-ui', 'sans-serif'],
           },
           colors: {
             brand: {
-              50: '#ecfdf5',
-              100: '#d1fae5',
-              200: '#a7f3d0',
-              300: '#6ee7b7',
-              400: '#34d399',
-              500: '#10b981',
-              600: '#00c288',
-              700: '#047857',
-              800: '#065f46',
-              900: '#064e3b',
-              950: '#022c22',
+              50: '#effbf5',
+              100: '#d4f6e6',
+              200: '#abecd0',
+              300: '#6edeac',
+              400: '#32c98b',
+              500: '#12b878',
+              600: '#00a866',
+              700: '#008d57',
+              800: '#046c43',
+              900: '#055938',
+              950: '#01321e',
+            },
+            navy: {
+              50: '#f0f5fa',
+              100: '#dce8f4',
+              200: '#b8d2e8',
+              300: '#83b3d8',
+              400: '#488ec3',
+              500: '#2371ab',
+              600: '#15588d',
+              700: '#0f4874',
+              800: '#0a4d82',
+              850: '#084577',
+              900: '#063c69',
+              950: '#032d4f',
+            },
+            emerald: {
+              50: '#effbf5',
+              100: '#d4f6e6',
+              200: '#abecd0',
+              300: '#6edeac',
+              400: '#32c98b',
+              500: '#12b878',
+              600: '#00a866',
+              700: '#008d57',
+              800: '#046c43',
+              900: '#055938',
+              950: '#01321e',
             },
             blue: {
-              50: '#ecfdf5',
-              100: '#d1fae5',
-              200: '#a7f3d0',
-              300: '#6ee7b7',
-              400: '#34d399',
-              500: '#10b981',
-              600: '#00c288',
-              700: '#047857',
-              800: '#065f46',
-              900: '#064e3b',
-              950: '#022c22',
+              50: '#effbf5',
+              100: '#d4f6e6',
+              200: '#abecd0',
+              300: '#6edeac',
+              400: '#32c98b',
+              500: '#12b878',
+              600: '#00a866',
+              700: '#008d57',
+              800: '#063c69',
+              900: '#032d4f',
+              950: '#01321e',
             },
             slate: {
-              50: '#f8fafc',
-              100: '#f1f5f9',
-              200: '#e2e8f0',
-              300: '#cbd5e1',
-              400: '#94a3b8',
-              500: '#64748b',
-              600: '#475569',
-              700: '#334155',
-              800: '#0d2238',
-              850: '#091b2c',
-              900: '#0a1827',
-              950: '#060e18',
+              50: '#f5f8fb',   /* Qasetly Light Background */
+              100: '#eff4f9',  /* Qasetly Soft Surface */
+              200: '#dce5ee',  /* Qasetly Light Border */
+              300: '#c5d5e4',
+              400: '#8fa4bb',
+              500: '#607086',  /* Qasetly Muted Text */
+              600: '#45586f',
+              700: '#273d54',
+              800: '#132838',  /* Qasetly Dark Sub-surface */
+              850: '#10212f',
+              900: '#0d1e2c',  /* Qasetly Dark Card Surface */
+              950: '#091925',  /* Qasetly Deep Navy Dark Base */
             }
+          },
+          boxShadow: {
+            'qasetly': '0 20px 50px rgba(3, 45, 79, 0.08)',
+            'qasetly-hover': '0 24px 60px rgba(3, 45, 79, 0.12)',
+            'emerald-glow': '0 10px 25px -4px rgba(0, 168, 102, 0.35)',
+            'navy-glow': '0 10px 25px -4px rgba(3, 45, 79, 0.3)',
           }
         }
       }
@@ -94,7 +127,7 @@
   <!-- ========================================== -->
   <!-- App Native Splash / Loading Screen -->
   <!-- ========================================== -->
-  <div id="app-splash-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#080f20] transition-opacity duration-300 pointer-events-auto">
+  <div id="app-splash-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#091925] transition-opacity duration-300 pointer-events-auto">
     <div class="flex flex-col items-center gap-4 text-center select-none">
       <img src="/icons/icon-192.png" alt="وقتي - WAQTY" class="w-24 h-24 rounded-3xl object-contain drop-shadow-2xl shadow-emerald-500/25 animate-pulse" />
       <div class="flex items-center justify-center gap-2 mt-1">
@@ -114,22 +147,22 @@
   <!-- ========================================== -->
   <div id="login-view" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-slate-950">
     <!-- Background glowing accents -->
-    <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-emerald-600/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-navy-800/20 dark:bg-navy-950/40 blur-3xl pointer-events-none"></div>
 
-    <div class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200/80 dark:border-slate-800 relative z-10 modal-enter">
+    <div class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-slate-200/80 dark:border-slate-800 relative z-10 modal-enter">
       <!-- Brand & Header -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge-emerald-pill text-xs font-bold mb-4 shadow-sm">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full hero-badge-chip text-xs font-bold mb-4">
+          <span class="hero-badge-pulse"></span>
           <span>نظام حضور ذكي • أمان وموقع جغرافي</span>
         </div>
         <div class="mb-5 flex justify-center">
-          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-24 sm:h-28 w-auto max-w-[280px] object-contain drop-shadow-lg" />
+          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-24 sm:h-28 w-auto max-w-[280px] object-contain drop-shadow-md" />
         </div>
 
         <!-- Install PWA Button -->
-        <button type="button" onclick="installPwa()" class="pwa-install-btn hidden w-full mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold transition-all shadow-sm">
+        <button type="button" onclick="installPwa()" class="pwa-install-btn hidden w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold transition-all shadow-sm">
           <i data-lucide="download" class="w-4 h-4"></i>
           <span>تثبيت التطبيق على جهازك (Install)</span>
         </button>
@@ -146,7 +179,7 @@
               <i data-lucide="user" class="w-4 h-4"></i>
             </span>
             <input type="text" id="login-identifier" required placeholder="admin@workforce.local"
-              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-slate-900 dark:text-white" />
           </div>
         </div>
 
@@ -159,30 +192,30 @@
               <i data-lucide="lock" class="w-4 h-4"></i>
             </span>
             <input type="password" id="login-password" required placeholder="••••••••"
-              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+              class="w-full pr-10 pl-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-slate-900 dark:text-white" />
           </div>
         </div>
 
         <button type="submit" id="login-submit-btn"
-          class="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all transform active:scale-98 flex items-center justify-center gap-2 mt-2">
+          class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all transform active:scale-98 flex items-center justify-center gap-2 mt-2">
           <span data-i18n="login_button">تسجيل الدخول</span>
           <i data-lucide="arrow-left" class="w-4 h-4"></i>
         </button>
 
         <div class="pt-2 text-center">
-          <button type="button" onclick="App.openRegisterManagerModal()" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5">
+          <button type="button" onclick="App.openRegisterManagerModal()" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1.5">
             <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
             <span>حساب مدير جديد؟ ابدأ منظومة عملك الآن</span>
           </button>
         </div>
 
         <div class="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          <button type="button" onclick="App.openSupportModal()" class="hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-1.5 transition-colors">
+          <button type="button" onclick="App.openSupportModal()" class="hover:text-emerald-600 dark:hover:text-emerald-400 inline-flex items-center gap-1.5 transition-colors">
             <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
             <span>الدعم الفني</span>
           </button>
           <span>•</span>
-          <button type="button" onclick="App.openPackagesModal()" class="hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-1.5 transition-colors">
+          <button type="button" onclick="App.openPackagesModal()" class="hover:text-emerald-600 dark:hover:text-emerald-400 inline-flex items-center gap-1.5 transition-colors">
             <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
             <span>باقات الاشتراك</span>
           </button>
@@ -196,7 +229,7 @@
   <!-- ========================================== -->
   <div id="app-view" class="min-h-screen flex flex-col hidden">
     <!-- Top Global Header -->
-    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+    <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30 transition-colors">
       <div class="w-full max-w-[96%] xl:max-w-[85%] 2xl:max-w-[80%] mx-auto px-3 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-2">
         <!-- Logo -->
         <div class="flex items-center min-w-0 py-1">
@@ -207,7 +240,7 @@
         <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           <!-- Support Button -->
           <button onclick="App.openSupportModal()"
-            class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-bold"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-bold border border-slate-200/50 dark:border-slate-700/50"
             title="الدعم الفني والمساعدة">
             <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
             <span class="hidden md:inline">الدعم الفني</span>
@@ -215,21 +248,15 @@
 
           <!-- Packages Button (Shown for manager) -->
           <button id="header-packages-btn" onclick="App.openPackagesModal()"
-            class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-bold hidden"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-bold hidden"
             title="باقات الاشتراك والترقية">
             <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
             <span class="hidden md:inline">الباقات</span>
           </button>
 
-          <!-- Language Toggle Button -->
-          <button id="lang-toggle-btn" onclick="App.toggleLanguage()"
-            class="px-2 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors whitespace-nowrap">
-            EN
-          </button>
-
           <!-- Theme Toggle Button -->
           <button onclick="App.toggleTheme()"
-            class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors border border-slate-200/50 dark:border-slate-700/50"
             title="تبديل الوضع الليلي">
             <i id="theme-toggle-icon" data-lucide="moon" class="w-4 h-4"></i>
           </button>
@@ -237,20 +264,20 @@
           <!-- Notifications Bell -->
           <div class="relative">
             <button onclick="App.toggleNotificationsDropdown()"
-              class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 relative transition-colors" title="الإشعارات">
+              class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 relative transition-colors border border-slate-200/50 dark:border-slate-700/50" title="الإشعارات">
               <i data-lucide="bell" class="w-4 h-4"></i>
               <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center hidden">0</span>
             </button>
           </div>
 
           <!-- User Card -->
-          <div onclick="App.openProfile()" class="flex items-center gap-1.5 sm:gap-3 pr-1.5 sm:pr-3 border-r border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" title="الملف الشخصي">
-            <img id="header-user-avatar" src="/uploads/avatar.svg" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+          <div onclick="App.openProfile()" class="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-3 pl-1.5 py-1 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 cursor-pointer hover:border-emerald-500/40 transition-all shadow-xs" title="الملف الشخصي">
+            <img id="header-user-avatar" src="/uploads/avatar.svg" class="w-8 h-8 rounded-xl object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0 ring-1 ring-emerald-500/30" />
             <div class="hidden sm:block text-right">
-              <span id="header-user-name" class="font-bold text-xs text-slate-900 dark:text-white block leading-tight truncate max-w-[100px]">مستخدم</span>
-              <span id="header-user-role" class="text-[10px] text-slate-500 font-medium">موظف</span>
+              <span id="header-user-name" class="font-bold text-xs text-slate-900 dark:text-white block leading-tight truncate max-w-[110px]">مستخدم</span>
+              <span id="header-user-role" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">موظف</span>
             </div>
-            <button onclick="event.stopPropagation(); App.logout()" class="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="تسجيل الخروج">
+            <button onclick="event.stopPropagation(); App.logout()" class="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors mr-1" title="تسجيل الخروج">
               <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
           </div>

@@ -243,12 +243,21 @@ const App = {
       roleEl.textContent = user.role === 'manager' ? 'المدير العام (Manager)' : (user.job_title || 'موظف');
     }
 
-    // Update Header packages button for managers
+    // Update Header packages button for managers (hidden for companies with open/lifetime package)
     const pkgBtn = document.getElementById('header-packages-btn');
     if (pkgBtn) {
-      if (user.role === 'manager') {
+      const sub = user.subscription || {};
+      const isLifetime = !!(
+        sub.isLifetime ||
+        sub.plan === 'lifetime' ||
+        sub.plan === 'open' ||
+        user.subscription_plan === 'lifetime' ||
+        user.subscription_plan === 'open'
+      );
+
+      if (user.role === 'manager' && !isLifetime) {
         pkgBtn.classList.remove('hidden');
-        const remaining = (user.subscription && (user.subscription.remainingDays !== undefined ? user.subscription.remainingDays : user.subscription.daysRemaining)) ?? 0;
+        const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0))) ?? 0;
         pkgBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> <span class="hidden md:inline">الباقات (${remaining} يوم)</span>`;
       } else {
         pkgBtn.classList.add('hidden');

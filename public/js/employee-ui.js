@@ -102,6 +102,7 @@ const EmployeeUI = {
       this.notConfigured = res.notConfigured;
       this.scheduleMode = res.schedule_mode || 'normal';
       this.shifts = res.shifts || [];
+      this.assignedShiftId = res.assigned_shift_id || null;
       this.isOffDay = !!res.is_off_day;
       this.offDayReason = res.off_day_reason || null;
       if (this.activeTab === 'attendance') {
@@ -641,7 +642,9 @@ const EmployeeUI = {
 
     // 1. Check if employee is pre-assigned to a specific shift
     const assigned = shifts.find(s =>
-      Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(user.id)
+      (this.assignedShiftId && s.id === this.assignedShiftId) ||
+      (user.shift_id && s.id === user.shift_id) ||
+      (Array.isArray(s.assigned_employee_ids) && s.assigned_employee_ids.includes(user.id))
     );
 
     if (assigned) {

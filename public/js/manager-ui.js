@@ -620,7 +620,13 @@ const ManagerUI = {
                   <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.email}</td>
                   <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono">${e.phone || '—'}</td>
                   <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.department_name || 'عام'}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.job_title || 'موظف'}</td>
+                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    <span class="block font-medium text-slate-800 dark:text-slate-200">${e.job_title || 'موظف'}</span>
+                    <span class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
+                      <i data-lucide="layers" class="w-3 h-3"></i>
+                      <span>${e.shift_name ? e.shift_name : 'مرن (جميع الورديات)'}</span>
+                    </span>
+                  </td>
                   <td class="py-3.5 px-4 text-center whitespace-nowrap">
                     <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20 whitespace-nowrap shadow-2xs">
                       ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
@@ -666,9 +672,19 @@ const ManagerUI = {
     const modal = document.getElementById('employee-crud-modal');
     if (!modal) return;
 
+    let shifts = [];
+    try {
+      if (Array.isArray(this.shiftsData) && this.shiftsData.length > 0) {
+        shifts = this.shiftsData;
+      } else {
+        const sRes = await API.getShifts();
+        shifts = sRes.shifts || [];
+      }
+    } catch (_) {}
+
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
               <i data-lucide="user-plus" class="w-5 h-5 text-blue-600"></i> إضافة موظف جديد
@@ -720,6 +736,21 @@ const ManagerUI = {
               </div>
             </div>
 
+            <!-- Assigned Shift / Working Period -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                <span>فترة / وردية العمل المخصصة</span>
+                <span class="text-[10px] text-purple-600 dark:text-purple-400 font-normal mr-1">(اختياري - متاح تعيين عدة موظفين لنفس الوردية)</span>
+              </label>
+              <select name="shift_id" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                <option value="">-- مرن / جميع الورديات (تناوب حر) --</option>
+                ${shifts.map(s => `
+                  <option value="${s.id}">${s.name} (${formatTime12(s.start_time)} - ${formatTime12(s.end_time)})</option>
+                `).join('')}
+              </select>
+              <span class="text-[10px] text-slate-400 mt-0.5 block">إذا تم تحديد وردية، سيلتزم الموظف بمواعيدها تلقائياً. إذا تُرك مرن، يمكنه الحضور في أي وردية.</span>
+            </div>
+
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">حالة الحساب</label>
               <select name="is_active" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">
@@ -759,6 +790,7 @@ const ManagerUI = {
       phone: form.phone.value.trim() || null,
       job_title: form.job_title.value.trim() || null,
       base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
+      shift_id: form.shift_id && form.shift_id.value ? parseInt(form.shift_id.value, 10) : null,
       is_active: parseInt(form.is_active.value, 10)
     };
 
@@ -874,6 +906,16 @@ const ManagerUI = {
       departments = dRes.departments || [];
     } catch (_) {}
 
+    let shifts = [];
+    try {
+      if (Array.isArray(this.shiftsData) && this.shiftsData.length > 0) {
+        shifts = this.shiftsData;
+      } else {
+        const sRes = await API.getShifts();
+        shifts = sRes.shifts || [];
+      }
+    } catch (_) {}
+
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter max-h-[90vh] overflow-y-auto">
@@ -969,6 +1011,23 @@ const ManagerUI = {
               </div>
             </div>
 
+            <!-- Assigned Shift / Working Period -->
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                <span>فترة / وردية العمل المخصصة</span>
+                <span class="text-[10px] text-purple-600 dark:text-purple-400 font-normal mr-1">(اختياري - متاح تعيين عدة موظفين لنفس الوردية)</span>
+              </label>
+              <select name="shift_id" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                <option value="">-- مرن / جميع الورديات (تناوب حر) --</option>
+                ${shifts.map(s => `
+                  <option value="${s.id}" ${String(emp.shift_id) === String(s.id) ? 'selected' : ''}>
+                    ${s.name} (${formatTime12(s.start_time)} - ${formatTime12(s.end_time)})
+                  </option>
+                `).join('')}
+              </select>
+              <span class="text-[10px] text-slate-400 mt-0.5 block">الوردية المحددة لهذا الموظف (يمكن تعيين أكثر من شخص لنفس الوردية)</span>
+            </div>
+
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">حالة الحساب</label>
               <select name="is_active" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">
@@ -1014,6 +1073,7 @@ const ManagerUI = {
       phone: form.phone.value.trim() || null,
       department_id: form.department_id.value ? parseInt(form.department_id.value, 10) : null,
       base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
+      shift_id: form.shift_id && form.shift_id.value ? parseInt(form.shift_id.value, 10) : null,
       is_active: parseInt(form.is_active.value, 10)
     };
 
@@ -2091,23 +2151,6 @@ const ManagerUI = {
                 onchange="ManagerUI.updateShiftField(${idx}, 'early_checkin_minutes', this.value)"
                 class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs text-slate-800 dark:text-white" />
               <span class="text-[10px] text-slate-400 mt-0.5 block">إتاحة تسجيل الحضور قبل بداية الوردية (مثال: 60 دقيقة = ساعة)</span>
-            </div>
-
-            <!-- Optional Assigned Employee -->
-            <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">
-                <span>الموظف المخصص للفترة</span>
-                <span class="text-[10px] text-purple-500 font-normal mr-1">(اختياري - متاح للجميع إذا تُرك فارغاً)</span>
-              </label>
-              <select onchange="ManagerUI.updateShiftAssignedEmployee(${idx}, this.value)"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white">
-                <option value="">-- متاح للجميع / تناوب وتبديل حر --</option>
-                ${employees.map(e => `
-                  <option value="${e.id}" ${String(assignedEmpId) === String(e.id) ? 'selected' : ''}>
-                    ${e.full_name} (${e.employee_code})
-                  </option>
-                `).join('')}
-              </select>
             </div>
           </div>
         </div>

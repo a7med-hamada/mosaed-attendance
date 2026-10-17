@@ -295,6 +295,11 @@ try {
     db.exec(`UPDATE users SET subscription_expires_at = '${defaultExp}' WHERE role = 'manager' AND (subscription_expires_at IS NULL OR subscription_expires_at = '');`);
   }
 
+  if (!userCols.includes('shift_id')) {
+    db.exec(`ALTER TABLE users ADD COLUMN shift_id INTEGER DEFAULT NULL;`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_shift ON users(shift_id);`);
+
   // Support Tickets table for technical support from website to super admin
   db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (

@@ -60,6 +60,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent stale caching of HTML and Service Worker
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path.endsWith('.html') || req.path === '/sw.js') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 // Serve static assets
 app.use(express.static(publicDir));
 app.use('/uploads', express.static(path.join(publicDir, 'uploads')));

@@ -1254,7 +1254,7 @@ function evaluateAttendanceStatusAndDeduction(checkInTime, schedStartTime, grace
 router.put('/:id', authenticateToken, requireManager, (req, res) => {
   try {
     const recordId = req.params.id;
-    const { check_in_time, check_out_time, notes, reason, waive_deductions } = req.body;
+    const { check_in_time, check_out_time, notes, reason, waive_deductions, shift_id } = req.body;
 
     const oldRecord = db.prepare(`SELECT * FROM attendance_records WHERE id = ?`).get(recordId);
     if (!oldRecord) {
@@ -1263,51 +1263,97 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const cleanReason = (reason && reason.trim()) || 'تعديل موعد الحضور بناء على مراجعة الإدارة';
 
-    // Get schedule grace period for employee
-    const empUser = db.prepare(`
-      SELECT u.id, COALESCE(s.start_time, '09:00') as start_time, COALESCE(s.grace_period_minutes, 15) as grace_period_minutes
-      FROM users u
-      LEFT JOIN schedules s ON u.schedule_id = s.id
-      WHERE u.id = ?
-    `).get(oldRecord.employee_id);
+    // 1. Shift handling
+    let newShiftId = oldRecord.shift_id;
+    let newShiftName = oldRecord.shift_name;
+    let schedStart = oldRecord.scheduled_start || '09:00';
+    let schedEnd = oldRecord.scheduled_end || '17:00';
+    let graceMins = 15;
 
-    const schedStart = empUser ? empUser.start_time : (oldRecord.scheduled_start || '09:00');
-    const graceMins = empUser ? empUser.grace_period_minutes : 15;
+    if (shift_id !== undefined && shift_id !== null && shift_id !== '') {
+      const chosenShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(parseInt(shift_id, 10));
+      if (chosenShift) {
+        newShiftId = chosenShift.id;
+        newShiftName = chosenShift.name;
+        schedStart = chosenShift.start_time;
+        schedEnd = chosenShift.end_time;
+        if (chosenShift.grace_period_minutes !== undefined) graceMins = chosenShift.grace_period_minutes;
+      }
+    } else if (shift_id === '' || shift_id === null) {
+      newShiftId = null;
+      newShiftName = null;
+    } else if (oldRecord.shift_id) {
+      const currentShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(oldRecord.shift_id);
+      if (currentShift) {
+        schedStart = currentShift.start_time;
+        schedEnd = currentShift.end_time;
+        if (currentShift.grace_period_minutes !== undefined) graceMins = currentShift.grace_period_minutes;
+      }
+    } else {
+      // Get schedule grace period for employee
+      const empUser = db.prepare(`
+        SELECT u.id, COALESCE(s.start_time, '09:00') as start_time, COALESCE(s.grace_period_minutes, 15) as grace_period_minutes
+        FROM users u
+        LEFT JOIN schedules s ON u.schedule_id = s.id
+        WHERE u.id = ?
+      `).get(oldRecord.employee_id);
+
+      if (empUser) {
+        schedStart = empUser.start_time;
+        graceMins = empUser.grace_period_minutes;
+      }
+    }
+
+    // Determine final check-out time: if passed as null or empty string, clear it!
+    let finalCheckOut = oldRecord.check_out_time;
+    if (check_out_time !== undefined) {
+      finalCheckOut = (check_out_time && String(check_out_time).trim()) ? String(check_out_time).trim() : null;
+    }
+
+    const finalCheckIn = check_in_time !== undefined ? (check_in_time && String(check_in_time).trim() ? String(check_in_time).trim() : null) : oldRecord.check_in_time;
 
     // Recompute worked hours if both times exist
-    let workedHours = oldRecord.worked_hours;
-    if (check_in_time && check_out_time) {
-      const inM = timeToMinutes(check_in_time);
-      const outM = timeToMinutes(check_out_time);
+    let workedHours = 0;
+    if (finalCheckIn && finalCheckOut) {
+      const inM = timeToMinutes(finalCheckIn);
+      const outM = timeToMinutes(finalCheckOut);
       workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
-    } else if (check_in_time) {
-      workedHours = 8.0;
     }
 
     // Determine status & deductions automatically
-    const evalResult = evaluateAttendanceStatusAndDeduction(check_in_time, schedStart, graceMins, waive_deductions);
+    const evalResult = evaluateAttendanceStatusAndDeduction(finalCheckIn, schedStart, graceMins, waive_deductions);
+
+    const verificationStatus = finalCheckOut ? 'manual_override' : 'verified';
 
     const newValues = {
-      check_in_time: check_in_time !== undefined ? check_in_time : oldRecord.check_in_time,
-      check_out_time: check_out_time !== undefined ? check_out_time : oldRecord.check_out_time,
+      check_in_time: finalCheckIn,
+      check_out_time: finalCheckOut,
       status: evalResult.status,
       worked_hours: workedHours,
       late_minutes: evalResult.lateMinutes,
       estimated_deduction: evalResult.deduction,
       notes: notes !== undefined ? notes : oldRecord.notes,
-      verification_status: 'manual_override'
+      verification_status: verificationStatus,
+      shift_id: newShiftId,
+      shift_name: newShiftName,
+      scheduled_start: schedStart,
+      scheduled_end: schedEnd
     };
 
     db.prepare(`
       UPDATE attendance_records SET
         check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
         late_minutes = ?, estimated_deduction = ?,
-        notes = ?, verification_status = ?, updated_at = CURRENT_TIMESTAMP
+        notes = ?, verification_status = ?,
+        shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
       newValues.check_in_time, newValues.check_out_time, newValues.status,
       newValues.worked_hours, newValues.late_minutes, newValues.estimated_deduction,
-      newValues.notes, newValues.verification_status, recordId
+      newValues.notes, newValues.verification_status,
+      newValues.shift_id, newValues.shift_name, newValues.scheduled_start, newValues.scheduled_end,
+      recordId
     );
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -1331,7 +1377,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       'info'
     );
 
-    res.json({ success: true, message: 'تم تحديث سجل الحضور بنجاح واحتساب الحالة تلقائياً' });
+    res.json({ success: true, message: 'تم تحديث سجل الحضور والوردية بنجاح واحتساب الحالة تلقائياً' });
   } catch (error) {
     console.error('Manual edit error:', error);
     res.status(500).json({ success: false, error: 'فشل في تعديل سجل الحضور' });
@@ -1343,7 +1389,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 // ==========================================
 router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
   try {
-    const { employee_id, date, check_in_time, check_out_time, reason, waive_deductions } = req.body;
+    const { employee_id, date, check_in_time, check_out_time, reason, waive_deductions, shift_id } = req.body;
 
     if (!employee_id || !date) {
       return res.status(400).json({ success: false, error: 'يرجى اختيار الموظف والتاريخ' });
@@ -1352,7 +1398,7 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
     const cleanReason = (reason && reason.trim()) || 'توثيق حضور إداري';
 
     const emp = db.prepare(`
-      SELECT u.id, u.full_name, u.schedule_id,
+      SELECT u.id, u.full_name, u.schedule_id, u.shift_id as emp_shift_id,
              COALESCE(s.start_time, '09:00') as start_time,
              COALESCE(s.end_time, '17:00') as end_time,
              COALESCE(s.grace_period_minutes, 15) as grace_period_minutes
@@ -1365,18 +1411,34 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
 
+    let targetShiftId = shift_id !== undefined ? (shift_id ? parseInt(shift_id, 10) : null) : (emp.emp_shift_id || null);
+    let targetShiftName = null;
+    let schedStart = emp.start_time;
+    let schedEnd = emp.end_time;
+    let graceMins = emp.grace_period_minutes;
+
+    if (targetShiftId) {
+      const chosenShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(targetShiftId);
+      if (chosenShift) {
+        targetShiftName = chosenShift.name;
+        schedStart = chosenShift.start_time;
+        schedEnd = chosenShift.end_time;
+        if (chosenShift.grace_period_minutes !== undefined) graceMins = chosenShift.grace_period_minutes;
+      }
+    }
+
     // Compute worked hours
     let workedHours = 0;
     if (check_in_time && check_out_time) {
       const inM = timeToMinutes(check_in_time);
       const outM = timeToMinutes(check_out_time);
       workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
-    } else if (check_in_time) {
-      workedHours = 8.0;
+    } else if (check_in_time && !check_out_time) {
+      workedHours = 0;
     }
 
     // Automatically determine status & late minutes & deduction
-    const evalResult = evaluateAttendanceStatusAndDeduction(check_in_time, emp.start_time, emp.grace_period_minutes, waive_deductions);
+    const evalResult = evaluateAttendanceStatusAndDeduction(check_in_time, schedStart, graceMins, waive_deductions);
 
     // Check if record exists for this date and employee
     const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(employee_id, date);
@@ -1387,23 +1449,26 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
       db.prepare(`
         UPDATE attendance_records SET
           check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
-          late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
-          notes = ?, updated_at = CURRENT_TIMESTAMP
+          late_minutes = ?, estimated_deduction = ?, verification_status = ?,
+          notes = ?, shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
+          updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
         check_in_time || null, check_out_time || null, evalResult.status, workedHours,
-        evalResult.lateMinutes, evalResult.deduction, cleanReason, recordId
+        evalResult.lateMinutes, evalResult.deduction, check_out_time ? 'manual_admin' : 'verified',
+        cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, recordId
       );
     } else {
       const info = db.prepare(`
         INSERT INTO attendance_records (
           employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
           status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
-          verification_status, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
+          verification_status, notes, shift_id, shift_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
       `).run(
-        employee_id, date, check_in_time || null, check_out_time || null, emp.start_time, emp.end_time,
-        evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction, cleanReason
+        employee_id, date, check_in_time || null, check_out_time || null, schedStart, schedEnd,
+        evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
+        check_out_time ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
       );
       recordId = info.lastInsertRowid;
     }
@@ -1681,9 +1746,10 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
       const outTime = item.check_out_time || null;
       const cleanReason = (item.reason && item.reason.trim()) || 'توثيق حضور إداري';
       const waive = !!item.waive_deductions;
+      const shiftId = item.shift_id ? parseInt(item.shift_id, 10) : null;
 
       const emp = db.prepare(`
-        SELECT u.id, u.full_name, u.schedule_id,
+        SELECT u.id, u.full_name, u.schedule_id, u.shift_id as emp_shift_id,
                COALESCE(s.start_time, '09:00') as start_time,
                COALESCE(s.end_time, '17:00') as end_time,
                COALESCE(s.grace_period_minutes, 15) as grace_period_minutes
@@ -1694,18 +1760,34 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
 
       if (!emp) continue;
 
+      let targetShiftId = shiftId !== null ? shiftId : (emp.emp_shift_id || null);
+      let targetShiftName = null;
+      let schedStart = emp.start_time;
+      let schedEnd = emp.end_time;
+      let graceMins = emp.grace_period_minutes;
+
+      if (targetShiftId) {
+        const chosenShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(targetShiftId);
+        if (chosenShift) {
+          targetShiftName = chosenShift.name;
+          schedStart = chosenShift.start_time;
+          schedEnd = chosenShift.end_time;
+          if (chosenShift.grace_period_minutes !== undefined) graceMins = chosenShift.grace_period_minutes;
+        }
+      }
+
       // Calculate worked hours
       let workedHours = 0;
       if (inTime && outTime) {
         const inM = timeToMinutes(inTime);
         const outM = timeToMinutes(outTime);
         workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
-      } else if (inTime) {
-        workedHours = 8.0;
+      } else if (inTime && !outTime) {
+        workedHours = 0;
       }
 
       // Automatically determine status & late minutes & deduction
-      const evalResult = evaluateAttendanceStatusAndDeduction(inTime, emp.start_time, emp.grace_period_minutes, waive);
+      const evalResult = evaluateAttendanceStatusAndDeduction(inTime, schedStart, graceMins, waive);
 
       // Upsert record
       const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(empId, date);
@@ -1714,20 +1796,26 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
         db.prepare(`
           UPDATE attendance_records SET
             check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
-            late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
-            notes = ?, updated_at = CURRENT_TIMESTAMP
+            late_minutes = ?, estimated_deduction = ?, verification_status = ?,
+            notes = ?, shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
+            updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(inTime, outTime, evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction, cleanReason, existing.id);
+        `).run(
+          inTime, outTime, evalResult.status, workedHours,
+          evalResult.lateMinutes, evalResult.deduction, outTime ? 'manual_admin' : 'verified',
+          cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, existing.id
+        );
       } else {
         db.prepare(`
           INSERT INTO attendance_records (
             employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
             status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
-            verification_status, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
+            verification_status, notes, shift_id, shift_name
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
         `).run(
-          empId, date, inTime, outTime, emp.start_time, emp.end_time,
-          evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction, cleanReason
+          empId, date, inTime, outTime, schedStart, schedEnd,
+          evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
+          outTime ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
         );
       }
 

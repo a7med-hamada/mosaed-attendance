@@ -34,44 +34,44 @@
           },
           colors: {
             brand: {
-              50: '#ecfdf5',
+              50: '#effbf5',
               100: '#d1fae5',
               200: '#a7f3d0',
               300: '#6ee7b7',
-              400: '#34d399',
-              500: '#10b981',
-              600: '#00c288',
+              400: '#12b878',
+              500: '#00a866',
+              600: '#008d57',
               700: '#047857',
               800: '#065f46',
-              900: '#064e3b',
-              950: '#022c22',
+              900: '#032d4f',
+              950: '#021e36',
             },
             blue: {
-              50: '#ecfdf5',
-              100: '#d1fae5',
-              200: '#a7f3d0',
-              300: '#6ee7b7',
-              400: '#34d399',
-              500: '#10b981',
-              600: '#00c288',
-              700: '#047857',
-              800: '#065f46',
-              900: '#064e3b',
-              950: '#022c22',
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#0f69d8',
+              700: '#0a4d82',
+              800: '#063c69',
+              900: '#032d4f',
+              950: '#021e36',
             },
             slate: {
-              50: '#f8fafc',
-              100: '#f1f5f9',
-              200: '#e2e8f0',
+              50: '#f5f8fb',
+              100: '#eaf1f7',
+              200: '#dce5ee',
               300: '#cbd5e1',
               400: '#94a3b8',
-              500: '#64748b',
+              500: '#607086',
               600: '#475569',
-              700: '#334155',
+              700: '#263b4d',
               800: '#0d2238',
-              850: '#091b2c',
-              900: '#0a1827',
-              950: '#060e18',
+              850: '#091925',
+              900: '#06131e',
+              950: '#040d16',
             }
           }
         }
@@ -86,8 +86,8 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="/css/style.css" />
+  <!-- Custom Stylesheet with Cache Buster -->
+  <link rel="stylesheet" href="/css/style.css?v=20261017_2000" />
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -947,14 +947,14 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="/js/i18n.js"></script>
-  <script src="/js/api.js"></script>
-  <script src="/js/tafqeet.js"></script>
-  <script src="/js/map.js"></script>
-  <script src="/js/employee-ui.js"></script>
-  <script src="/js/manager-ui.js"></script>
-  <script src="/js/app.js"></script>
+  <!-- Scripts with Cache Busters -->
+  <script src="/js/i18n.js?v=20261017_2000"></script>
+  <script src="/js/api.js?v=20261017_2000"></script>
+  <script src="/js/tafqeet.js?v=20261017_2000"></script>
+  <script src="/js/map.js?v=20261017_2000"></script>
+  <script src="/js/employee-ui.js?v=20261017_2000"></script>
+  <script src="/js/manager-ui.js?v=20261017_2000"></script>
+  <script src="/js/app.js?v=20261017_2000"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>
@@ -984,7 +984,8 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then((reg) => {
+        navigator.serviceWorker.register('/sw.js?v=20261017_2000').then((reg) => {
+          reg.update(); // Force check for SW update
           console.log('Mosaed PWA Service Worker registered:', reg.scope);
         }).catch((err) => {
           console.log('Mosaed PWA Service Worker notice:', err);

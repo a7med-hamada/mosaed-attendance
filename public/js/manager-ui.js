@@ -2659,7 +2659,8 @@ const ManagerUI = {
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
                   <tr>
                     <th class="py-2.5 px-3 min-w-[180px]">الموظف *</th>
-                    <th class="py-2.5 px-3 min-w-[140px]">التاريخ *</th>
+                    <th class="py-2.5 px-3 min-w-[140px]">الوردية (الشيفت)</th>
+                    <th class="py-2.5 px-3 min-w-[130px]">التاريخ *</th>
                     <th class="py-2.5 px-3 min-w-[110px]">وقت الحضور *</th>
                     <th class="py-2.5 px-3 min-w-[110px]">وقت الانصراف</th>
                     <th class="py-2.5 px-3 min-w-[160px]">السبب / المبرر (اختياري)</th>
@@ -2795,9 +2796,13 @@ const ManagerUI = {
 
   async populateAdjustmentDropdowns() {
     try {
-      const empsRes = await API.getEmployees({ limit: 100 });
+      const [empsRes, shiftsRes] = await Promise.all([
+        API.getEmployees({ limit: 100 }),
+        API.getShifts().catch(() => ({ shifts: [] }))
+      ]);
       const employees = empsRes.employees || [];
       this.cachedEmployees = employees;
+      this.cachedShifts = (shiftsRes && shiftsRes.shifts) || [];
 
       const empSelect2 = document.getElementById('filter-edit-emp');
 
@@ -2837,9 +2842,14 @@ const ManagerUI = {
     const rowId = 'batch-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     const today = new Date().toISOString().split('T')[0];
     const employees = this.cachedEmployees || [];
+    const shifts = this.cachedShifts || [];
 
-    const options = employees.map(e => `
-      <option value="${e.id}">${e.full_name} (${e.employee_code || 'موظف'})</option>
+    const empOptions = employees.map(e => `
+      <option value="${e.id}" data-shift="${e.shift_id || ''}">${e.full_name} (${e.employee_code || 'موظف'})</option>
+    `).join('');
+
+    const shiftOptions = shifts.map(s => `
+      <option value="${s.id}" data-start="${s.start_time}" data-end="${s.end_time}">${s.name} (${formatTime12(s.start_time)} - ${formatTime12(s.end_time)})</option>
     `).join('');
 
     const tr = document.createElement('tr');
@@ -2847,9 +2857,15 @@ const ManagerUI = {
     tr.className = 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors batch-att-row';
     tr.innerHTML = `
       <td class="py-2.5 px-3">
-        <select class="batch-emp w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+        <select class="batch-emp w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" onchange="ManagerUI.handleBatchEmpChange(this)">
           <option value="">-- اختر الموظف --</option>
-          ${options}
+          ${empOptions}
+        </select>
+      </td>
+      <td class="py-2.5 px-3">
+        <select class="batch-shift w-full px-2 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" onchange="ManagerUI.handleBatchRowShiftChange(this)">
+          <option value="">-- بدون تحديد --</option>
+          ${shiftOptions}
         </select>
       </td>
       <td class="py-2.5 px-3">
@@ -2874,6 +2890,32 @@ const ManagerUI = {
     if (window.lucide) lucide.createIcons();
   },
 
+  handleBatchEmpChange(selectEl) {
+    const row = selectEl.closest('tr');
+    if (!row) return;
+    const opt = selectEl.selectedOptions[0];
+    const shiftId = opt ? opt.dataset.shift : null;
+    if (shiftId) {
+      const shiftSelect = row.querySelector('.batch-shift');
+      if (shiftSelect) {
+        shiftSelect.value = shiftId;
+        this.handleBatchRowShiftChange(shiftSelect);
+      }
+    }
+  },
+
+  handleBatchRowShiftChange(selectEl) {
+    const row = selectEl.closest('tr');
+    if (!row) return;
+    const opt = selectEl.selectedOptions[0];
+    if (opt && opt.dataset.start) {
+      const inEl = row.querySelector('.batch-in');
+      const outEl = row.querySelector('.batch-out');
+      if (inEl) inEl.value = opt.dataset.start;
+      if (outEl) outEl.value = opt.dataset.end;
+    }
+  },
+
   async submitBatchManualAttendance() {
     const rows = document.querySelectorAll('#batch-att-tbody .batch-att-row');
     const items = [];
@@ -2881,6 +2923,7 @@ const ManagerUI = {
 
     rows.forEach(r => {
       const empId = r.querySelector('.batch-emp')?.value;
+      const shiftId = r.querySelector('.batch-shift')?.value;
       const date = r.querySelector('.batch-date')?.value;
       const checkin = r.querySelector('.batch-in')?.value;
       const checkout = r.querySelector('.batch-out')?.value;
@@ -2889,6 +2932,7 @@ const ManagerUI = {
       if (empId && date) {
         items.push({
           employee_id: parseInt(empId, 10),
+          shift_id: shiftId ? parseInt(shiftId, 10) : null,
           date,
           check_in_time: checkin || null,
           check_out_time: checkout || null,
@@ -2982,6 +3026,7 @@ const ManagerUI = {
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
                 <tr>
                   <th class="py-3 px-3">الموظف</th>
+                  <th class="py-3 px-3 text-center">الوردية</th>
                   <th class="py-3 px-3 text-center">التاريخ</th>
                   <th class="py-3 px-3 text-center">وقت الحضور</th>
                   <th class="py-3 px-3 text-center">وقت الانصراف</th>
@@ -3014,6 +3059,14 @@ const ManagerUI = {
                           </div>
                         </div>
                       </td>
+                      <td class="py-3 px-3 text-center whitespace-nowrap">
+                        ${r.shift_name ? `
+                          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-bold text-[11px] border border-purple-500/20">
+                            <i data-lucide="layers" class="w-3 h-3 text-purple-500"></i>
+                            <span>${r.shift_name}</span>
+                          </span>
+                        ` : '<span class="text-slate-400 font-mono text-[11px]">دوام عام</span>'}
+                      </td>
                       <td class="py-3 px-3 text-center font-mono font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                         ${r.date}
                       </td>
@@ -3024,7 +3077,7 @@ const ManagerUI = {
                         ${r.check_out_time ? `
                           <span class="block">${formatTime12(r.check_out_time)}</span>
                           ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? '<span class="text-[9px] font-bold text-amber-500 block mt-0.5">انصراف تلقائي 🤖</span>' : ''}
-                        ` : '<span class="text-slate-400 font-normal">—</span>'}
+                        ` : '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">على رأس العمل 🟢</span>'}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${getStatusBadge(r.status)}
@@ -3073,6 +3126,7 @@ const ManagerUI = {
     if (!modal) return;
 
     const safeName = (record.full_name || '').replace(/'/g, "\\'");
+    const shifts = this.cachedShifts || [];
 
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -3083,7 +3137,7 @@ const ManagerUI = {
                 <i data-lucide="clock" class="w-5 h-5"></i>
               </div>
               <div>
-                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تعديل سجل حضور الموظف</h3>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تعديل سجل حضور الموظف والوردية</h3>
                 <p class="text-[11px] text-slate-400 font-semibold">${record.full_name} • يوم ${record.date}</p>
               </div>
             </div>
@@ -3093,20 +3147,43 @@ const ManagerUI = {
           </div>
 
           <form onsubmit="event.preventDefault(); ManagerUI.saveEditedAttendance(${recordId});" class="space-y-4">
+            <!-- Shift Selector -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                الوردية (الشيفت)
+              </label>
+              <select id="edit-rec-shift" onchange="ManagerUI.handleEditModalShiftChange(this.value)"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white">
+                <option value="">-- بدون وردية محددة (مواعيد العمل الافتراضية) --</option>
+                ${shifts.map(s => `
+                  <option value="${s.id}" ${record.shift_id === s.id ? 'selected' : ''}>
+                    ${s.name} (${formatTime12(s.start_time)} - ${formatTime12(s.end_time)})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- In / Out Times -->
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الحضور الفعلي</label>
                 <input type="time" id="edit-rec-checkin" value="${record.check_in_time || '09:00'}" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">وقت الانصراف الفعلي</label>
-                <input type="time" id="edit-rec-checkout" value="${record.check_out_time || '17:00'}" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white" />
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-bold text-slate-700 dark:text-slate-300">وقت الانصراف الفعلي</label>
+                  <label class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 cursor-pointer">
+                    <input type="checkbox" id="edit-rec-on-duty" onchange="ManagerUI.toggleEditOnDuty(this.checked)" ${!record.check_out_time ? 'checked' : ''} class="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500" />
+                    <span>على رأس العمل الآن</span>
+                  </label>
+                </div>
+                <input type="time" id="edit-rec-checkout" value="${record.check_out_time || ''}" ${!record.check_out_time ? 'disabled' : ''} class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white disabled:opacity-50" />
               </div>
             </div>
 
             <div class="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-700 dark:text-blue-300 flex items-center gap-2">
               <i data-lucide="calculator" class="w-4 h-4 flex-shrink-0"></i>
-              <span>يتم احتساب حالة الحضور (منضبط / متأخر) وقيمة الخصم تلقائياً بواسطة المنظومة حسب وقت الحضور وفترة السماح المعتمدة.</span>
+              <span>يتم احتساب حالة الحضور (منضبط / متأخر) وقيمة الخصم تلقائياً بواسطة المنظومة حسب موعد وردية الموظف وفترة السماح المعتمدة.</span>
             </div>
 
             <div>
@@ -3120,7 +3197,7 @@ const ManagerUI = {
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 سبب التعديل (اختياري)
               </label>
-              <input type="text" id="edit-rec-reason" placeholder="مثال: تصحيح وقت تسجيل الحضور بناء على مراجعة المدير (اختياري)"
+              <input type="text" id="edit-rec-reason" placeholder="مثال: تصحيح وقت تسجيل الحضور أو تعديل الوردية بناء على مراجعة المدير"
                 class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white" />
             </div>
 
@@ -3134,7 +3211,7 @@ const ManagerUI = {
                 <button type="button" onclick="document.getElementById('manual-edit-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
                   إلغاء
                 </button>
-                <button type="submit" id="edit-rec-save-btn" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all">
+                <button type="submit" id="edit-rec-save-btn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition-all">
                   حفظ التعديل وتحديث السجل
                 </button>
               </div>
@@ -3147,9 +3224,37 @@ const ManagerUI = {
     if (window.lucide) lucide.createIcons();
   },
 
+  handleEditModalShiftChange(shiftId) {
+    if (!shiftId) return;
+    const shift = (this.cachedShifts || []).find(s => s.id === parseInt(shiftId, 10));
+    if (shift) {
+      const inEl = document.getElementById('edit-rec-checkin');
+      const outEl = document.getElementById('edit-rec-checkout');
+      const onDutyEl = document.getElementById('edit-rec-on-duty');
+      if (inEl && (!inEl.value || inEl.value === '09:00')) inEl.value = shift.start_time;
+      if (outEl && !onDutyEl?.checked) outEl.value = shift.end_time;
+    }
+  },
+
+  toggleEditOnDuty(isOnDuty) {
+    const outEl = document.getElementById('edit-rec-checkout');
+    if (!outEl) return;
+    if (isOnDuty) {
+      outEl.value = '';
+      outEl.disabled = true;
+    } else {
+      outEl.disabled = false;
+      const shiftId = document.getElementById('edit-rec-shift')?.value;
+      const shift = shiftId ? (this.cachedShifts || []).find(s => s.id === parseInt(shiftId, 10)) : null;
+      outEl.value = (shift && shift.end_time) || '17:00';
+    }
+  },
+
   async saveEditedAttendance(recordId) {
+    const shiftId = document.getElementById('edit-rec-shift')?.value;
     const checkin = document.getElementById('edit-rec-checkin')?.value;
-    const checkout = document.getElementById('edit-rec-checkout')?.value;
+    const isOnDuty = document.getElementById('edit-rec-on-duty')?.checked;
+    const checkout = isOnDuty ? '' : (document.getElementById('edit-rec-checkout')?.value || '');
     const waive = document.getElementById('edit-rec-waive')?.checked;
     const rawReason = document.getElementById('edit-rec-reason')?.value;
     const reason = (rawReason && rawReason.trim()) || 'تصحيح موعد الحضور بواسطة المدير';
@@ -3161,6 +3266,7 @@ const ManagerUI = {
       const res = await API.updateAttendance(recordId, {
         check_in_time: checkin || null,
         check_out_time: checkout || null,
+        shift_id: shiftId ? parseInt(shiftId, 10) : '',
         waive_deductions: waive,
         reason: reason
       });
@@ -3168,6 +3274,9 @@ const ManagerUI = {
       showToast(res.message || 'تم تحديث سجل الحضور بنجاح ✓', 'success');
       document.getElementById('manual-edit-modal').innerHTML = '';
       await this.loadRecordsToEdit();
+      if (this.activeSection === 'dashboard') {
+        await this.loadLiveFeed();
+      }
     } catch (err) {
       showToast(err.message || 'فشل في تحديث سجل الحضور', 'danger');
     } finally {

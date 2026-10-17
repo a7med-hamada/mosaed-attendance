@@ -42,41 +42,40 @@ body {
 }
 
 /* ========================================================
-   DARK THEME (Deep Navy Fintech Palette - qasetly.com dark)
+   DARK THEME (Unified Qasetly Fintech Palette)
    ======================================================== */
-html.dark, html.dark body, body.dark {
-  background-color: #040e18 !important;
+html,
+html.dark,
+body,
+html.dark body,
+body.dark,
+#app-view {
+  background-color: #06131e !important;
   color: #e2eaf1 !important;
+  min-height: 100vh !important;
 }
 
 .dark .bg-slate-950 {
-  background-color: #040e18 !important;
+  background-color: #06131e !important;
 }
 
-.dark .bg-slate-900 {
-  background-color: #081a2b !important;
+.dark .bg-slate-900,
+.dark .bg-slate-850 {
+  background-color: #091c2e !important;
   border-color: #14334f !important;
 }
 
-.dark .bg-slate-850 {
-  background-color: #0a1f33 !important;
-  border-color: #163857 !important;
-}
-
 .dark .bg-slate-800 {
-  background-color: #0c2236 !important;
+  background-color: #0d2238 !important;
   border-color: #193d5e !important;
 }
 
 .dark .bg-slate-50 {
-  background-color: #071726 !important;
+  background-color: #06131e !important;
 }
 
 .dark .border-slate-800,
-.dark .border-slate-700 {
-  border-color: #14334f !important;
-}
-
+.dark .border-slate-700,
 .dark .border-slate-200 {
   border-color: #14334f !important;
 }
@@ -92,16 +91,20 @@ html.dark, html.dark body, body.dark {
 }
 
 /* ========================================================
-   HEADER & NAVBAR
+   HEADER & NAVBAR (Frosted glass with identical base color)
    ======================================================== */
 header {
-  background: #051626 !important;
+  background-color: rgba(6, 19, 30, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid #14334f !important;
-  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
 }
 
 html:not(.dark) header {
-  background: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid #dbe6ef !important;
   box-shadow: 0 4px 20px rgba(3, 45, 79, 0.05) !important;
 }
@@ -153,7 +156,7 @@ button.bg-blue-600:active {
    SIDEBAR & NAVIGATION
    ======================================================== */
 aside > div {
-  background: #081a2b !important;
+  background: #091c2e !important;
   border: 1px solid #14334f !important;
   border-radius: 20px !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25) !important;
@@ -183,8 +186,8 @@ html:not(.dark) aside > div {
    STAT / METRIC CARDS (Dashboard Widgets)
    ======================================================== */
 #mgr-metrics-grid > div {
-  background: #091e32 !important;
-  border: 1px solid #163857 !important;
+  background: #091c2e !important;
+  border: 1px solid #14334f !important;
   border-radius: 18px !important;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2) !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease !important;
@@ -207,7 +210,7 @@ html:not(.dark) #mgr-metrics-grid > div {
 .dark table thead,
 thead.bg-slate-50,
 thead {
-  background-color: #051321 !important;
+  background-color: #071726 !important;
   border-bottom: 1px solid #14334f !important;
 }
 

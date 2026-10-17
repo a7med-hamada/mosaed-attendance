@@ -134,9 +134,6 @@ const ManagerUI = {
         <!-- Checklist Container -->
         <div id="mgr-setup-checklist-card"></div>
 
-        <!-- Employee of the Month Spotlight Banner -->
-        <div id="mgr-employee-of-month-banner"></div>
-
         <!-- Dashboard Header & Real-time Auto-refresh -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -184,7 +181,6 @@ const ManagerUI = {
     `;
 
     if (window.lucide) lucide.createIcons();
-    this.loadEmployeeOfMonthBanner();
     await this.loadLiveFeed();
 
     if (isLiveAutoRefresh) {

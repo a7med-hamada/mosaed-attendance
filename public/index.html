@@ -87,7 +87,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet with Cache Buster -->
-  <link rel="stylesheet" href="/css/style.css?v=20261017_2100" />
+  <link rel="stylesheet" href="/css/style.css?v=20261017_2115" />
 </head>
 <body class="min-h-screen bg-[#f4f8fb] dark:bg-[#06131e] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -948,13 +948,13 @@
   </div>
 
   <!-- Scripts with Cache Busters -->
-  <script src="/js/i18n.js?v=20261017_2100"></script>
-  <script src="/js/api.js?v=20261017_2100"></script>
-  <script src="/js/tafqeet.js?v=20261017_2100"></script>
-  <script src="/js/map.js?v=20261017_2100"></script>
-  <script src="/js/employee-ui.js?v=20261017_2100"></script>
-  <script src="/js/manager-ui.js?v=20261017_2100"></script>
-  <script src="/js/app.js?v=20261017_2100"></script>
+  <script src="/js/i18n.js?v=20261017_2115"></script>
+  <script src="/js/api.js?v=20261017_2115"></script>
+  <script src="/js/tafqeet.js?v=20261017_2115"></script>
+  <script src="/js/map.js?v=20261017_2115"></script>
+  <script src="/js/employee-ui.js?v=20261017_2115"></script>
+  <script src="/js/manager-ui.js?v=20261017_2115"></script>
+  <script src="/js/app.js?v=20261017_2115"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>
@@ -984,7 +984,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20261017_2100').then((reg) => {
+        navigator.serviceWorker.register('/sw.js?v=20261017_2115').then((reg) => {
           reg.update(); // Force check for SW update
           console.log('Mosaed PWA Service Worker registered:', reg.scope);
         }).catch((err) => {

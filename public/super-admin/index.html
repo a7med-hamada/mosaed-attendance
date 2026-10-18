@@ -82,7 +82,7 @@
         <h1 class="text-xl font-black text-white tracking-wide">بوابة مالك المنظومة</h1>
         <p class="text-xs text-slate-400 mt-1 font-medium">لوحة التحكم الرئيسية لإدارة الشركات والاشتراكات (SaaS Super Admin)</p>
         <span class="inline-block mt-3 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold">
-          🔒 منطقة محمية خاصة بمالك الموقع
+          منطقة محمية خاصة بمالك الموقع
         </span>
       </div>
 
@@ -536,7 +536,7 @@
                   <span class="text-xs font-black text-purple-200">300 ج.م</span>
                   <span class="text-[10px] text-slate-400 line-through">400</span>
                 </div>
-                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">نصف سنوي 🔥</span>
+                <span class="text-[10px] text-slate-400 font-mono mt-0.5 block">نصف سنوي</span>
               </button>
 
               <button onclick="extendSubscription(365, 'annual')"
@@ -557,10 +557,10 @@
                 <div class="flex items-center justify-center gap-1.5 mt-1">
                   <span class="text-xs font-black text-amber-200">مدى الحياة</span>
                 </div>
-                <span class="text-[10px] text-amber-400/80 font-mono mt-0.5 block">اشتراك دائم ♾️</span>
+                <span class="text-[10px] text-amber-400/80 font-mono mt-0.5 block">اشتراك دائم️</span>
               </button>
             </div>
-            <p class="text-[10px] text-slate-400 mt-1.5 font-medium">💡 ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وباقة مدى الحياة تجعل الحساب مفتوحاً بشكل دائم بدون انتهاء.</p>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-medium">ملاحظة: الضغط مرتين على باقة السنة يمنحه سنتين (730 يوم)، وباقة مدى الحياة تجعل الحساب مفتوحاً بشكل دائم بدون انتهاء.</p>
           </div>
 
           <!-- Fine-tuning Days Control (+ / - / Custom Input) -->
@@ -1103,7 +1103,7 @@
       const planLabels = {
         trial: 'فترة تجريبية',
         pro: 'باقة احترافية ⭐',
-        enterprise: 'باقة مؤسسات 🏢'
+        enterprise: 'باقة مؤسسات'
       };
 
       tbody.innerHTML = companies.map(c => {
@@ -1123,7 +1123,7 @@
                     <span class="text-[10px] text-slate-400 font-mono">${c.workplace_name} • ${c.employee_code}</span>
                     ${c.schedule_mode === 'shifts' ? `
                       <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                        🔄 ${c.shift_count || 0} فترات
+                        ${c.shift_count || 0} فترات
                       </span>
                     ` : `
                       <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400">
@@ -1188,7 +1188,7 @@
               ` : c.subscription_plan === 'trial' ? `
                 <div class="inline-flex flex-col items-center">
                   <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${c.is_trial_expired ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}">
-                    ${c.is_trial_expired ? 'انتهت التجربة ⚠️' : `تجريبي (${c.trial_days_remaining} يوم)`}
+                    ${c.is_trial_expired ? 'انتهت التجربة' : `تجريبي (${c.trial_days_remaining} يوم)`}
                   </span>
                 </div>
               ` : `
@@ -1246,7 +1246,7 @@
                 <!-- Change Password Button -->
                 <button onclick="openChangePasswordModal(${c.id})"
                   class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 text-xs font-bold transition-all"
-                  title="تغيير كلمة مرور المدير 🔑">
+                  title="تغيير كلمة مرور المدير">
                   <i data-lucide="key" class="w-3.5 h-3.5"></i>
                 </button>
 
@@ -1635,7 +1635,7 @@
       if (isLifetime) {
         planBadge.textContent = 'باقة مفتوحة (مدى الحياة) ⭐';
         planBadge.className = 'px-3 py-1 rounded-full text-xs font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10';
-        daysRemainingEl.innerHTML = '<span class="text-amber-300">اشتراك دائم ♾️ (مفتوح)</span>';
+        daysRemainingEl.innerHTML = '<span class="text-amber-300">اشتراك دائم (مفتوح)</span>';
         daysRemainingEl.className = 'text-base font-black font-mono text-amber-300';
       } else {
         planBadge.textContent = planLabels[c.subscription_plan] || c.subscription_plan;
@@ -1653,7 +1653,7 @@
       if (customDaysInput) {
         if (isLifetime) {
           customDaysInput.value = '';
-          customDaysInput.placeholder = 'دائم ♾️';
+          customDaysInput.placeholder = 'دائم';
           customDaysInput.disabled = true;
         } else {
           customDaysInput.disabled = false;
@@ -1814,11 +1814,11 @@
       }
       try {
         await navigator.clipboard.writeText(el.value);
-        showToast('تم نسخ كلمة المرور إلى الحافظة 📋', 'success');
+        showToast('تم نسخ كلمة المرور إلى الحافظة', 'success');
       } catch (e) {
         el.select();
         document.execCommand('copy');
-        showToast('تم نسخ كلمة المرور إلى الحافظة 📋', 'success');
+        showToast('تم نسخ كلمة المرور إلى الحافظة', 'success');
       }
     }
 
@@ -1850,7 +1850,7 @@
       if (!lastGeneratedCredentials) return;
       try {
         await navigator.clipboard.writeText(lastGeneratedCredentials);
-        showToast('تم نسخ بيانات الدخول كاملة إلى الحافظة 📋', 'success');
+        showToast('تم نسخ بيانات الدخول كاملة إلى الحافظة', 'success');
       } catch (err) {
         showToast('تم التحديد للنسخ', 'info');
       }
@@ -1868,7 +1868,7 @@
       }
 
       btn.disabled = true;
-      btn.innerHTML = '<span class="inline-block animate-spin mr-1">⏳</span> جاري الحفظ...';
+      btn.innerHTML = ' جاري الحفظ...';
 
       try {
         const res = await apiRequest(`/api/super-admin/companies/${id}/password`, {
@@ -1883,10 +1883,10 @@
           document.getElementById('cp-credentials-preview').textContent = `${email} | ${password}`;
           document.getElementById('cp-copy-card').classList.remove('hidden');
 
-          showToast(res.message || 'تم تغيير كلمة المرور بنجاح 🔑', 'success');
+          showToast(res.message || 'تم تغيير كلمة المرور بنجاح', 'success');
           try {
             await navigator.clipboard.writeText(lastGeneratedCredentials);
-            showToast('تم نسخ بيانات الدخول الجديدة تلقائياً لإرسالها للعميل 📋', 'success');
+            showToast('تم نسخ بيانات الدخول الجديدة تلقائياً لإرسالها للعميل', 'success');
           } catch(e) {}
 
           setTimeout(() => {
@@ -1956,11 +1956,11 @@
 
         let statusBadge = '';
         if (t.status === 'new') {
-          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">جديدة 🔥</span>';
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">جديدة</span>';
         } else if (t.status === 'in_progress') {
-          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">قيد المتابعة ⏳</span>';
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">قيد المتابعة</span>';
         } else if (t.status === 'resolved') {
-          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">تم الحل ✅</span>';
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">تم الحل</span>';
         }
 
         const phoneClean = (t.sender_phone || '').replace(/[^0-9]/g, '');
@@ -1996,7 +1996,7 @@
                   <button type="button" onclick="openTicketImageModal(${t.id})"
                     class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold transition-all shadow-sm">
                     <i data-lucide="image" class="w-3.5 h-3.5"></i>
-                    <span>عرض الصورة المرفقة 🖼️</span>
+                    <span>عرض الصورة المرفقة</span>
                   </button>
                   <img src="${t.attachment_photo}" onclick="openTicketImageModal(${t.id})"
                     class="h-9 w-9 rounded-lg border border-emerald-500/40 object-cover cursor-pointer hover:scale-110 transition-transform shadow-sm" alt="مرفق" title="انقر لتكبير الصورة" />
@@ -2020,7 +2020,7 @@
                 ${t.status !== 'resolved' ? `
                   <button onclick="updateTicketStatus(${t.id}, 'resolved')"
                     class="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold transition-all" title="تعيين تم الحل">
-                    تم الحل ✅
+                    تم الحل
                   </button>
                 ` : `
                   <button onclick="updateTicketStatus(${t.id}, 'new')"

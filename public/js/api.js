@@ -720,7 +720,7 @@ function getStatusBadge(status) {
       break;
     case 'On Leave':
       badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800';
-      label = 'إجازة معتمدة 🌴';
+      label = 'إجازة معتمدة';
       break;
     case 'Outside Location':
       badgeClass = 'badge-outside';

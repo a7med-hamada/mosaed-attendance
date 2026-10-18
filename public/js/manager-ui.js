@@ -32,7 +32,7 @@ const ManagerUI = {
       { id: 'dashboard', icon: 'layout-dashboard', label: isEn ? 'Dashboard' : 'لوحة التحكم' },
       { id: 'employees', icon: 'users', label: isEn ? 'Employees' : 'الموظفون' },
       { id: 'attendance', icon: 'clock', label: isEn ? 'Attendance' : 'سجل الحضور' },
-      { id: 'adjust_attendance', icon: 'shield-alert', label: isEn ? 'Adjust Attendance' : 'تعديل وإضافة الحضور 🔐' },
+      { id: 'adjust_attendance', icon: 'shield-alert', label: isEn ? 'Adjust Attendance' : 'تعديل وإضافة الحضور ' },
       { id: 'leaderboard', icon: 'award', label: isEn ? 'Commitment Score' : 'مؤشر تقييم الالتزام' },
       { id: 'leaves', icon: 'calendar-check', label: isEn ? 'Leaves & Permissions' : 'الإجازات والأذونات' },
       { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
@@ -40,8 +40,8 @@ const ManagerUI = {
       { id: 'archive', icon: 'coins', label: isEn ? 'Payroll & Monthly Archive' : 'مسير الرواتب والخصومات' },
       { id: 'reports', icon: 'file-text', label: isEn ? 'Reports' : 'التقارير' },
       { id: 'settings', icon: 'sliders', label: isEn ? 'Settings' : 'الإعدادات' },
-      { id: 'packages', icon: 'sparkles', label: isEn ? 'Subscription Plans' : 'باقات الاشتراك 💎' },
-      { id: 'support', icon: 'headphones', label: isEn ? 'Technical Support' : 'الدعم الفني 🎧' },
+      { id: 'packages', icon: 'sparkles', label: isEn ? 'Subscription Plans' : 'باقات الاشتراك ' },
+      { id: 'support', icon: 'headphones', label: isEn ? 'Technical Support' : 'الدعم الفني ' },
       { id: 'profile', icon: 'user-cog', label: isEn ? 'Profile' : 'الملف الشخصي' }
     ];
 
@@ -145,7 +145,7 @@ const ManagerUI = {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <button onclick="ManagerUI.openMorningBriefingModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap transition-all">
-              <i data-lucide="message-circle" class="w-4 h-4"></i> تقرير الصباح للواتساب 📲
+              <i data-lucide="message-circle" class="w-4 h-4"></i> تقرير الصباح للواتساب
             </button>
             <button onclick="ManagerUI.openAddEmployeeModal()" class="px-3.5 py-2 rounded-xl bg-emerald-grad hover:opacity-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 flex items-center gap-1.5 whitespace-nowrap">
               <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
@@ -374,30 +374,30 @@ const ManagerUI = {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-4 text-xs font-semibold">
           <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 flex items-center gap-2.5 shadow-xs">
-            <span class="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">✓</span>
+            <span class="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs flex items-center justify-center"><i data-lucide="check" class="w-3 h-3 text-white"></i></span>
             <span>إنشاء حساب المدير</span>
           </div>
 
           <div onclick="ManagerUI.switchSection('employees')" class="p-3 rounded-2xl bg-white dark:bg-slate-900 border ${checklist.hasEmployees ? 'border-emerald-200 text-emerald-700 dark:text-emerald-400' : 'border-amber-300 text-amber-800 dark:text-amber-300'} flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:border-blue-500 transition-colors">
             <div class="flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full ${checklist.hasEmployees ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasEmployees ? '✓' : '2'}</span>
+              <span class="w-5 h-5 rounded-full ${checklist.hasEmployees ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasEmployees ? '' : '2'}</span>
               <span>إضافة الموظفين</span>
             </div>
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">${checklist.employeeCount || 0}</span>
           </div>
 
           <div onclick="ManagerUI.switchSection('workplace')" class="p-3 rounded-2xl bg-white dark:bg-slate-900 border ${checklist.hasWorkplace ? 'border-emerald-200 text-emerald-700 dark:text-emerald-400' : 'border-amber-300 text-amber-800 dark:text-amber-300'} flex items-center gap-2.5 shadow-xs cursor-pointer hover:border-blue-500 transition-colors">
-            <span class="w-5 h-5 rounded-full ${checklist.hasWorkplace ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasWorkplace ? '✓' : '3'}</span>
+            <span class="w-5 h-5 rounded-full ${checklist.hasWorkplace ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasWorkplace ? '' : '3'}</span>
             <span>تحديد موقع العمل</span>
           </div>
 
           <div onclick="ManagerUI.switchSection('hours')" class="p-3 rounded-2xl bg-white dark:bg-slate-900 border ${checklist.hasSchedule ? 'border-emerald-200 text-emerald-700 dark:text-emerald-400' : 'border-amber-300 text-amber-800 dark:text-amber-300'} flex items-center gap-2.5 shadow-xs cursor-pointer hover:border-blue-500 transition-colors">
-            <span class="w-5 h-5 rounded-full ${checklist.hasSchedule ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasSchedule ? '✓' : '4'}</span>
+            <span class="w-5 h-5 rounded-full ${checklist.hasSchedule ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">${checklist.hasSchedule ? '' : '4'}</span>
             <span>تحديد مواعيد العمل</span>
           </div>
 
           <div onclick="ManagerUI.switchSection('settings')" class="p-3 rounded-2xl bg-white dark:bg-slate-900 border ${checklist.hasRules ? 'border-emerald-200 text-emerald-700 dark:text-emerald-400' : 'border-slate-200 text-slate-700 dark:text-slate-300'} flex items-center gap-2.5 shadow-xs cursor-pointer hover:border-blue-500 transition-colors">
-            <span class="w-5 h-5 rounded-full ${checklist.hasRules ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-xs font-bold">${checklist.hasRules ? '✓' : '5'}</span>
+            <span class="w-5 h-5 rounded-full ${checklist.hasRules ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-xs font-bold">${checklist.hasRules ? '' : '5'}</span>
             <span>تحديد قواعد الحضور</span>
           </div>
         </div>
@@ -477,11 +477,11 @@ const ManagerUI = {
                       <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_in_time)}</span>
                       ${r.check_in_distance !== null && r.check_in_distance !== undefined ? `
                         <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          📍 داخل المقر (${r.check_in_distance}م)
+                          داخل المقر (${r.check_in_distance}م)
                         </span>
                       ` : (r.check_in_lat ? `
                         <a href="https://www.google.com/maps?q=${r.check_in_lat},${r.check_in_lng}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline font-mono">
-                          📍 فتح الخريطة
+                          فتح الخريطة
                         </a>
                       ` : '')}
                     </div>
@@ -493,15 +493,15 @@ const ManagerUI = {
                       <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_out_time)}</span>
                       ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? `
                         <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 mt-1">
-                          🤖 تم الانصراف التلقائي
+                          تم الانصراف التلقائي
                         </span>
                       ` : (r.check_out_distance !== null && r.check_out_distance !== undefined ? `
                         <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          📍 من المقر (${r.check_out_distance}م)
+                          من المقر (${r.check_out_distance}م)
                         </span>
                       ` : (r.check_out_lat ? `
                         <a href="https://www.google.com/maps?q=${r.check_out_lat},${r.check_out_lng}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline font-mono">
-                          📍 خريطة الانصراف
+                          خريطة الانصراف
                         </a>
                       ` : '<span class="text-[11px] text-slate-400">موقع مسجل</span>'))}
                       ${r.early_leave_minutes > 0 ? `
@@ -1154,9 +1154,9 @@ const ManagerUI = {
             <select id="mgr-leaves-status-filter" onchange="ManagerUI.renderLeavesSection(this.value)"
               class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500">
               <option value="all" ${currentFilter === 'all' ? 'selected' : ''}>جميع الطلبات</option>
-              <option value="pending" ${currentFilter === 'pending' ? 'selected' : ''}>⏳ بانتظار الاعتماد فقط</option>
-              <option value="approved" ${currentFilter === 'approved' ? 'selected' : ''}>✓ المعتمدة</option>
-              <option value="rejected" ${currentFilter === 'rejected' ? 'selected' : ''}>✕ المرفوضة</option>
+              <option value="pending" ${currentFilter === 'pending' ? 'selected' : ''}>بانتظار الاعتماد فقط</option>
+              <option value="approved" ${currentFilter === 'approved' ? 'selected' : ''}>المعتمدة</option>
+              <option value="rejected" ${currentFilter === 'rejected' ? 'selected' : ''}>المرفوضة</option>
             </select>
             <button onclick="ManagerUI.renderLeavesSection('${currentFilter}')"
               class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300" title="تحديث">
@@ -1296,9 +1296,9 @@ const ManagerUI = {
     const typeNames = { annual: 'إجازة سنوية اعتيادية', sick: 'إجازة مرضية', casual: 'إجازة عارضة / طارئة', unpaid: 'إجازة بدون راتب' };
     const typeColors = { annual: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60', sick: 'text-amber-600 bg-amber-50 dark:bg-amber-950/60', casual: 'text-purple-600 bg-purple-50 dark:bg-purple-950/60', unpaid: 'text-rose-600 bg-rose-50 dark:bg-rose-950/60' };
     const statusBadges = {
-      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار ⏳</span>',
-      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة ✓</span>',
-      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة ✕</span>'
+      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار</span>',
+      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة</span>',
+      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة</span>'
     };
 
     container.innerHTML = `
@@ -1398,9 +1398,9 @@ const ManagerUI = {
 
     const permTypes = { late_arrival: 'إذن تأخير صباحي بعذر', early_departure: 'إذن انصراف مبكر', during_day: 'إذن خروج وعودة أثناء الدوام' };
     const statusBadges = {
-      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار ⏳</span>',
-      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد ✓</span>',
-      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض ✕</span>'
+      pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد الانتظار</span>',
+      approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد</span>',
+      rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض</span>'
     };
 
     container.innerHTML = `
@@ -1652,7 +1652,7 @@ const ManagerUI = {
               class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
-                  📅 ${m.label}
+                  ${m.label}
                 </option>
               `).join('')}
             </select>
@@ -1862,7 +1862,7 @@ const ManagerUI = {
             <div>
               <h4 class="font-bold text-xs sm:text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
                 <span>نظام الشيفتات والورديات</span>
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-300">متعدد الفترات 🔄</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-300">متعدد الفترات</span>
               </h4>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">فترات عمل متعددة (صباحي / مسائي / ليلي) وتناوب الموظفين</p>
             </div>
@@ -2006,7 +2006,7 @@ const ManagerUI = {
             <div class="flex justify-end pt-2">
               <button type="submit" id="save-shifts-btn" class="py-3 px-8 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md shadow-purple-500/25 flex items-center gap-2 text-sm transition-all">
                 <i data-lucide="check-check" class="w-4 h-4"></i>
-                <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم 💾</span>
+                <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم</span>
               </button>
             </div>
           </form>
@@ -2276,7 +2276,7 @@ const ManagerUI = {
       });
 
       if (res.success) {
-        showToast(res.message || 'تم تفعيل وحفظ نظام الشيفتات بنجاح وسريانه فوراً لهذا اليوم! 🔄', 'success');
+        showToast(res.message || 'تم تفعيل وحفظ نظام الشيفتات بنجاح وسريانه فوراً لهذا اليوم!', 'success');
         this.scheduleMode = 'shifts';
       } else {
         showToast(res.error || 'فشل في حفظ إعدادات الشيفتات', 'danger');
@@ -2286,7 +2286,7 @@ const ManagerUI = {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="check-check" class="w-4 h-4"></i> <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم 💾</span>';
+        btn.innerHTML = '<i data-lucide="check-check" class="w-4 h-4"></i> <span>حفظ وتفعيل نظام الشيفتات فوراً اليوم</span>';
         if (window.lucide) lucide.createIcons();
       }
     }
@@ -2323,7 +2323,7 @@ const ManagerUI = {
               <input type="radio" name="apply-scope-choice" value="from_month_start" checked class="mt-1 w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
               <div class="space-y-1">
                 <div class="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
-                  <span>الخيار الأول: تطبيق بأثر رجعي من أول الشهر الحالي 🗓️</span>
+                  <span>الخيار الأول: تطبيق بأثر رجعي من أول الشهر الحالي</span>
                   <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">موصى به</span>
                 </div>
                 <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -2336,7 +2336,7 @@ const ManagerUI = {
               <input type="radio" name="apply-scope-choice" value="from_today" class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" />
               <div class="space-y-1">
                 <div class="font-bold text-slate-900 dark:text-white text-xs">
-                  الخيار الثاني: تطبيق من اليوم فصاعداً فقط ⏱️
+                  الخيار الثاني: تطبيق من اليوم فصاعداً فقط
                 </div>
                 <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                   تطبيق المواعيد والقواعد الجديدة على تسجيلات اليوم والأيام القادمة فقط، مع إبقاء سجلات وخصومات الأيام السابقة كما هي دون أي تغيير.
@@ -2350,7 +2350,7 @@ const ManagerUI = {
               إلغاء
             </button>
             <button type="button" id="confirm-scope-btn" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
-              <i data-lucide="check" class="w-4 h-4"></i> تأكيد وحفظ الإعدادات 💾
+              <i data-lucide="check" class="w-4 h-4"></i> تأكيد وحفظ الإعدادات
             </button>
           </div>
         </div>
@@ -2597,7 +2597,7 @@ const ManagerUI = {
               <div class="flex items-center gap-3 pt-2">
                 <button type="submit" id="mgr-adjust-submit-btn"
                   class="flex-1 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
-                  <i data-lucide="unlock" class="w-4 h-4"></i> تأكيد الهوية والدخول 🔓
+                  <i data-lucide="unlock" class="w-4 h-4"></i> تأكيد الهوية والدخول
                 </button>
               </div>
             </form>
@@ -2620,14 +2620,14 @@ const ManagerUI = {
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">إضافة وتعديل الحضور بأثر رجعي</h2>
-                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20">صلاحية مفعلة 🔓</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20">صلاحية مفعلة</span>
               </div>
               <p class="text-xs text-slate-400">إضافة سجلات لمن حضروا قبل التسجيل بالنظام وتعديل المواعيد مع توثيق الأسباب</p>
             </div>
           </div>
           <button onclick="ManagerUI.lockAdjustmentAccess()"
             class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
-            <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i> قفل الصلاحية 🔒
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i> قفل الصلاحية
           </button>
         </div>
 
@@ -2635,11 +2635,11 @@ const ManagerUI = {
         <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button id="tab-btn-retroactive" onclick="ManagerUI.switchAdjustmentTab('retroactive')"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-blue-600 text-white shadow-sm">
-            ➕ إضافة حضور بأثر رجعي
+            إضافة حضور بأثر رجعي
           </button>
           <button id="tab-btn-existing" onclick="ManagerUI.switchAdjustmentTab('existing')"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
-            ✏️ تعديل المواعيد القائمة
+            تعديل المواعيد القائمة
           </button>
         </div>
 
@@ -2657,7 +2657,7 @@ const ManagerUI = {
               <div class="flex items-center gap-2">
                 <button type="button" onclick="ManagerUI.addBatchAttRow()"
                   class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all">
-                  <i data-lucide="plus" class="w-4 h-4"></i> ➕ إضافة صف حضور آخر
+                  <i data-lucide="plus" class="w-4 h-4"></i> إضافة صف حضور آخر
                 </button>
               </div>
             </div>
@@ -2690,11 +2690,11 @@ const ManagerUI = {
               <div class="flex items-center gap-2">
                 <button type="button" onclick="ManagerUI.addBatchAttRow()"
                   class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 transition-all">
-                  <i data-lucide="plus" class="w-4 h-4"></i> صف آخر ➕
+                  <i data-lucide="plus" class="w-4 h-4"></i> صف آخر
                 </button>
                 <button type="button" id="batch-att-submit-btn" onclick="ManagerUI.submitBatchManualAttendance()"
                   class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
-                  <i data-lucide="check-check" class="w-4 h-4"></i> حفظ وتوثيق كافة السجلات دفعة واحدة 🚀
+                  <i data-lucide="check-check" class="w-4 h-4"></i> حفظ وتوثيق كافة السجلات دفعة واحدة
                 </button>
               </div>
             </div>
@@ -2720,10 +2720,10 @@ const ManagerUI = {
                   <i data-lucide="search" class="w-3.5 h-3.5"></i> بحث وفلترة
                 </button>
                 <button onclick="ManagerUI.showAllRecordsToEdit()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition-all" title="عرض كل الأيام المسجلة بالنظام">
-                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-500"></i> عرض كل الأيام 📋
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-500"></i> عرض كل الأيام
                 </button>
                 <button onclick="ManagerUI.setFilterTodayToEdit()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1 transition-all">
-                  اليوم فقط 📅
+                  اليوم فقط
                 </button>
               </div>
             </div>
@@ -2756,7 +2756,7 @@ const ManagerUI = {
       const res = await API.verifyPassword(pwdInput.value);
       if (res && res.verified) {
         sessionStorage.setItem('manager_att_adjust_unlocked', 'true');
-        showToast('تم تأكيد الهوية بنجاح، مرحباً بك في وضع التعديل الإداري 🔓', 'success');
+        showToast('تم تأكيد الهوية بنجاح، مرحباً بك في وضع التعديل الإداري', 'success');
         await this.renderAttendanceAdjustmentSection();
       } else {
         throw new Error(res.error || 'فشل التحقق من كلمة المرور');
@@ -2774,7 +2774,7 @@ const ManagerUI = {
 
   lockAdjustmentAccess() {
     sessionStorage.removeItem('manager_att_adjust_unlocked');
-    showToast('تم قفل صفحة التعديل الإداري بنجاح 🔒', 'info');
+    showToast('تم قفل صفحة التعديل الإداري بنجاح', 'info');
     this.renderAttendanceAdjustmentSection();
   },
 
@@ -2960,7 +2960,7 @@ const ManagerUI = {
 
     try {
       const res = await API.batchManualAttendance(items);
-      showToast(res.message || `تم بنجاح حفظ وتوثيق (${items.length}) سجلات حضور واحتساب الحالة تلقائياً ✓`, 'success');
+      showToast(res.message || `تم بنجاح حفظ وتوثيق (${items.length}) سجلات حضور واحتساب الحالة تلقائياً`, 'success');
       this.initBatchAttendanceRows();
       await this.loadRecordsToEdit();
     } catch (err) {
@@ -2977,7 +2977,7 @@ const ManagerUI = {
 
     try {
       const res = await API.deleteAttendance(recordId);
-      showToast(res.message || 'تم حذف السجل بنجاح 🗑️', 'success');
+      showToast(res.message || 'تم حذف السجل بنجاح', 'success');
       await this.loadRecordsToEdit();
     } catch (err) {
       showToast(err.message || 'فشل في حذف السجل', 'danger');
@@ -3022,10 +3022,10 @@ const ManagerUI = {
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-slate-700 dark:text-slate-300">قائمة السجلات:</span>
               <span class="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold font-mono">${records.length} سجل</span>
-              ${dateVal ? `<span class="text-[11px] text-slate-400 font-mono">📅 تاريخ: ${dateVal}</span>` : `<span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">📋 معروض جميع الأيام</span>`}
+              ${dateVal ? `<span class="text-[11px] text-slate-400 font-mono">تاريخ: ${dateVal}</span>` : `<span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">معروض جميع الأيام</span>`}
             </div>
             <button onclick="ManagerUI.showAllRecordsToEdit()" class="text-xs font-bold text-blue-600 hover:underline">
-              تحديث وعرض الكل 🔄
+              تحديث وعرض الكل
             </button>
           </div>
 
@@ -3084,7 +3084,7 @@ const ManagerUI = {
                       <td class="py-3 px-3 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                         ${r.check_out_time ? `
                           <span class="block">${formatTime12(r.check_out_time)}</span>
-                          ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? '<span class="text-[9px] font-bold text-amber-500 block mt-0.5">انصراف تلقائي 🤖</span>' : ''}
+                          ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? '<span class="text-[9px] font-bold text-amber-500 block mt-0.5">انصراف تلقائي</span>' : ''}
                         ` : '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/30 shadow-xs shadow-emerald-500/10"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span>على رأس العمل</span></span>'}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
@@ -3098,12 +3098,12 @@ const ManagerUI = {
                           <button onclick="ManagerUI.openEditAttendanceModal(${r.id})"
                             class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-300 border border-blue-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="تعديل الموعد">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                            <span>تعديل ✏️</span>
+                            <span>تعديل</span>
                           </button>
                           <button onclick="ManagerUI.deleteAttendanceRecord(${r.id}, '${safeName}', '${r.date}')"
                             class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="حذف السجل نهائياً">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            <span>حذف 🗑️</span>
+                            <span>حذف</span>
                           </button>
                         </div>
                       </td>
@@ -3212,7 +3212,7 @@ const ManagerUI = {
             <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
               <button type="button" onclick="ManagerUI.deleteAttendanceRecord(${record.id}, '${safeName}', '${record.date}'); document.getElementById('manual-edit-modal').innerHTML='';"
                 class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1 transition-all">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> حذف هذا السجل 🗑️
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> حذف هذا السجل
               </button>
 
               <div class="flex items-center gap-2">
@@ -3279,7 +3279,7 @@ const ManagerUI = {
         reason: reason
       });
 
-      showToast(res.message || 'تم تحديث سجل الحضور بنجاح ✓', 'success');
+      showToast(res.message || 'تم تحديث سجل الحضور بنجاح', 'success');
       document.getElementById('manual-edit-modal').innerHTML = '';
       await this.loadRecordsToEdit();
       if (this.activeSection === 'dashboard') {
@@ -3610,7 +3610,7 @@ const ManagerUI = {
           <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
             <button type="button" onclick="ManagerUI.testWhatsAppConnection()" class="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors">
               <i data-lucide="send" class="w-4 h-4 text-emerald-500"></i>
-              <span>إرسال رسالة تجريبية للاختبار 📲</span>
+              <span>إرسال رسالة تجريبية للاختبار</span>
             </button>
             <button type="button" onclick="ManagerUI.saveWhatsAppSettings()" class="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
               <i data-lucide="check" class="w-4 h-4"></i>
@@ -3829,7 +3829,7 @@ const ManagerUI = {
                   </span>
                   <span class="font-mono font-bold text-slate-900 dark:text-white text-xs">
                     ${record.check_out_time ? formatTime12(record.check_out_time) : 'قيد العمل'}
-                    ${isAutoCheckout ? '<span class="inline-block text-[10px] text-amber-500 font-bold mr-1">(تلقائي 🤖)</span>' : ''}
+                    ${isAutoCheckout ? '<span class="inline-block text-[10px] text-amber-500 font-bold mr-1">(انصراف تلقائي)</span>' : ''}
                   </span>
                 </div>
 
@@ -3840,7 +3840,7 @@ const ManagerUI = {
                       <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2">
                         <i data-lucide="bot" class="w-5 h-5"></i>
                       </div>
-                      <span class="font-extrabold text-xs mb-1 text-amber-700 dark:text-amber-300">🤖 تم الانصراف التلقائي</span>
+                      <span class="font-extrabold text-xs mb-1 text-amber-700 dark:text-amber-300">تم الانصراف التلقائي</span>
                       <span class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed max-w-xs">تم تسجيل الانصراف تلقائياً بواسطة المنظومة بنهاية مواعيد العمل الرسمية</span>
                     </div>
                   ` : record.check_out_photo ? `
@@ -3965,7 +3965,7 @@ const ManagerUI = {
                   class="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none">
                   ${availMonths.map(m => `
                     <option value="${m}" ${m === activeMonth ? 'selected' : ''}>
-                      📅 ${m === res.currentMonth ? `${m} (الشهر الحالي)` : m}
+                      ${m === res.currentMonth ? `${m} (الشهر الحالي)` : m}
                     </option>
                   `).join('')}
                   <option value="all" ${activeMonth === 'all' ? 'selected' : ''}>جميع الشهور (تراكمي)</option>
@@ -3982,7 +3982,7 @@ const ManagerUI = {
               </button>
               <button onclick="ManagerUI.printPayslip(${employeeId}, '${activeMonth}')"
                 class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="طباعة قسيمة الراتب">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i> قسيمة الراتب 📄
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i> قسيمة الراتب
               </button>
             </div>
           </div>
@@ -4052,7 +4052,7 @@ const ManagerUI = {
               <div class="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20">
                 <span class="text-[11px] text-purple-600 dark:text-purple-400 font-bold block">المكافآت (+)</span>
                 <span class="font-extrabold text-purple-600 dark:text-purple-400 font-mono text-base mt-1 block">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
-                <span class="text-[10px] text-purple-500/80 block mt-0.5 font-semibold">${bonuses.length} مكافأة معتمدة 🎁</span>
+                <span class="text-[10px] text-purple-500/80 block mt-0.5 font-semibold">${bonuses.length} مكافأة معتمدة</span>
               </div>
 
               <!-- Deductions (-) -->
@@ -4066,7 +4066,7 @@ const ManagerUI = {
               <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                 <span class="text-[11px] text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات (-)</span>
                 <span class="font-extrabold text-amber-600 dark:text-amber-400 font-mono text-base mt-1 block">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
-                <span class="text-[10px] text-amber-600/80 dark:text-amber-400/80 block mt-0.5 font-semibold">${advances.filter(a => a.status === 'approved').length} سلفة معتمدة 💸</span>
+                <span class="text-[10px] text-amber-600/80 dark:text-amber-400/80 block mt-0.5 font-semibold">${advances.filter(a => a.status === 'approved').length} سلفة معتمدة</span>
               </div>
 
               <!-- Net Salary (=) -->
@@ -4091,7 +4091,7 @@ const ManagerUI = {
                 ${bonuses.map(b => `
                   <div class="flex items-center justify-between py-1.5 px-2 hover:bg-purple-100/30 rounded-xl transition-colors">
                     <div>
-                      <span class="font-bold text-slate-800 dark:text-slate-200 text-xs block">🎁 ${b.reason}</span>
+                      <span class="font-bold text-slate-800 dark:text-slate-200 text-xs block">${b.reason}</span>
                       <span class="text-[10px] text-slate-400 font-mono">${b.date} • شهر: ${b.month}</span>
                     </div>
                     <span class="font-mono font-bold text-purple-600 dark:text-purple-400 text-xs">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
@@ -4113,15 +4113,15 @@ const ManagerUI = {
               <div class="divide-y divide-amber-100 dark:divide-amber-900/30 p-2 space-y-1">
                 ${advances.map(a => {
                   const statusBadge = a.status === 'approved'
-                    ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة ومخصومة ✓</span>'
+                    ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة ومخصومة</span>'
                     : (a.status === 'rejected'
-                      ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة ✗</span>'
-                      : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة ⏳</span>');
+                      ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة</span>'
+                      : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة</span>');
                   return `
                     <div class="flex items-center justify-between py-1.5 px-2 hover:bg-amber-100/30 rounded-xl transition-colors">
                       <div>
                         <div class="flex items-center gap-1.5">
-                          <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">💸 ${a.reason || 'سلفة على الراتب'}</span>
+                          <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${a.reason || 'سلفة على الراتب'}</span>
                           ${statusBadge}
                         </div>
                         <span class="text-[10px] text-slate-400 font-mono">${a.date} (شهر: ${a.month})</span>
@@ -4234,7 +4234,7 @@ const ManagerUI = {
               class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
-                  📅 ${m.label}
+                  ${m.label}
                 </option>
               `).join('')}
             </select>
@@ -4302,7 +4302,7 @@ const ManagerUI = {
           <div class="p-3.5 sm:p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
             <span class="text-[11px] sm:text-xs text-purple-600 dark:text-purple-400 font-bold block">المكافآت والحوافز</span>
             <span class="text-lg sm:text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonusesCompany.toLocaleString('ar-EG')} ج.م</span>
-            <span class="text-[10px] text-purple-400/80 mt-0.5 block font-semibold">حوافز شهرية 🎁</span>
+            <span class="text-[10px] text-purple-400/80 mt-0.5 block font-semibold">حوافز شهرية</span>
           </div>
 
           <div class="p-3.5 sm:p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
@@ -4314,7 +4314,7 @@ const ManagerUI = {
           <div class="p-3.5 sm:p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
             <span class="text-[11px] sm:text-xs text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات</span>
             <span class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvancesCompany.toLocaleString('ar-EG')} ج.م</span>
-            <span class="text-[10px] text-amber-500/80 mt-0.5 block font-semibold">سلف معتمدة 💸</span>
+            <span class="text-[10px] text-amber-500/80 mt-0.5 block font-semibold">سلف معتمدة</span>
           </div>
 
           <div class="p-3.5 sm:p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right">
@@ -4352,7 +4352,7 @@ const ManagerUI = {
               <button onclick="ManagerUI.sendAllPayslipsWhatsApp('${targetMonth}')"
                 class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm shadow-emerald-500/20 transition-all">
                 <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                <span>إرسال الرواتب للجميع عبر واتساب 📲</span>
+                <span>إرسال الرواتب للجميع عبر واتساب</span>
               </button>
               <span class="text-xs text-slate-400 font-mono">${summaries.length} موظف مسجل</span>
             </div>
@@ -4403,7 +4403,7 @@ const ManagerUI = {
                             <span class="font-bold text-amber-500 block text-[11px]">${s.lateDays}ي (${formatMinutesArabic(s.totalLateMinutes)})</span>
                             <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
                           </div>
-                        ` : '<span class="text-emerald-500 font-bold text-[11px]">لا يوجد ✓</span>'}
+                        ` : '<span class="text-emerald-500 font-bold text-[11px]">لا يوجد</span>'}
                       </td>
                       <td class="py-3 px-2 text-center">
                         ${s.absentDays > 0 ? `
@@ -4444,12 +4444,12 @@ const ManagerUI = {
                           <button onclick="ManagerUI.printPayslip(${s.employee.id}, '${targetMonth}')"
                             class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm shadow-emerald-500/20 transition-all" title="طباعة قسيمة الراتب ومفردات المرتب">
                             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                            <span>قسيمة الراتب 📄</span>
+                            <span>قسيمة الراتب</span>
                           </button>
                           <button onclick="ManagerUI.sendPayslipWhatsApp(${s.employee.id}, '${targetMonth}')"
                             class="px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1 transition-all" title="إرسال كشف الراتب للموظف عبر واتساب">
                             <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                            <span>واتساب 📲</span>
+                            <span>واتساب</span>
                           </button>
                         </div>
                       </td>
@@ -4551,7 +4551,7 @@ const ManagerUI = {
               <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="ManagerUI.printPayslip(${emp.id}, '${month}')"
                   class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-500/25 transition-all">
-                  <i data-lucide="printer" class="w-3.5 h-3.5"></i> طباعة قسيمة الراتب 📄
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i> طباعة قسيمة الراتب
                 </button>
                 <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${month}')"
                   class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
@@ -4609,7 +4609,7 @@ const ManagerUI = {
                   ${bonuses.map(b => `
                     <div class="flex items-center justify-between py-2 px-2 hover:bg-purple-100/30 rounded-xl transition-colors">
                       <div>
-                        <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">🎁 ${b.reason}</span>
+                        <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">${b.reason}</span>
                         <span class="text-[10px] text-slate-400 font-mono">${b.date} • بواسطة: ${b.creator_name || 'الإدارة'}</span>
                       </div>
                       <div class="flex items-center gap-3">
@@ -4642,15 +4642,15 @@ const ManagerUI = {
                 <div class="divide-y divide-amber-100 dark:divide-amber-900/30 p-2">
                   ${advances.map(a => {
                     const statusBadge = a.status === 'approved'
-                      ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة ✓</span>'
+                      ? '<span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">معتمدة</span>'
                       : (a.status === 'rejected'
-                        ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة ✗</span>'
-                        : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة ⏳</span>');
+                        ? '<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">مرفوضة</span>'
+                        : '<span class="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold">قيد المراجعة</span>');
                     return `
                       <div class="flex items-center justify-between py-2 px-2 hover:bg-amber-100/30 rounded-xl transition-colors">
                         <div>
                           <div class="flex items-center gap-2">
-                            <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">💸 ${a.reason || 'سلفة على الراتب'}</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${a.reason || 'سلفة على الراتب'}</span>
                             ${statusBadge}
                           </div>
                           <span class="text-[10px] text-slate-400 font-mono">${a.date} ${a.review_notes ? '• ' + a.review_notes : ''}</span>
@@ -4954,7 +4954,7 @@ const ManagerUI = {
                   +${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م
                 </td>
                 <td class="py-3 px-3 font-sans">
-                  <span class="font-bold text-slate-700 dark:text-slate-300 block">🎁 ${b.reason}</span>
+                  <span class="font-bold text-slate-700 dark:text-slate-300 block">${b.reason}</span>
                   <span class="text-[10px] text-slate-400 font-mono">${b.date} (شهر: ${b.month})</span>
                 </td>
                 <td class="py-3 px-3 font-sans text-slate-500 text-[11px]">
@@ -5130,15 +5130,15 @@ const ManagerUI = {
             </button>
             <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'pending')"
               class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'pending' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-              طلبات قيد المراجعة ⏳
+              طلبات قيد المراجعة
             </button>
             <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'approved')"
               class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'approved' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-              السلف المعتمدة ✓
+              السلف المعتمدة
             </button>
             <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}', 'rejected')"
               class="px-3 py-1.5 rounded-xl font-bold transition-colors ${filterStatus === 'rejected' ? 'bg-rose-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
-              الطلبات المرفوضة ✗
+              الطلبات المرفوضة
             </button>
           </div>
 
@@ -5178,10 +5178,10 @@ const ManagerUI = {
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
             ${advances.map(a => {
               const statusBadge = a.status === 'approved'
-                ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">معتمدة ✓</span>'
+                ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">معتمدة</span>'
                 : (a.status === 'rejected'
-                  ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold">مرفوضة ✗</span>'
-                  : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold animate-pulse">قيد المراجعة ⏳</span>');
+                  ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold">مرفوضة</span>'
+                  : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold animate-pulse">قيد المراجعة</span>');
 
               return `
                 <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
@@ -5204,11 +5204,11 @@ const ManagerUI = {
                       <div class="flex items-center justify-center gap-1.5 flex-wrap">
                         <button onclick="ManagerUI.reviewAdvanceRequest(${a.id}, 'approved', '${targetMonth}')"
                           class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs" title="موافقة على السلفة وخصمها من الراتب">
-                          موافقة ✓
+                          موافقة
                         </button>
                         <button onclick="ManagerUI.reviewAdvanceRequest(${a.id}, 'rejected', '${targetMonth}')"
                           class="px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 font-bold text-xs" title="رفض طلب السلفة">
-                          رفض ✗
+                          رفض
                         </button>
                         <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
                           class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">
@@ -5343,7 +5343,7 @@ const ManagerUI = {
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span> الحساب نشط
                 </span>
                 <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-xs font-semibold">
-                  🏢 ${companyName || 'المقر الرئيسي للمنظومة'}
+                  ${companyName || 'المقر الرئيسي للمنظومة'}
                 </span>
               </div>
             </div>
@@ -5712,7 +5712,7 @@ const ManagerUI = {
             <div>
               <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1.5 flex items-center justify-between">
                 <span>نص رسالة الواتساب الجاهزة:</span>
-                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('morning-msg-preview').value); showToast('تم نسخ نص التقرير للحافظة 📋', 'success');" class="text-blue-500 hover:underline text-[11px] font-semibold flex items-center gap-1">
+                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('morning-msg-preview').value); showToast('تم نسخ نص التقرير للحافظة', 'success');" class="text-blue-500 hover:underline text-[11px] font-semibold flex items-center gap-1">
                   <i data-lucide="copy" class="w-3.5 h-3.5"></i> نسخ النص
                 </button>
               </label>
@@ -5735,7 +5735,7 @@ const ManagerUI = {
                   <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> إرسال عبر بوابة API
                 </button>
                 <a id="morning-wa-direct-link" href="${data.waLink}" target="_blank" onclick="setTimeout(() => { document.getElementById('employee-crud-modal').innerHTML=''; }, 800);" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-500/25 transition-all">
-                  <i data-lucide="message-circle" class="w-4 h-4"></i> فتح في واتساب الآن 📲
+                  <i data-lucide="message-circle" class="w-4 h-4"></i> فتح في واتساب الآن
                 </a>
               </div>
             </div>
@@ -5828,7 +5828,7 @@ const ManagerUI = {
                   <div>
                     ${r.waLink ? `
                       <a href="${r.waLink}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1 transition-all">
-                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> إرسال عبر واتساب 📲
+                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> إرسال عبر واتساب
                       </a>
                     ` : `
                       <span class="text-rose-500 font-semibold text-[11px]">لا يمكن الإرسال (بدون رقم)</span>
@@ -5938,7 +5938,7 @@ const ManagerUI = {
                 ⭐ باقة مفتوحة مدى الحياة (Lifetime)
               </div>
               <h3 class="text-lg sm:text-xl font-black text-white">
-                حساب مؤسسة ${company} مفعّل باشتراك مفتوح ودائم ♾️
+                حساب مؤسسة ${company} مفعّل باشتراك مفتوح ودائم
               </h3>
               <p class="text-xs text-slate-300 mt-1">
                 حالة الاشتراك: <span class="font-bold text-amber-300">دائم مدى الحياة بدون تاريخ انتهاء أو رسوم تجديد مطلوبة</span>
@@ -6050,7 +6050,7 @@ const ManagerUI = {
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">نصف سنوي</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300">خصم 25% 🔥</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300">خصم 25%</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة 6 أشهر</h4>
               <div class="flex items-baseline gap-2 my-4">
@@ -6075,12 +6075,12 @@ const ManagerUI = {
           <!-- 4. Annual (Featured) -->
           <div class="rounded-3xl p-6 bg-gradient-to-b from-emerald-500/10 via-white to-white dark:via-slate-900 dark:to-slate-900 border-2 border-emerald-500 shadow-md hover:shadow-2xl transition-all flex flex-col justify-between relative">
             <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md">
-              الأكثر توفيراً - خصم 25% ⭐
+              الأكثر توفيراً - خصم 25%
             </div>
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">سنوي كامل</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">خصم 25% 🏷️</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">خصم 25%</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة السنوية (سنة)</h4>
               <div class="flex items-baseline gap-2 my-4">
@@ -6105,12 +6105,12 @@ const ManagerUI = {
           <!-- 5. Lifetime / Open Package (6,000 EGP) -->
           <div class="rounded-3xl p-6 bg-gradient-to-b from-amber-500/15 via-white to-white dark:via-slate-900 dark:to-slate-900 border-2 border-amber-500/60 shadow-lg hover:shadow-2xl transition-all flex flex-col justify-between relative overflow-hidden">
             <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-md">
-              باقة مدى الحياة ⭐
+              باقة مدى الحياة
             </div>
             <div>
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">مفتوح دائم</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">بدون تجديد ♾️</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">بدون تجديد</span>
               </div>
               <h4 class="font-extrabold text-lg text-slate-900 dark:text-white">باقة مدى الحياة (مفتوحة)</h4>
               <div class="my-4">

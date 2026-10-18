@@ -460,7 +460,7 @@ const App = {
     containers.forEach(c => { c.classList.remove('hidden'); });
 
     const sizeStr = size > 0 ? ` (${(size / 1024).toFixed(1)} KB)` : '';
-    nameEls.forEach(n => { n.textContent = `📎 ${name}${sizeStr}`; });
+    nameEls.forEach(n => { n.textContent = `${name}${sizeStr}`; });
 
     if (window.lucide) lucide.createIcons();
   },
@@ -499,7 +499,7 @@ const App = {
             reader.onload = (event) => {
               this.supportImageBase64 = event.target.result;
               this.renderSupportImagePreview(`screenshot_${Date.now()}.png`, blob.size);
-              showToast('تم التقاط الصورة من الحافظة ولصقها بنجاح 📋🖼️', 'info');
+              showToast('تم التقاط الصورة من الحافظة ولصقها بنجاح', 'info');
             };
             reader.readAsDataURL(blob);
             break;
@@ -576,7 +576,7 @@ const App = {
         const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0)));
         const isExpired = !isLifetime && (sub.expired !== undefined ? sub.expired : (sub.isExpired !== undefined ? sub.isExpired : (remaining <= 0)));
         const statusBadge = isLifetime 
-          ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5"><i data-lucide="crown" class="w-3.5 h-3.5"></i> نشطة (اشتراك دائم ومفتوح ♾️)</span>`
+          ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5"><i data-lucide="crown" class="w-3.5 h-3.5"></i> نشطة (اشتراك دائم ومفتوح)</span>`
           : (isExpired 
             ? `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30">منتهية الصلاحية</span>`
             : `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">نشطة (${remaining} يوم متبقي)</span>`);

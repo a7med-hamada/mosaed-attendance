@@ -200,9 +200,9 @@ const EmployeeUI = {
             <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-start gap-3">
               <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-500 font-black flex items-center justify-center flex-shrink-0 text-xs">3</span>
               <div>
-                <strong class="font-bold text-slate-900 dark:text-white block text-xs">إذا كان الموقع محظوراً بالمتصفح (Locked 🔒):</strong>
+                <strong class="font-bold text-slate-900 dark:text-white block text-xs">إذا كان الموقع محظوراً بالمتصفح (محظور بالمتصفح):</strong>
                 <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  اضغط على أيقونة 🔒 بجوار رابط الموقع في شريط العنوان بالأعلى، واضبط <strong>"الموقع / Location"</strong> على <strong>"سماح / Allow"</strong>.
+                  اضغط على أيقونة القفل بجوار رابط الموقع في شريط العنوان بالأعلى، واضبط <strong>"الموقع / Location"</strong> على <strong>"سماح / Allow"</strong>.
                 </p>
               </div>
             </div>
@@ -212,7 +212,7 @@ const EmployeeUI = {
           <div class="pt-2">
             <button type="button" onclick="EmployeeUI.forceRetryGps()" class="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition-all">
               <i data-lucide="map-pin" class="w-4 h-4"></i>
-              <span>فحص وتشغيل الموقع الآن ⚡</span>
+              <span>فحص وتشغيل الموقع الآن</span>
             </button>
           </div>
         </div>
@@ -273,7 +273,7 @@ const EmployeeUI = {
             <i data-lucide="alert-circle" class="w-5 h-5 text-rose-500 flex-shrink-0"></i>
             <div>
               <strong class="font-bold block">لم يتم الحصول على الموقع بعد:</strong>
-              <span>${err.code === 1 ? 'تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو القفل 🔒 بالأعلى.' : 'تأكد من تشغيل الـ GPS من شريط إشعارات الهاتف.'}</span>
+              <span>${err.code === 1 ? 'تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو أيقونة القفل بالأعلى.' : 'تأكد من تشغيل الـ GPS من شريط إشعارات الهاتف.'}</span>
             </div>
           `;
           if (window.lucide) lucide.createIcons();
@@ -311,7 +311,7 @@ const EmployeeUI = {
           <div class="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button type="button" onclick="EmployeeUI.openGpsEnableModal()" class="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all">
               <i data-lucide="navigation" class="w-4 h-4"></i>
-              <span>📍 تشغيل وتفعيل الـ GPS فوراً</span>
+              <span>تشغيل وتفعيل الـ GPS فوراً</span>
             </button>
             <button type="button" onclick="EmployeeUI.requestGeolocation()" class="py-3 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
               <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -415,7 +415,7 @@ const EmployeeUI = {
       container.innerHTML = `
         <div class="max-w-2xl mx-auto space-y-6">
           <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/10">
-            <h2 class="text-2xl font-extrabold">${t('greeting_morning')}، ${user.full_name || ''} 👋</h2>
+            <h2 class="text-2xl font-extrabold">${t('greeting_morning')}، ${user.full_name || ''}</h2>
             <p id="emp-current-date" class="text-blue-100 text-xs mt-1"></p>
           </div>
 
@@ -452,7 +452,7 @@ const EmployeeUI = {
                 <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i> مرحباً بك
               </span>
               <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
-                ${t('greeting_morning')}، ${user.full_name || 'زميلنا العزيز'} 👋
+                ${t('greeting_morning')}، ${user.full_name || 'زميلنا العزيز'}
               </h2>
               <p id="emp-current-date" class="text-blue-100 text-xs sm:text-sm mt-1"></p>
             </div>
@@ -485,7 +485,7 @@ const EmployeeUI = {
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
               <h4 class="font-extrabold text-sm text-amber-900 dark:text-amber-100">
-                اليوم عطلة رسمية للمنشأة (${this.offDayReason || 'عطلة أسبوعية'}) 🌴
+                اليوم عطلة رسمية للمنشأة (${this.offDayReason || 'عطلة أسبوعية'})
               </h4>
             </div>
             <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
@@ -542,7 +542,7 @@ const EmployeeUI = {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span>أنت على رأس العمل الآن ✓</span>
+                <span>أنت على رأس العمل الآن</span>
               </div>
 
               <!-- 2. Live Shift Timer Card -->
@@ -606,7 +606,7 @@ const EmployeeUI = {
                        target="_blank"
                        class="w-full py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all border border-emerald-500/30 shadow-sm">
                       <i data-lucide="message-circle" class="w-4 h-4"></i>
-                      <span>إشعار التأخير عبر واتساب 📲</span>
+                      <span>إشعار التأخير عبر واتساب</span>
                     </a>
                   </div>
                 ` : ''}
@@ -631,7 +631,7 @@ const EmployeeUI = {
               <div class="w-16 h-16 mx-auto rounded-3xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
                 <i data-lucide="badge-check" class="w-9 h-9"></i>
               </div>
-              <h3 class="text-xl font-bold text-slate-900 dark:text-white">اكتمل دوام اليوم بنجاح ✓</h3>
+              <h3 class="text-xl font-bold text-slate-900 dark:text-white">اكتمل دوام اليوم بنجاح</h3>
               <p class="text-sm text-slate-500 dark:text-slate-400">
                 لقد سجلت الحضور والانصراف لهذا اليوم. نتمنى لك يوماً سعيداً!
               </p>
@@ -712,7 +712,7 @@ const EmployeeUI = {
         if (remEl) {
           const remMs = endDate.getTime() - now.getTime();
           if (remMs <= 0) {
-            remEl.textContent = 'اكتملت ساعات الوردية ✓';
+            remEl.textContent = 'اكتملت ساعات الوردية';
             remEl.className = 'text-emerald-400 font-sans font-bold text-xs';
           } else {
             const remMin = Math.floor(remMs / (60 * 1000));
@@ -886,7 +886,7 @@ const EmployeeUI = {
                   }">
                   <div class="flex items-center justify-between w-full">
                     <span class="font-bold text-xs ${isSelected ? 'text-purple-700 dark:text-purple-300' : 'text-slate-800 dark:text-white'}">${s.name}</span>
-                    ${isSelected ? '<span class="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">✓</span>' : ''}
+                    ${isSelected ? '<span class="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]"><i data-lucide="check" class="w-2.5 h-2.5"></i></span>' : ''}
                   </div>
                   <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1">
                     ${formatTime12(s.start_time)} — ${formatTime12(s.end_time)}
@@ -1322,7 +1322,7 @@ const EmployeeUI = {
               class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
-                  📅 ${m.label}
+                  ${m.label}
                 </option>
               `).join('')}
             </select>
@@ -1401,7 +1401,7 @@ const EmployeeUI = {
 
             <div class="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 w-fit">
               <i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0"></i>
-              <span>🌴 أيام العطلة الأسبوعية معفاة تماماً ولا تُسجل كغياب</span>
+              <span>أيام العطلة الأسبوعية معفاة تماماً ولا تُسجل كغياب</span>
             </div>
           </div>
 
@@ -1426,14 +1426,14 @@ const EmployeeUI = {
                   <span class="text-[10px] text-slate-400 block font-bold">الأيام التي تم تسجيل غياب فيها:</span>
                   ${myMetrics.absentDaysList.map(a => `
                     <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-[11px] font-mono">
-                      <span class="text-slate-700 dark:text-slate-300 font-semibold">📅 ${a.date}</span>
+                      <span class="text-slate-700 dark:text-slate-300 font-semibold">${a.date}</span>
                       <span class="text-rose-600 font-bold">-${a.deduction} ج.م</span>
                     </div>
                   `).join('')}
                 </div>
               ` : `
                 <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold pt-1">
-                  ✓ سجل ناصع بدون أي غياب مسجل 🎉
+                  سجل ناصع بدون أي غياب مسجل
                 </div>
               `}
             </div>
@@ -1457,14 +1457,14 @@ const EmployeeUI = {
                   <span class="text-[10px] text-slate-400 block font-bold">الأيام التي سُجل فيها تأخير:</span>
                   ${myMetrics.lateDaysList.map(l => `
                     <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-[11px] font-mono">
-                      <span class="text-slate-700 dark:text-slate-300">📅 ${l.date} (${l.lateMinutes}د)</span>
+                      <span class="text-slate-700 dark:text-slate-300">${l.date} (${l.lateMinutes}د)</span>
                       <span class="text-amber-600 font-bold">-${l.deduction} ج.م</span>
                     </div>
                   `).join('')}
                 </div>
               ` : `
                 <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold pt-1">
-                  ✓ حضور كامل في الموعد بدون أي تأخير ✨
+                  حضور كامل في الموعد بدون أي تأخير
                 </div>
               `}
             </div>
@@ -1483,7 +1483,7 @@ const EmployeeUI = {
                 حضور منضبط بالكامل خلال فترة السماح
               </span>
               <div class="pt-2 text-[11px] text-emerald-700 dark:text-emerald-300/80 font-medium leading-relaxed">
-                الانضباط اليومي يحافظ على مؤشر التقييم عند 100% ويؤهلك للحصول على مكافأة تميز شهرية 🎁
+                الانضباط اليومي يحافظ على مؤشر التقييم عند 100% ويؤهلك للحصول على مكافأة تميز شهرية
               </div>
             </div>
           </div>
@@ -1826,8 +1826,8 @@ const EmployeeUI = {
               </div>
               <div>
                 ${c.status === 'pending' ? '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة</span>' :
-                  c.status === 'approved' ? '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">تمت الموافقة ✓</span>' :
-                  '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">تم الرفض ✗</span>'}
+                  c.status === 'approved' ? '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">تمت الموافقة</span>' :
+                  '<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">تم الرفض</span>'}
               </div>
             </div>
           `).join('')}
@@ -2114,11 +2114,11 @@ const EmployeeUI = {
           <div class="flex items-center gap-2 flex-wrap">
             <button onclick="EmployeeUI.openLeaveRequestModal()"
               class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all">
-              <i data-lucide="plus" class="w-4 h-4"></i> طلب إجازة 🌴
+              <i data-lucide="plus" class="w-4 h-4"></i> طلب إجازة
             </button>
             <button onclick="EmployeeUI.openPermissionRequestModal()"
               class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all">
-              <i data-lucide="clock" class="w-4 h-4"></i> طلب إذن خروج ⏱️
+              <i data-lucide="clock" class="w-4 h-4"></i> طلب إذن خروج
             </button>
           </div>
         </div>
@@ -2218,9 +2218,9 @@ const EmployeeUI = {
           const typeNames = { annual: 'إجازة سنوية اعتيادية', sick: 'إجازة مرضية', casual: 'إجازة عارضة / طارئة', unpaid: 'إجازة بدون راتب' };
           const typeColors = { annual: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60', sick: 'text-amber-600 bg-amber-50 dark:bg-amber-950/60', casual: 'text-purple-600 bg-purple-50 dark:bg-purple-950/60', unpaid: 'text-rose-600 bg-rose-50 dark:bg-rose-950/60' };
           const statusBadges = {
-            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة ⏳</span>',
-            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة ✓</span>',
-            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة ✕</span>'
+            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة</span>',
+            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمدة</span>',
+            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوضة</span>'
           };
 
           leavesListEl.innerHTML = leaves.map(l => `
@@ -2261,9 +2261,9 @@ const EmployeeUI = {
         } else {
           const permTypes = { late_arrival: 'إذن تأخير صباحي بعذر', early_departure: 'إذن انصراف مبكر', during_day: 'إذن خروج وعودة أثناء الدوام' };
           const statusBadges = {
-            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة ⏳</span>',
-            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد ✓</span>',
-            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض ✕</span>'
+            pending: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">قيد المراجعة</span>',
+            approved: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">معتمد</span>',
+            rejected: '<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">مرفوض</span>'
           };
 
           permsListEl.innerHTML = perms.map(p => `
@@ -2328,10 +2328,10 @@ const EmployeeUI = {
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">نوع الإجازة:</label>
               <select id="leave-type-select" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold focus:ring-2 focus:ring-blue-500">
-                <option value="annual">🌴 إجازة سنوية اعتيادية (تُخصم من الرصيد)</option>
+                <option value="annual">إجازة سنوية اعتيادية (تُخصم من الرصيد)</option>
                 <option value="sick">🩺 إجازة مرضية (تقرير طبي)</option>
-                <option value="casual">⚡ إجازة عارضة / طارئة</option>
-                <option value="unpaid">💼 إجازة بدون راتب</option>
+                <option value="casual">إجازة عارضة / طارئة</option>
+                <option value="unpaid">إجازة بدون راتب</option>
               </select>
             </div>
 
@@ -2460,9 +2460,9 @@ const EmployeeUI = {
             <div>
               <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">نوع الإذن:</label>
               <select id="perm-type-select" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold focus:ring-2 focus:ring-indigo-500">
-                <option value="late_arrival">🌅 إذن تأخير صباحي بعذر</option>
-                <option value="early_departure">🚪 إذن انصراف مبكر</option>
-                <option value="during_day">⚡ إذن خروج وعودة أثناء الدوام</option>
+                <option value="late_arrival">إذن تأخير صباحي بعذر</option>
+                <option value="early_departure">إذن انصراف مبكر</option>
+                <option value="during_day">إذن خروج وعودة أثناء الدوام</option>
               </select>
             </div>
 
@@ -2614,7 +2614,7 @@ const EmployeeUI = {
               class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
               ${months.map(m => `
                 <option value="${m.value}" ${m.value === targetMonth ? 'selected' : ''}>
-                  📅 ${m.label}
+                  ${m.label}
                 </option>
               `).join('')}
             </select>
@@ -2625,7 +2625,7 @@ const EmployeeUI = {
           </button>
           <button onclick="EmployeeUI.printMyPayslip('${targetMonth}')"
             class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all">
-            <i data-lucide="printer" class="w-4 h-4"></i> طباعة قسيمة الراتب 📄
+            <i data-lucide="printer" class="w-4 h-4"></i> طباعة قسيمة الراتب
           </button>
         `;
       }
@@ -2660,7 +2660,7 @@ const EmployeeUI = {
             <div class="p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
               <span class="text-xs text-purple-600 dark:text-purple-400 font-bold block">المكافآت والحوافز</span>
               <span class="text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
-              <span class="text-[10px] text-purple-400 mt-0.5 block font-semibold">${bonuses.length} مكافأة معتمدة 🎁</span>
+              <span class="text-[10px] text-purple-400 mt-0.5 block font-semibold">${bonuses.length} مكافأة معتمدة</span>
             </div>
 
             <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
@@ -2672,7 +2672,7 @@ const EmployeeUI = {
             <div class="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
               <span class="text-xs text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات</span>
               <span class="text-xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
-              <span class="text-[10px] text-amber-500 mt-0.5 block font-semibold">سلف معتمدة ومخصومة 💸</span>
+              <span class="text-[10px] text-amber-500 mt-0.5 block font-semibold">سلف معتمدة ومخصومة</span>
             </div>
 
             <div class="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right col-span-2 sm:col-span-1">
@@ -2715,10 +2715,10 @@ const EmployeeUI = {
                   <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
                     ${advances.map(a => {
                       const badge = a.status === 'approved'
-                        ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans">تمت الموافقة ✓</span>'
+                        ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-sans">تمت الموافقة</span>'
                         : (a.status === 'rejected'
-                          ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold font-sans">مرفوضة ✗</span>'
-                          : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold font-sans animate-pulse">قيد المراجعة ⏳</span>');
+                          ? '<span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-500 text-xs font-bold font-sans">مرفوضة</span>'
+                          : '<span class="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 text-xs font-bold font-sans animate-pulse">قيد المراجعة</span>');
                       return `
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                           <td class="py-3 px-3 text-slate-700 dark:text-slate-300">${a.date}</td>
@@ -2755,14 +2755,14 @@ const EmployeeUI = {
             </div>
 
             ${bonuses.length === 0 ? `
-              <div class="p-8 text-center text-slate-400 text-xs">لا توجد مكافآت مسجلة في هذا الشهر. نتمنى لك التوفيق والتميز دائماً! ✨</div>
+              <div class="p-8 text-center text-slate-400 text-xs">لا توجد مكافآت مسجلة في هذا الشهر. نتمنى لك التوفيق والتميز دائماً!</div>
             ` : `
               <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 ${bonuses.map(b => `
                   <div class="p-4 rounded-2xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/20 flex items-center justify-between">
                     <div>
                       <div class="flex items-center gap-2">
-                        <span class="text-lg">🎁</span>
+                        <span class="text-lg flex items-center justify-center"><i data-lucide="gift" class="w-6 h-6 text-purple-400"></i></span>
                         <span class="font-bold text-slate-900 dark:text-white text-xs">${b.reason}</span>
                       </div>
                       <span class="text-[10px] text-slate-400 font-mono mt-1 block">${b.date} • بواسطة: ${b.creator_name || 'الإدارة'}</span>
@@ -2835,7 +2835,7 @@ const EmployeeUI = {
             </div>
 
             <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-300">
-              <p class="leading-relaxed text-[11px]">📌 بمجرد إرسال الطلب، سيتلقى المدير إشعاراً فورياً لدراسة الطلب والموافقة عليه وإدراجه بمسير الراتب.</p>
+              <p class="leading-relaxed text-[11px]">بمجرد إرسال الطلب، سيتلقى المدير إشعاراً فورياً لدراسة الطلب والموافقة عليه وإدراجه بمسير الراتب.</p>
             </div>
 
             <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">

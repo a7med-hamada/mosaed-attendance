@@ -268,7 +268,7 @@
                 </div>
                 <div>
                   <span class="text-slate-500 block">حالة الاعتماد</span>
-                  <span class="font-bold text-emerald-700">معتمد للصرف ✓</span>
+                  <span class="font-bold text-emerald-700">معتمد للصرف</span>
                 </div>
               </div>
             </div>
@@ -299,7 +299,7 @@
                   ` : bonuses.map(b => `
                     <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
                       <div>
-                        <span class="font-bold text-emerald-700 block">🎁 ${b.reason}</span>
+                        <span class="font-bold text-emerald-700 block">${b.reason}</span>
                         <span class="text-[10px] text-slate-400 font-mono">${b.date}</span>
                       </div>
                       <span class="font-mono font-black text-emerald-700">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
@@ -347,7 +347,7 @@
                   ` : advances.map(a => `
                     <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
                       <div>
-                        <span class="font-bold text-amber-700 block">💸 سلفة: ${a.reason || 'سلفة على الراتب'}</span>
+                        <span class="font-bold text-amber-700 block">سلفة: ${a.reason || 'سلفة على الراتب'}</span>
                         <span class="text-[10px] text-slate-400 font-mono">${a.date}</span>
                       </div>
                       <span class="font-mono font-black text-rose-600">-${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م</span>

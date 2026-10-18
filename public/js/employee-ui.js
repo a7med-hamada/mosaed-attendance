@@ -507,7 +507,7 @@ const EmployeeUI = {
         </div>
 
         <!-- Attendance Action Card -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 text-center">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 text-center glass-card">
           ${!isCheckedIn ? `
             <div class="max-w-md mx-auto space-y-5">
               <div class="w-20 h-20 mx-auto rounded-3xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -529,16 +529,51 @@ const EmployeeUI = {
 
               <button id="emp-checkin-submit-btn" disabled
                 onclick="EmployeeUI.openCameraModal('check-in')"
-                class="w-full py-4 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg shadow-lg shadow-blue-500/25 transition-all transform active:scale-98 flex items-center justify-center gap-3">
+                class="hero-btn-checkin w-full py-4 px-6 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-lg flex items-center justify-center gap-3">
                 <i data-lucide="camera" class="w-6 h-6"></i>
                 <span>${t('check_in_btn')}</span>
               </button>
             </div>
           ` : !isCheckedOut ? `
-            <div class="max-w-md mx-auto space-y-6">
-              <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-sm font-bold">
-                <i data-lucide="check-circle" class="w-4 h-4"></i>
-                <span>${t('checked_in_success')}</span>
+            <div class="max-w-md mx-auto space-y-5">
+              <!-- 1. Pulsing Green Radar Badge -->
+              <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-bold shadow-sm shadow-emerald-500/10">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span>أنت على رأس العمل الآن ✓</span>
+              </div>
+
+              <!-- 2. Live Shift Timer Card -->
+              <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/25 shadow-lg shadow-emerald-950/30 text-center relative overflow-hidden">
+                <div class="text-[11px] font-bold text-emerald-400/90 uppercase tracking-wider flex items-center justify-center gap-1.5 mb-1">
+                  <i data-lucide="timer" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
+                  <span>مدة العمل المباشرة اليوم</span>
+                </div>
+                <div id="live-shift-timer-display" class="live-timer-neon text-3xl sm:text-4xl font-black text-emerald-400 tracking-widest my-1">
+                  00:00:00
+                </div>
+                <span class="text-[10px] text-slate-400 block font-mono">بدء الحضور: ${formatTime12(todayRecord.check_in_time)}</span>
+              </div>
+
+              <!-- 3. Shift Progress Bar -->
+              <div class="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/50 space-y-2 text-right">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="hourglass" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    <span>مسار دوام الوردية</span>
+                  </span>
+                  <span id="shift-progress-percent" class="font-mono text-emerald-400 text-xs">0%</span>
+                </div>
+                <div class="w-full h-2.5 rounded-full shift-progress-track overflow-hidden p-0.5">
+                  <div id="shift-progress-bar-fill" class="h-full rounded-full shift-progress-fill transition-all duration-700" style="width: 0%"></div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <span>${formatTime12(todayRecord.scheduled_start || startTime || todayRecord.check_in_time)}</span>
+                  <span id="shift-time-remaining" class="text-amber-300 font-sans font-bold">جاري الحساب...</span>
+                  <span>${formatTime12(todayRecord.scheduled_end || endTime || '17:00')}</span>
+                </div>
               </div>
 
               <!-- Today's Record Details -->
@@ -584,7 +619,7 @@ const EmployeeUI = {
                 </p>
                 <button id="emp-checkout-submit-btn" disabled
                   onclick="EmployeeUI.handleCheckOutClick()"
-                  class="w-full py-4 px-6 rounded-2xl bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white font-bold text-lg shadow-lg transition-all transform active:scale-98 flex items-center justify-center gap-3">
+                  class="hero-btn-checkout w-full py-4 px-6 rounded-2xl disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-lg flex items-center justify-center gap-3">
                   <i data-lucide="log-out" class="w-5 h-5"></i>
                   <span>${t('check_out_btn')}</span>
                 </button>
@@ -624,6 +659,82 @@ const EmployeeUI = {
     if (window.lucide) lucide.createIcons();
     this.updateGpsCard();
     this.loadEmployeeScoreCard();
+    if (isCheckedIn && !isCheckedOut) {
+      this.startLiveShiftTimer(todayRecord.check_in_time, todayRecord.scheduled_start || startTime, todayRecord.scheduled_end || endTime);
+    } else {
+      this.stopLiveShiftTimer();
+    }
+  },
+
+  startLiveShiftTimer(checkInTime, schedStart, schedEnd) {
+    this.stopLiveShiftTimer();
+    if (!checkInTime) return;
+
+    const parseToDate = (timeStr) => {
+      if (!timeStr) return new Date();
+      const parts = String(timeStr).trim().split(':').map(Number);
+      const d = new Date();
+      d.setHours(parts[0] || 0, parts[1] || 0, parts[2] || 0, 0);
+      return d;
+    };
+
+    const inDate = parseToDate(checkInTime);
+    const startDate = parseToDate(schedStart || checkInTime);
+    let endDate = parseToDate(schedEnd || '17:00:00');
+    if (endDate <= startDate) {
+      endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    const update = () => {
+      const now = new Date();
+      const elapsedMs = Math.max(0, now.getTime() - inDate.getTime());
+      const totalSecs = Math.floor(elapsedMs / 1000);
+      const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+      const secs = String(totalSecs % 60).padStart(2, '0');
+
+      const timerEl = document.getElementById('live-shift-timer-display');
+      if (timerEl) {
+        timerEl.textContent = `${hrs}:${mins}:${secs}`;
+      }
+
+      const fillEl = document.getElementById('shift-progress-bar-fill');
+      const pctEl = document.getElementById('shift-progress-percent');
+      const remEl = document.getElementById('shift-time-remaining');
+
+      if (fillEl && pctEl) {
+        const totalShiftMs = Math.max(1000, endDate.getTime() - startDate.getTime());
+        const shiftElapsedMs = Math.max(0, now.getTime() - startDate.getTime());
+        const pct = Math.min(100, Math.max(0, Math.round((shiftElapsedMs / totalShiftMs) * 100)));
+        fillEl.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+
+        if (remEl) {
+          const remMs = endDate.getTime() - now.getTime();
+          if (remMs <= 0) {
+            remEl.textContent = 'اكتملت ساعات الوردية ✓';
+            remEl.className = 'text-emerald-400 font-sans font-bold text-xs';
+          } else {
+            const remMin = Math.floor(remMs / (60 * 1000));
+            const remHrs = Math.floor(remMin / 60);
+            const rMin = remMin % 60;
+            const remText = remHrs > 0 ? `متبقي ${remHrs} س و ${rMin} د` : `متبقي ${rMin} دقيقة`;
+            remEl.textContent = remText;
+            remEl.className = 'text-amber-300 font-sans font-bold text-xs';
+          }
+        }
+      }
+    };
+
+    update();
+    this._liveTimerInterval = setInterval(update, 1000);
+  },
+
+  stopLiveShiftTimer() {
+    if (this._liveTimerInterval) {
+      clearInterval(this._liveTimerInterval);
+      this._liveTimerInterval = null;
+    }
   },
 
   getShiftSelectionHtml() {
@@ -852,6 +963,9 @@ const EmployeeUI = {
         null
       );
       showToast(res.message, 'success');
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate([60, 40, 80]); } catch (_) {}
+      }
       await this.loadTodayData();
     } catch (err) {
       showToast(err.message, 'danger');
@@ -1079,6 +1193,10 @@ const EmployeeUI = {
           capturedPhotoData
         );
         showToast(res.message, 'success');
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate([60, 40, 80]); } catch (_) {}
       }
 
       this.closeCameraModal();

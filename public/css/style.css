@@ -569,3 +569,117 @@ html:not(.dark) .modal-enter {
     max-height: 92vh;
   }
 }
+
+/* ========================================================
+   PREMIUM SAAS UI ENHANCEMENTS (Glassmorphism, 3D Hero, Live Pulse)
+   ======================================================== */
+
+/* 1. Glassmorphism Panels & Cards */
+.glass-card {
+  background: rgba(9, 28, 46, 0.72) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45) !important;
+}
+
+html:not(.dark) .glass-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 2. Hover Ambient Glow */
+.glow-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative;
+}
+
+.glow-hover:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 14px 35px -8px rgba(0, 229, 155, 0.16), 0 0 0 1px rgba(0, 229, 155, 0.22) !important;
+}
+
+/* 3. Hero 3D Tactile Action Buttons */
+.hero-btn-checkin {
+  background: linear-gradient(135deg, #00d68f 0%, #00995a 100%) !important;
+  box-shadow: 0 10px 25px -4px rgba(0, 214, 143, 0.42), 0 3px 6px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.hero-btn-checkin:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 18px 36px -5px rgba(0, 214, 143, 0.55), 0 5px 10px 0 rgba(0, 0, 0, 0.25), inset 0 1px 2px 0 rgba(255, 255, 255, 0.5) !important;
+  filter: brightness(1.05);
+}
+
+.hero-btn-checkin:active:not(:disabled) {
+  transform: translateY(2px) scale(0.985) !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 214, 143, 0.35), inset 0 2px 4px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
+.hero-btn-checkout {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+  box-shadow: 0 10px 25px -4px rgba(239, 68, 68, 0.42), 0 3px 6px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.hero-btn-checkout:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 18px 36px -5px rgba(239, 68, 68, 0.55), 0 5px 10px 0 rgba(0, 0, 0, 0.25), inset 0 1px 2px 0 rgba(255, 255, 255, 0.5) !important;
+  filter: brightness(1.05);
+}
+
+.hero-btn-checkout:active:not(:disabled) {
+  transform: translateY(2px) scale(0.985) !important;
+  box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.35), inset 0 2px 4px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
+/* 4. Live Shift Timer & Pulse Beacon */
+.live-timer-neon {
+  font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
+  letter-spacing: 2px;
+  text-shadow: 0 0 16px rgba(0, 229, 155, 0.4);
+}
+
+@keyframes radarWave {
+  0% { transform: scale(1); opacity: 0.9; }
+  70% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.radar-beacon {
+  position: relative;
+  display: inline-flex;
+}
+
+.radar-beacon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: #10b981;
+  animation: radarWave 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* 5. Shift Progress Track & Fill */
+.shift-progress-track {
+  background: rgba(15, 23, 42, 0.7);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.shift-progress-fill {
+  background: linear-gradient(90deg, #059669 0%, #10b981 50%, #00e59b 100%);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.5);
+}
+

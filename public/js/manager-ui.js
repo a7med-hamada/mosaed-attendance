@@ -163,7 +163,7 @@ const ManagerUI = {
         </div>
 
         <!-- Today's Attendance Table -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div class="bg-white dark:bg-slate-900 glass-card glow-hover rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
             <h3 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
               <i data-lucide="users" class="w-4 h-4 text-blue-600"></i> حضور الموظفين اليوم
@@ -295,7 +295,7 @@ const ManagerUI = {
       const metricsGrid = document.getElementById('mgr-metrics-grid');
       if (metricsGrid) {
         metricsGrid.innerHTML = `
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
             <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold block">إجمالي الموظفين</span>
             <div class="flex items-baseline justify-between mt-1">
               <span class="text-2xl font-extrabold text-slate-900 dark:text-white">${m.totalEmployees}</span>
@@ -303,37 +303,37 @@ const ManagerUI = {
             </div>
           </div>
 
-          <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
             <span class="text-xs text-blue-600 dark:text-blue-400 font-semibold block">الحاضرون اليوم</span>
             <span class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1 block">${m.presentCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
             <span class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold block">في الموعد</span>
             <span class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1 block">${m.onTimeCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
             <span class="text-xs text-amber-600 dark:text-amber-400 font-semibold block">المتأخرون</span>
             <span class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1 block">${m.lateCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900">
             <span class="text-xs text-orange-600 dark:text-orange-400 font-semibold block">نصف يوم</span>
             <span class="text-2xl font-extrabold text-orange-700 dark:text-orange-300 mt-1 block">${m.halfDayCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
             <span class="text-xs text-rose-600 dark:text-rose-400 font-semibold block">الغائبون</span>
             <span class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1 block">${m.absentCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900">
             <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold block">على رأس العمل الآن</span>
             <span class="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1 block">${m.workingNowCount}</span>
           </div>
 
-          <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900">
+          <div class="glass-card glow-hover p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900">
             <span class="text-xs text-purple-600 dark:text-purple-400 font-semibold block">تم الانصراف</span>
             <span class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-1 block">${m.checkedOutCount}</span>
           </div>
@@ -509,8 +509,12 @@ const ManagerUI = {
                       ` : ''}
                     </div>
                   ` : (r.check_in_time ? `
-                    <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold inline-flex items-center gap-1.5 border border-emerald-500/20">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> على رأس العمل
+                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] font-bold inline-flex items-center gap-2 border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
+                      <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span>على رأس العمل</span>
                     </span>
                   ` : `
                     <span class="text-slate-400 font-medium">—</span>
@@ -658,7 +662,15 @@ const ManagerUI = {
                     </span>
                   </td>
                   <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    ${e.today_status ? getStatusBadge(e.today_status) : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>'}
+                    ${(e.today_check_in && !e.today_check_out) ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span>على رأس العمل</span>
+                      </span>
+                    ` : (e.today_status ? getStatusBadge(e.today_status) : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>')}
                   </td>
                   <td class="py-3.5 px-4 text-center whitespace-nowrap">
                     <div class="flex items-center justify-center gap-1.5">
@@ -3073,7 +3085,7 @@ const ManagerUI = {
                         ${r.check_out_time ? `
                           <span class="block">${formatTime12(r.check_out_time)}</span>
                           ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? '<span class="text-[9px] font-bold text-amber-500 block mt-0.5">انصراف تلقائي 🤖</span>' : ''}
-                        ` : '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">على رأس العمل 🟢</span>'}
+                        ` : '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/30 shadow-xs shadow-emerald-500/10"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span><span>على رأس العمل</span></span>'}
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         ${getStatusBadge(r.status)}

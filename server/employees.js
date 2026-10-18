@@ -18,7 +18,7 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
         u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
-        u.profile_photo, u.created_at,
+        u.profile_photo, (u.face_descriptor IS NOT NULL) as has_face_enrolled, u.face_enrolled_at, u.created_at,
         d.name as department_name,
         s.name as schedule_name, s.start_time, s.end_time,
         cs.name as shift_name,
@@ -539,6 +539,52 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
   } catch (error) {
     console.error('Delete employee error:', error);
     res.status(500).json({ success: false, error: 'فشل في حذف الموظف' });
+  }
+});
+
+// POST /api/employees/:id/reset-face (Manager resets employee Face ID)
+router.post('/:id/reset-face', authenticateToken, requireManager, (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    const managerId = req.user.manager_id || req.user.id;
+
+    const emp = db.prepare('SELECT id, full_name, manager_id FROM users WHERE id = ?').get(targetId);
+    if (!emp) {
+      return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+    }
+
+    if (emp.manager_id !== managerId && managerId !== 1) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بتعديل موظف تابع لجهة أخرى' });
+    }
+
+    db.prepare(`
+      UPDATE users SET
+        face_descriptor = NULL,
+        face_photo = NULL,
+        face_enrolled_at = NULL
+      WHERE id = ?
+    `).run(targetId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'RESET_EMPLOYEE_FACE_ID',
+      'users',
+      targetId,
+      null,
+      null,
+      `إعادة تعيين بصمة الوجه للموظف ${emp.full_name}`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: `تمت إعادة تعيين بصمة الوجه للموظف ${emp.full_name} بنجاح، وسيطلب منه النظام تسجيلها مجدداً عند أول تسجيل دخول.`
+    });
+  } catch (err) {
+    console.error('Reset face error:', err);
+    res.status(500).json({ success: false, error: 'فشل في إعادة تعيين بصمة الوجه' });
   }
 });
 

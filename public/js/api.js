@@ -114,20 +114,30 @@ const API = {
     });
   },
 
+  faceEnroll(descriptor, photo) {
+    return this.request('/auth/face-enroll', {
+      method: 'POST',
+      body: { descriptor, photo }
+    });
+  },
+
   // Attendance
-  checkIn(latitude, longitude, accuracy, photo, shift_id = null) {
+  checkIn(latitude, longitude, accuracy, photo, shift_id = null, face_descriptor = null) {
     const body = { latitude, longitude, accuracy, photo };
     if (shift_id) body.shift_id = shift_id;
+    if (face_descriptor) body.face_descriptor = face_descriptor;
     return this.request('/attendance/check-in', {
       method: 'POST',
       body
     });
   },
 
-  checkOut(latitude, longitude, accuracy, photo) {
+  checkOut(latitude, longitude, accuracy, photo, face_descriptor = null) {
+    const body = { latitude, longitude, accuracy, photo };
+    if (face_descriptor) body.face_descriptor = face_descriptor;
     return this.request('/attendance/check-out', {
       method: 'POST',
-      body: { latitude, longitude, accuracy, photo }
+      body
     });
   },
 
@@ -229,6 +239,12 @@ const API = {
   deleteEmployee(id) {
     return this.request(`/employees/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  resetEmployeeFace(id) {
+    return this.request(`/employees/${id}/reset-face`, {
+      method: 'POST'
     });
   },
 

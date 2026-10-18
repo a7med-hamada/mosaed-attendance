@@ -274,6 +274,9 @@ router.post('/login', (req, res) => {
     const { password_hash, ...safeUser } = user;
     safeUser.manager_id = effectiveManagerId;
     safeUser.subscription = subStatus;
+    safeUser.has_face_enrolled = !!user.face_descriptor;
+    safeUser.face_enrolled_at = user.face_enrolled_at || null;
+    safeUser.face_descriptor = user.face_descriptor ? (typeof user.face_descriptor === 'string' ? JSON.parse(user.face_descriptor) : user.face_descriptor) : null;
 
     let wpLogin = db.prepare('SELECT company_name FROM workplaces WHERE manager_id = ? LIMIT 1').get(effectiveManagerId);
     if (!wpLogin && effectiveManagerId === 1) {
@@ -302,6 +305,7 @@ router.get('/me', authenticateToken, (req, res) => {
     const user = db.prepare(`
       SELECT u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
              u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.is_active, u.profile_photo,
+             u.face_descriptor, u.face_photo, u.face_enrolled_at,
              d.name as department_name,
              s.name as schedule_name, s.start_time, s.end_time, s.grace_period_minutes, s.half_day_threshold, s.absence_threshold, s.working_days
       FROM users u
@@ -323,6 +327,8 @@ router.get('/me', authenticateToken, (req, res) => {
     user.company_name = (wp && wp.company_name) ? wp.company_name : (user.role === 'manager' ? user.full_name : '');
 
     user.subscription = getSubscriptionDetails(user.manager_id);
+    user.has_face_enrolled = !!user.face_descriptor;
+    user.face_descriptor = user.face_descriptor ? (typeof user.face_descriptor === 'string' ? JSON.parse(user.face_descriptor) : user.face_descriptor) : null;
 
     res.json({ success: true, user });
   } catch (error) {
@@ -465,6 +471,42 @@ router.post('/verify-password', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Verify password error:', error);
     res.status(500).json({ success: false, error: 'فشل في التحقق من كلمة المرور' });
+  }
+});
+
+// POST /api/auth/face-enroll (Biometric Face ID Enrollment for Employee)
+router.post('/face-enroll', authenticateToken, (req, res) => {
+  try {
+    const { descriptor, photo } = req.body;
+    if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+      return res.status(400).json({
+        success: false,
+        error: 'بيانات ملامح بصمة الوجه غير مكتملة، يرجى إعادة المحاولة والتأكد من وضوح الإضاءة ومواجهة الكاميرا مباشرة'
+      });
+    }
+
+    const userId = req.user.id;
+    const enrolledAt = new Date().toISOString();
+
+    db.prepare(`
+      UPDATE users SET
+        face_descriptor = ?,
+        face_photo = COALESCE(?, face_photo),
+        face_enrolled_at = ?
+      WHERE id = ?
+    `).run(JSON.stringify(descriptor), photo || null, enrolledAt, userId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(userId, req.user.full_name, 'FACE_ID_ENROLLED', 'users', userId, null, null, 'تسجيل بصمة الوجه البيومترية للمرة الأولى بنجاح', clientIp);
+
+    res.json({
+      success: true,
+      message: 'تم تسجيل وتوثيق بصمة وجهك بنجاح! يمكنك الآن تسجيل الحضور بسهولة وأمان.',
+      face_enrolled_at: enrolledAt
+    });
+  } catch (err) {
+    console.error('Face enroll error:', err);
+    res.status(500).json({ success: false, error: 'حدث خطأ أثناء حفظ بصمة الوجه' });
   }
 });
 

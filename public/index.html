@@ -336,6 +336,9 @@
         </div>
       </div>
 
+      <!-- Face ID Verification Status in Camera Modal -->
+      <div id="camera-face-status" class="hidden mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"></div>
+
       <!-- Control Buttons -->
       <div class="flex items-center justify-center gap-3">
         <!-- Snap Photo Button -->
@@ -362,6 +365,87 @@
         <!-- Cancel / Close Button -->
         <button onclick="EmployeeUI.closeCameraModal()"
           class="py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-400 font-bold text-sm"
+          title="إلغاء">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: BIOMETRIC FACE ID ENROLLMENT -->
+  <!-- ========================================== -->
+  <div id="face-enroll-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-center relative overflow-hidden">
+      <!-- Glow ambient background -->
+      <div class="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Header -->
+      <div class="mb-4">
+        <div class="w-12 h-12 mx-auto mb-2 rounded-2xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <i data-lucide="scan-face" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 dark:text-white">
+          تعريف بصمة الوجه (Face ID)
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+          خطوة أساسية لمرة واحدة لحماية حسابك وتوثيق حضورك الذكي ومنع تسجيل أي شخص بالنيابة عنك.
+        </p>
+      </div>
+
+      <!-- Camera Feed / Face Scan Frame -->
+      <div class="relative w-full aspect-4/3 rounded-2xl bg-slate-950 overflow-hidden flex items-center justify-center shadow-inner mb-4 border border-slate-800">
+        <!-- Live Video Element -->
+        <video id="face-enroll-video" autoplay playsinline class="w-full h-full object-cover camera-mirror"></video>
+
+        <!-- Preview Image after capture -->
+        <img id="face-enroll-preview" class="w-full h-full object-cover hidden" />
+
+        <!-- Biometric Target Oval Overlay -->
+        <div id="face-enroll-overlay" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
+          <div class="relative w-48 h-56 rounded-[50%] border-2 border-dashed border-blue-400/70 shadow-[0_0_20px_rgba(59,130,246,0.35)] flex items-center justify-center animate-pulse">
+            <!-- Corner Brackets -->
+            <div class="absolute top-2 left-6 w-4 h-4 border-t-2 border-l-2 border-blue-400"></div>
+            <div class="absolute top-2 right-6 w-4 h-4 border-t-2 border-r-2 border-blue-400"></div>
+            <div class="absolute bottom-2 left-6 w-4 h-4 border-b-2 border-l-2 border-blue-400"></div>
+            <div class="absolute bottom-2 right-6 w-4 h-4 border-b-2 border-r-2 border-blue-400"></div>
+          </div>
+        </div>
+
+        <!-- Scan Status Badge -->
+        <div id="face-enroll-status" class="absolute bottom-3 left-4 right-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-xl text-center text-xs text-slate-200 border border-white/10 flex items-center justify-center gap-2">
+          <i data-lucide="scan" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>ضع وجهك داخل الإطار واثبت لثوانٍ...</span>
+        </div>
+      </div>
+
+      <!-- Quick Guidance Tips -->
+      <div class="grid grid-cols-3 gap-2 mb-4 text-[10px] text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+          <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
+          <span>إضاءة جيدة</span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+          <i data-lucide="eye" class="w-3.5 h-3.5 text-blue-500 shrink-0"></i>
+          <span>انظر للأمام</span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500 shrink-0"></i>
+          <span>بدون نظارة</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button id="face-enroll-capture-btn" onclick="EmployeeUI.captureAndEnrollFace()"
+          class="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="scan-face" class="w-5 h-5"></i>
+          <span>التقاط وحفظ بصمة الوجه</span>
+        </button>
+
+        <button id="face-enroll-close-btn" onclick="EmployeeUI.closeFaceEnrollModal()"
+          class="py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-bold text-sm transition-all"
           title="إلغاء">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
@@ -947,14 +1031,18 @@
     </div>
   </div>
 
+  <!-- Biometric Face API & Service -->
+  <script src="/js/face-api.min.js"></script>
+  <script src="/js/face-service.js?v=20261018_1400"></script>
+
   <!-- Scripts with Cache Busters -->
-  <script src="/js/i18n.js?v=20261017_2115"></script>
-  <script src="/js/api.js?v=20261017_2115"></script>
-  <script src="/js/tafqeet.js?v=20261017_2115"></script>
-  <script src="/js/map.js?v=20261017_2115"></script>
-  <script src="/js/employee-ui.js?v=20261017_2115"></script>
-  <script src="/js/manager-ui.js?v=20261017_2115"></script>
-  <script src="/js/app.js?v=20261017_2115"></script>
+  <script src="/js/i18n.js?v=20261018_1400"></script>
+  <script src="/js/api.js?v=20261018_1400"></script>
+  <script src="/js/tafqeet.js?v=20261018_1400"></script>
+  <script src="/js/map.js?v=20261018_1400"></script>
+  <script src="/js/employee-ui.js?v=20261018_1400"></script>
+  <script src="/js/manager-ui.js?v=20261018_1400"></script>
+  <script src="/js/app.js?v=20261018_1400"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>

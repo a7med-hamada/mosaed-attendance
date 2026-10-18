@@ -300,6 +300,16 @@ try {
   }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_shift ON users(shift_id);`);
 
+  if (!userCols.includes('face_descriptor')) {
+    db.exec(`ALTER TABLE users ADD COLUMN face_descriptor TEXT DEFAULT NULL;`);
+  }
+  if (!userCols.includes('face_photo')) {
+    db.exec(`ALTER TABLE users ADD COLUMN face_photo TEXT DEFAULT NULL;`);
+  }
+  if (!userCols.includes('face_enrolled_at')) {
+    db.exec(`ALTER TABLE users ADD COLUMN face_enrolled_at TEXT DEFAULT NULL;`);
+  }
+
   // Support Tickets table for technical support from website to super admin
   db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (

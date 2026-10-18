@@ -624,6 +624,7 @@ const ManagerUI = {
                 <th class="py-3.5 px-4">القسم</th>
                 <th class="py-3.5 px-4">المسمى الوظيفي</th>
                 <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
+                <th class="py-3.5 px-4 text-center">بصمة الوجه (Face ID)</th>
                 <th class="py-3.5 px-4 text-center">حالة الحساب</th>
                 <th class="py-3.5 px-4 text-center">حضور اليوم</th>
                 <th class="py-3.5 px-4 text-center">الإجراءات</th>
@@ -657,6 +658,19 @@ const ManagerUI = {
                     </span>
                   </td>
                   <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    ${e.has_face_enrolled ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
+                        <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                        <span>مسجلة</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                        <span>غير مسجلة</span>
+                      </span>
+                    `}
+                  </td>
+                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
                     <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
                       ${e.is_active ? 'نشط' : 'معطل'}
                     </span>
@@ -683,6 +697,11 @@ const ManagerUI = {
                       <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})" class="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
                         <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-4 h-4"></i>
                       </button>
+                      ${e.has_face_enrolled ? `
+                        <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
+                          <i data-lucide="scan-face" class="w-4 h-4"></i>
+                        </button>
+                      ` : ''}
                       <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
@@ -844,6 +863,17 @@ const ManagerUI = {
     try {
       await API.updateEmployee(id, { is_active: newStatus });
       showToast(newStatus ? 'تم تفعيل حساب الموظف' : 'تم تعطيل حساب الموظف', 'success');
+      this.loadEmployeesTable();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async resetEmployeeFace(id, name) {
+    if (!confirm(`هل أنت متأكد من إعادة تعيين بصمة وجه الموظف "${name}"؟ سيُطلب منه تعريف وجهه مجدداً عند تسجيل الدخول.`)) return;
+    try {
+      await API.resetEmployeeFace(id);
+      showToast('تمت إعادة تعيين بصمة وجه الموظف بنجاح', 'success');
       this.loadEmployeesTable();
     } catch (err) {
       showToast(err.message, 'danger');

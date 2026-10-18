@@ -413,6 +413,19 @@
           </div>
         </div>
 
+        <!-- Fallback/Permission Prompt if autoplay camera is blocked -->
+        <div id="face-enroll-cam-prompt" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+          <div class="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-3">
+            <i data-lucide="camera" class="w-7 h-7"></i>
+          </div>
+          <h4 class="text-sm font-bold text-white mb-1.5">السماح بتشغيل الكاميرا</h4>
+          <p class="text-[11px] text-slate-300 max-w-xs mb-4">اضغط على الزر أدناه لتشغيل الكاميرا والبدء في مسح تفاصيل الوجه بدقة.</p>
+          <button onclick="EmployeeUI.retryFaceEnrollCamera()" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-blue-500/30 flex items-center gap-2 active:scale-95 transition-all">
+            <i data-lucide="camera" class="w-4 h-4"></i>
+            <span>تشغيل الكاميرا ومسح الوجه</span>
+          </button>
+        </div>
+
         <!-- Scan Status Badge -->
         <div id="face-enroll-status" class="absolute bottom-3 left-4 right-4 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-xl text-center text-xs text-slate-200 border border-white/10 flex items-center justify-center gap-2">
           <i data-lucide="scan" class="w-3.5 h-3.5 text-blue-400"></i>
@@ -1033,16 +1046,16 @@
 
   <!-- Biometric Face API & Service -->
   <script src="/js/face-api.min.js"></script>
-  <script src="/js/face-service.js?v=20261018_1400"></script>
+  <script src="/js/face-service.js?v=20261018_1450"></script>
 
   <!-- Scripts with Cache Busters -->
-  <script src="/js/i18n.js?v=20261018_1400"></script>
-  <script src="/js/api.js?v=20261018_1400"></script>
-  <script src="/js/tafqeet.js?v=20261018_1400"></script>
-  <script src="/js/map.js?v=20261018_1400"></script>
-  <script src="/js/employee-ui.js?v=20261018_1400"></script>
-  <script src="/js/manager-ui.js?v=20261018_1400"></script>
-  <script src="/js/app.js?v=20261018_1400"></script>
+  <script src="/js/i18n.js?v=20261018_1450"></script>
+  <script src="/js/api.js?v=20261018_1450"></script>
+  <script src="/js/tafqeet.js?v=20261018_1450"></script>
+  <script src="/js/map.js?v=20261018_1450"></script>
+  <script src="/js/employee-ui.js?v=20261018_1450"></script>
+  <script src="/js/manager-ui.js?v=20261018_1450"></script>
+  <script src="/js/app.js?v=20261018_1450"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>

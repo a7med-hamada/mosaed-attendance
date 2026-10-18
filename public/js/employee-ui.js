@@ -1355,6 +1355,10 @@ const EmployeeUI = {
     }
     if (window.lucide) lucide.createIcons();
 
+    // Hide prompt initially
+    const camPrompt = document.getElementById('face-enroll-cam-prompt');
+    if (camPrompt) camPrompt.classList.add('hidden');
+
     // Start video stream
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -1370,9 +1374,12 @@ const EmployeeUI = {
         throw new Error('الكاميرا غير مدعومة في المتصفح');
       }
     } catch (err) {
-      console.warn('Face enroll camera error:', err);
-      showToast('تعذر فتح الكاميرا لتعريف بصمة الوجه: ' + err.message, 'danger');
-      this.closeFaceEnrollModal();
+      console.warn('Face enroll camera autoplay notice:', err);
+      // Keep modal open and show tap-to-start camera button
+      if (camPrompt) {
+        camPrompt.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      }
       return;
     }
 
@@ -1380,6 +1387,27 @@ const EmployeeUI = {
     FaceService.init().then(() => {
       this.startFaceEnrollDetection();
     });
+  },
+
+  async retryFaceEnrollCamera() {
+    const camPrompt = document.getElementById('face-enroll-cam-prompt');
+    const video = document.getElementById('face-enroll-video');
+    try {
+      this.faceEnrollStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+      });
+      if (video) {
+        video.srcObject = this.faceEnrollStream;
+        await video.play();
+      }
+      if (camPrompt) camPrompt.classList.add('hidden');
+      FaceService.init().then(() => {
+        this.startFaceEnrollDetection();
+      });
+    } catch (err) {
+      showToast('تعذر فتح الكاميرا: ' + err.message, 'danger');
+    }
   },
 
   startFaceEnrollDetection() {

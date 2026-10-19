@@ -315,61 +315,6 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'التقاط صورة سيلفي لإثبات التواجد مطلوب لإتمام الحضور' });
     }
 
-    // Verify Face ID Biometric match if enrolled
-    const userFace = db.prepare('SELECT face_descriptor, full_name, role FROM users WHERE id = ?').get(employeeId);
-    let faceVerified = false;
-    if (userFace && userFace.role === 'employee' && !userFace.face_descriptor) {
-      return res.status(400).json({
-        success: false,
-        face_required: true,
-        error: 'يجب تعريف بصمة وجهك أولاً من خلال مسح الوجه لتتمكن من تسجيل الحضور'
-      });
-    }
-
-    if (userFace && userFace.face_descriptor) {
-      const submittedDescriptor = req.body.face_descriptor || req.body.descriptor;
-      if (!submittedDescriptor || !Array.isArray(submittedDescriptor) || submittedDescriptor.length !== 128) {
-        return res.status(400).json({
-          success: false,
-          face_required: true,
-          error: 'يلزم مسح وتأكيد بصمة الوجه للتحقق من هويتك ومنع تسجيل الحضور بالنيابة'
-        });
-      }
-
-      try {
-        const enrolled = typeof userFace.face_descriptor === 'string' ? JSON.parse(userFace.face_descriptor) : userFace.face_descriptor;
-        let sum = 0;
-        for (let i = 0; i < 128; i++) {
-          const diff = submittedDescriptor[i] - enrolled[i];
-          sum += diff * diff;
-        }
-        const distance = Math.sqrt(sum);
-        // Distance threshold: < 0.55 is verified same person
-        if (distance > 0.55) {
-          const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-          logAudit(
-            employeeId,
-            req.user.full_name,
-            'FACE_ID_MISMATCH_BLOCKED',
-            'attendance_records',
-            null,
-            null,
-            { distance, threshold: 0.55 },
-            `محاولة تسجيل حضور فاشلة: بصمة الوجه غير متطابقة (مسافة الفارق: ${distance.toFixed(3)})`,
-            clientIp
-          );
-          return res.status(403).json({
-            success: false,
-            face_mismatch: true,
-            error: 'عذراً! ملامح الوجه لا تطابق بصمة وجه صاحب الحساب المسجلة. لا يمكن تسجيل الحضور نيابة عن شخص آخر.'
-          });
-        }
-        faceVerified = true;
-      } catch (faceErr) {
-        console.error('Face verification comparison error:', faceErr);
-      }
-    }
-
     const today = getTodayString();
     const currentTime = getCurrentTimeString();
 
@@ -737,44 +682,6 @@ router.post('/check-out', authenticateToken, (req, res) => {
 
     if (record.check_out_time) {
       return res.status(400).json({ success: false, error: `تم تسجيل الانصراف مسبقاً لهذا اليوم في الساعة ${record.check_out_time}` });
-    }
-
-    // Verify Face ID Biometric match on checkout if enrolled
-    const userFace = db.prepare('SELECT face_descriptor, full_name FROM users WHERE id = ?').get(employeeId);
-    if (userFace && userFace.face_descriptor && photo) {
-      const submittedDescriptor = req.body.face_descriptor || req.body.descriptor;
-      if (submittedDescriptor && Array.isArray(submittedDescriptor) && submittedDescriptor.length === 128) {
-        try {
-          const enrolled = typeof userFace.face_descriptor === 'string' ? JSON.parse(userFace.face_descriptor) : userFace.face_descriptor;
-          let sum = 0;
-          for (let i = 0; i < 128; i++) {
-            const diff = submittedDescriptor[i] - enrolled[i];
-            sum += diff * diff;
-          }
-          const distance = Math.sqrt(sum);
-          if (distance > 0.55) {
-            const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-            logAudit(
-              employeeId,
-              req.user.full_name,
-              'FACE_ID_CHECKOUT_MISMATCH_BLOCKED',
-              'attendance_records',
-              record.id,
-              null,
-              { distance, threshold: 0.55 },
-              `محاولة انصراف مرفوضة: ملامح الوجه لا تطابق صاحب الحساب (فارق: ${distance.toFixed(3)})`,
-              clientIp
-            );
-            return res.status(403).json({
-              success: false,
-              face_mismatch: true,
-              error: 'عذراً! ملامح الوجه لا تطابق بصمة وجه صاحب الحساب المسجلة. لا يمكن تسجيل الانصراف نيابة عن شخص آخر.'
-            });
-          }
-        } catch (faceErr) {
-          console.error('Checkout face comparison error:', faceErr);
-        }
-      }
     }
 
     const empUser = db.prepare('SELECT manager_id, shift_id FROM users WHERE id = ?').get(employeeId);

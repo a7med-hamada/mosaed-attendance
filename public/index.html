@@ -1044,18 +1044,14 @@
     </div>
   </div>
 
-  <!-- Biometric Face API & Service -->
-  <script src="/js/face-api.min.js"></script>
-  <script src="/js/face-service.js?v=20261018_1450"></script>
-
   <!-- Scripts with Cache Busters -->
-  <script src="/js/i18n.js?v=20261018_1450"></script>
-  <script src="/js/api.js?v=20261018_1450"></script>
-  <script src="/js/tafqeet.js?v=20261018_1450"></script>
-  <script src="/js/map.js?v=20261018_1450"></script>
-  <script src="/js/employee-ui.js?v=20261018_1450"></script>
-  <script src="/js/manager-ui.js?v=20261018_1450"></script>
-  <script src="/js/app.js?v=20261018_1450"></script>
+  <script src="/js/i18n.js?v=20261019_1455"></script>
+  <script src="/js/api.js?v=20261019_1455"></script>
+  <script src="/js/tafqeet.js?v=20261019_1455"></script>
+  <script src="/js/map.js?v=20261019_1455"></script>
+  <script src="/js/employee-ui.js?v=20261019_1455"></script>
+  <script src="/js/manager-ui.js?v=20261019_1455"></script>
+  <script src="/js/app.js?v=20261019_1455"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>
@@ -1085,7 +1081,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20261017_2115').then((reg) => {
+        navigator.serviceWorker.register('/sw.js?v=20261019_1455').then((reg) => {
           reg.update(); // Force check for SW update
           console.log('Mosaed PWA Service Worker registered:', reg.scope);
         }).catch((err) => {

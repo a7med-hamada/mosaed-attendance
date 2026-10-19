@@ -339,16 +339,32 @@ const App = {
       success: 'check-circle',
       danger: 'alert-octagon',
       warning: 'alert-triangle',
-      info: 'info'
+      info: 'info',
+      face_reset_request: 'scan-face'
     };
 
     listContainer.innerHTML = notifs.map(n => `
       <div class="p-3 rounded-2xl flex items-start gap-3 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 group">
-        <i data-lucide="${typeIcons[n.type] || 'info'}" class="w-4 h-4 flex-shrink-0 text-emerald-500 mt-0.5"></i>
+        <i data-lucide="${typeIcons[n.type] || 'info'}" class="w-4 h-4 flex-shrink-0 ${n.type === 'face_reset_request' ? 'text-blue-500' : 'text-emerald-500'} mt-0.5"></i>
         <div class="flex-1">
           <div class="font-bold text-slate-900 dark:text-white">${n.title}</div>
           <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${n.message}</div>
           <div class="text-[10px] text-slate-400 font-mono mt-1">${formatDateTime12(n.created_at)}</div>
+
+          ${n.type === 'face_reset_request' ? `
+            <div class="mt-2.5 flex items-center gap-2">
+              <button onclick="App.reviewFaceReset(${n.related_id || n.id}, 'approved', ${n.id})"
+                class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition-all">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>قبول الطلب</span>
+              </button>
+              <button onclick="App.reviewFaceReset(${n.related_id || n.id}, 'rejected', ${n.id})"
+                class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition-all">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                <span>رفض الطلب</span>
+              </button>
+            </div>
+          ` : ''}
         </div>
         <button onclick="App.deleteNotification(${n.id})" class="p-1 text-slate-300 hover:text-rose-500 transition-colors" title="حذف هذا الإشعار">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -357,6 +373,23 @@ const App = {
     `).join('');
 
     if (window.lucide) lucide.createIcons();
+  },
+
+  async reviewFaceReset(reqId, action, notifId) {
+    try {
+      showToast('جاري معالجة الطلب...', 'info');
+      const res = await API.reviewFaceReset(reqId, action);
+      showToast(res.message, action === 'approved' ? 'success' : 'info');
+      if (notifId) {
+        window.latestNotifications = (window.latestNotifications || []).filter(n => n.id !== notifId);
+      }
+      this.renderNotificationsList();
+      if (window.ManagerUI && typeof ManagerUI.loadEmployees === 'function') {
+        ManagerUI.loadEmployees();
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
   },
 
   async clearAllNotifications() {

@@ -447,6 +447,35 @@ try {
   console.error('WhatsApp settings init error:', waSettingErr);
 }
 
+// Face Reset Requests Table & Indexes
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS face_reset_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id INTEGER NOT NULL,
+      manager_id INTEGER NOT NULL,
+      reason TEXT,
+      status TEXT DEFAULT 'pending',
+      reviewed_by INTEGER,
+      reviewed_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_face_reset_status ON face_reset_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_face_reset_emp ON face_reset_requests(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_face_reset_mgr ON face_reset_requests(manager_id);
+  `);
+
+  const notifCols = db.prepare(`PRAGMA table_info(notifications)`).all().map(c => c.name);
+  if (!notifCols.includes('related_id')) {
+    db.exec(`ALTER TABLE notifications ADD COLUMN related_id INTEGER DEFAULT NULL;`);
+  }
+
+  // Clear legacy/test face descriptors so all employees enroll fresh with strict multi-angle liveness
+  db.exec(`UPDATE users SET face_descriptor = NULL, face_photo = NULL, face_enrolled_at = NULL WHERE role = 'employee' AND face_descriptor IS NOT NULL;`);
+} catch (faceTableErr) {
+  console.error('Face reset table init error:', faceTableErr);
+}
+
 // Helper to log audit events
 function logAudit(userId, userName, action, targetType, targetId, oldValues, newValues, reason, ipAddress) {
   try {
@@ -471,13 +500,13 @@ function logAudit(userId, userName, action, targetType, targetId, oldValues, new
 }
 
 // Helper to create notifications
-function createNotification(userId, title, message, type = 'info') {
+function createNotification(userId, title, message, type = 'info', relatedId = null) {
   try {
     const stmt = db.prepare(`
-      INSERT INTO notifications (user_id, title, message, type)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO notifications (user_id, title, message, type, related_id)
+      VALUES (?, ?, ?, ?, ?)
     `);
-    stmt.run(userId || null, title, message, type);
+    stmt.run(userId || null, title, message, type, relatedId || null);
   } catch (err) {
     console.error('Notification error:', err);
   }

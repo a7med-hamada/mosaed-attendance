@@ -121,6 +121,28 @@ const API = {
     });
   },
 
+  requestFaceReset(reason) {
+    return this.request('/attendance/face-reset-request', {
+      method: 'POST',
+      body: { reason }
+    });
+  },
+
+  getFaceResetStatus() {
+    return this.request('/attendance/face-reset-status');
+  },
+
+  getFaceResetRequests() {
+    return this.request('/attendance/face-reset-requests');
+  },
+
+  reviewFaceReset(id, action, notes = '') {
+    return this.request(`/attendance/face-reset-requests/${id}/review`, {
+      method: 'PUT',
+      body: { action, notes }
+    });
+  },
+
   // Attendance
   checkIn(latitude, longitude, accuracy, photo, shift_id = null, face_descriptor = null) {
     const body = { latitude, longitude, accuracy, photo };

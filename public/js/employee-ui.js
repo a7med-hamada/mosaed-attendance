@@ -15,9 +15,18 @@ const EmployeeUI = {
     this.startDigitalClock();
     await this.loadTodayData();
     this.requestGeolocation();
+    this.checkFaceEnrollment();
   },
 
-  checkFaceEnrollment() {},
+  checkFaceEnrollment() {
+    const user = API.getCurrentUser();
+    if (!user || user.role !== 'employee') return;
+    if (!user.has_face_enrolled) {
+      setTimeout(() => {
+        this.openFaceEnrollModal();
+      }, 700);
+    }
+  },
 
   startDigitalClock() {
     const updateTime = () => {
@@ -976,6 +985,13 @@ const EmployeeUI = {
 
   // Camera Verification Modal Flow
   openCameraModal(action = 'check-in') {
+    const user = API.getCurrentUser() || {};
+    if (user.role === 'employee' && (!user.has_face_enrolled || !user.face_descriptor)) {
+      showToast('يرجى تسجيل وتوثيق بصمة وجهك البيومترية أولاً لتتمكن من إثبات الحضور والانصراف', 'warning');
+      this.openFaceEnrollModal();
+      return;
+    }
+
     activeCheckAction = action;
     capturedPhotoData = null;
     this.currentAttendanceDescriptor = null;
@@ -1101,9 +1117,11 @@ const EmployeeUI = {
     if (retakeBtn) retakeBtn.classList.remove('hidden');
     if (confirmBtn) {
       confirmBtn.classList.remove('hidden');
-      confirmBtn.disabled = false;
     }
     if (window.lucide) lucide.createIcons();
+
+    // Verify face biometrics
+    await this.verifyFaceForAttendance(canvas);
   },
 
   retakeSnapshot() {
@@ -1136,7 +1154,7 @@ const EmployeeUI = {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const maxDim = 640;
         let w = img.width;
         let h = img.height;
@@ -1171,9 +1189,10 @@ const EmployeeUI = {
         if (retakeBtn) retakeBtn.classList.remove('hidden');
         if (confirmBtn) {
           confirmBtn.classList.remove('hidden');
-          confirmBtn.disabled = false;
         }
         if (window.lucide) lucide.createIcons();
+
+        await this.verifyFaceForAttendance(canvas);
       };
       img.src = e.target.result;
     };
@@ -1181,10 +1200,67 @@ const EmployeeUI = {
   },
 
   async verifyFaceForAttendance(canvas) {
-    const confirmBtn = document.getElementById('camera-confirm-btn');
-    if (confirmBtn) confirmBtn.disabled = false;
+    const user = API.getCurrentUser() || {};
     const faceStatusEl = document.getElementById('camera-face-status');
-    if (faceStatusEl) faceStatusEl.classList.add('hidden');
+    const confirmBtn = document.getElementById('camera-confirm-btn');
+
+    if (!faceStatusEl) return true;
+
+    if (!user.has_face_enrolled || !user.face_descriptor) {
+      faceStatusEl.classList.remove('hidden');
+      faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300';
+      faceStatusEl.innerHTML = `
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-amber-500"></i>
+          <span>لم تقم بتعريف بصمة وجهك بعد</span>
+        </div>
+        <button type="button" onclick="EmployeeUI.closeCameraModal(); EmployeeUI.openFaceEnrollModal();" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px]">
+          تعريف البصمة الآن
+        </button>
+      `;
+      if (confirmBtn) confirmBtn.disabled = true;
+      if (window.lucide) lucide.createIcons();
+      return false;
+    }
+
+    faceStatusEl.classList.remove('hidden');
+    faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300';
+    faceStatusEl.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div><span>جاري التحقق البيومتري من ملامح الوجه...</span>`;
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    try {
+      const detected = await FaceService.detectSingleFaceWithValidation(canvas);
+      if (!detected || !detected.valid) {
+        const msg = detected ? detected.message : 'لم يتم العثور على وجه واضح بالصورة. يرجى توجيه الكاميرا إلى وجهك مباشرة.';
+        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300';
+        faceStatusEl.innerHTML = `<i data-lucide="alert-octagon" class="w-4 h-4 shrink-0 text-rose-500"></i><span>${msg}</span>`;
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (window.lucide) lucide.createIcons();
+        return false;
+      }
+
+      // Biometric similarity check against enrolled descriptor
+      const cmp = FaceService.compare(detected.descriptor, user.face_descriptor);
+      if (cmp.match) {
+        this.currentAttendanceDescriptor = detected.descriptor;
+        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300';
+        faceStatusEl.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 shrink-0 text-emerald-500"></i><span>تم التحقق من بصمة الوجه بنجاح (تطابق ${cmp.similarity}%)</span>`;
+        if (confirmBtn) confirmBtn.disabled = false;
+        if (window.lucide) lucide.createIcons();
+        return true;
+      } else {
+        this.currentAttendanceDescriptor = null;
+        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300';
+        faceStatusEl.innerHTML = `<i data-lucide="alert-octagon" class="w-4 h-4 shrink-0 text-rose-500"></i><span>بصمة الوجه لا تتطابق مع صاحب الحساب (${cmp.similarity}% تطابق). لا يمكن تسجيل الحضور نيابة عن شخص آخر.</span>`;
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (window.lucide) lucide.createIcons();
+        return false;
+      }
+    } catch (err) {
+      console.warn('Face verification error:', err);
+      if (confirmBtn) confirmBtn.disabled = false;
+      return true;
+    }
   },
 
   async confirmAndSubmitAttendance() {
@@ -1241,31 +1317,110 @@ const EmployeeUI = {
   },
 
   // ========================================================
-  // BIOMETRIC FACE ID ENROLLMENT FLOW
+  // BIOMETRIC FACE ID ENROLLMENT FLOW (3-STEP LIVENESS)
   // ========================================================
   faceEnrollStream: null,
   faceEnrollInterval: null,
+  faceEnrollStep: 'front', // 'front', 'right', 'left', 'done'
+  faceEnrollDescriptors: { front: null, right: null, left: null },
+  faceEnrollPhotos: { front: null },
+  faceEnrollHoldFrames: 0,
+
+  grabFrameDataUrl(video) {
+    if (!video) return null;
+    const maxDim = 640;
+    let w = video.videoWidth || 640;
+    let h = video.videoHeight || 480;
+    if (w > maxDim || h > maxDim) {
+      if (w > h) {
+        h = Math.round((h * maxDim) / w);
+        w = maxDim;
+      } else {
+        w = Math.round((w * maxDim) / h);
+        h = maxDim;
+      }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.70);
+  },
+
+  updateEnrollStepUI() {
+    const badgeFront = document.getElementById('step-badge-front');
+    const badgeRight = document.getElementById('step-badge-right');
+    const badgeLeft = document.getElementById('step-badge-left');
+    const btn = document.getElementById('face-enroll-capture-btn');
+    const btnText = document.getElementById('face-enroll-btn-text');
+
+    const setBadgeState = (el, iconName, label, state) => {
+      if (!el) return;
+      if (state === 'completed') {
+        el.className = 'flex flex-col items-center p-2 rounded-2xl border bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 transition-all';
+        el.innerHTML = `<div class="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-500/10 mb-1"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i></div><span class="text-[10px] font-bold">${label}</span>`;
+      } else if (state === 'active') {
+        el.className = 'flex flex-col items-center p-2 rounded-2xl border bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 text-blue-600 dark:text-blue-400 ring-2 ring-blue-400/30 transition-all';
+        el.innerHTML = `<div class="w-6 h-6 rounded-full flex items-center justify-center bg-blue-500/15 mb-1"><i data-lucide="${iconName}" class="w-3.5 h-3.5 text-blue-500"></i></div><span class="text-[10px] font-bold">${label}</span>`;
+      } else {
+        el.className = 'flex flex-col items-center p-2 rounded-2xl border bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400 transition-all';
+        el.innerHTML = `<div class="w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-700 mb-1"><i data-lucide="${iconName}" class="w-3.5 h-3.5"></i></div><span class="text-[10px] font-bold">${label}</span>`;
+      }
+    };
+
+    const frontState = this.faceEnrollDescriptors.front ? 'completed' : (this.faceEnrollStep === 'front' ? 'active' : 'inactive');
+    const rightState = this.faceEnrollDescriptors.right ? 'completed' : (this.faceEnrollStep === 'right' ? 'active' : 'inactive');
+    const leftState = this.faceEnrollDescriptors.left ? 'completed' : (this.faceEnrollStep === 'left' ? 'active' : 'inactive');
+
+    setBadgeState(badgeFront, 'user', '1. للأمام', frontState);
+    setBadgeState(badgeRight, 'chevron-right', '2. لليمين', rightState);
+    setBadgeState(badgeLeft, 'chevron-left', '3. لليسار', leftState);
+
+    if (this.faceEnrollStep === 'done') {
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'تم التقاط كافة التفاصيل - حفظ البصمة';
+    } else {
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.textContent = 'أكمل الخطوات الثلاث للحفظ';
+    }
+
+    if (window.lucide) lucide.createIcons();
+  },
 
   async openFaceEnrollModal() {
     const modal = document.getElementById('face-enroll-modal');
     if (!modal) return;
     modal.classList.remove('hidden');
 
+    this.faceEnrollStep = 'front';
+    this.faceEnrollDescriptors = { front: null, right: null, left: null };
+    this.faceEnrollPhotos = { front: null };
+    this.faceEnrollHoldFrames = 0;
+
     const video = document.getElementById('face-enroll-video');
     const preview = document.getElementById('face-enroll-preview');
-    const captureBtn = document.getElementById('face-enroll-capture-btn');
-    const statusEl = document.getElementById('face-enroll-status');
+    const instructionEl = document.getElementById('face-enroll-instruction');
+    const ovalEl = document.getElementById('face-enroll-oval');
 
     if (preview) preview.classList.add('hidden');
     if (video) video.classList.remove('hidden');
-    if (captureBtn) {
-      captureBtn.disabled = false;
-      captureBtn.innerHTML = `<i data-lucide="scan-face" class="w-5 h-5"></i><span>التقاط وحفظ بصمة الوجه</span>`;
+    if (ovalEl) {
+      ovalEl.className = 'relative w-44 h-52 rounded-[50%] border-2 border-dashed border-blue-400/80 shadow-[0_0_20px_rgba(59,130,246,0.35)] flex items-center justify-center transition-all duration-300';
     }
-    if (statusEl) {
-      statusEl.innerHTML = `<i data-lucide="scan" class="w-3.5 h-3.5 text-blue-400"></i><span>ضع وجهك داخل الإطار واثبت لثوانٍ...</span>`;
+    if (instructionEl) {
+      instructionEl.textContent = 'ضع وجهك داخل الإطار وانظر للأمام بثبات...';
     }
-    if (window.lucide) lucide.createIcons();
+
+    this.updateEnrollStepUI();
+
+    // Reset quality indicators
+    ['qual-lighting', 'qual-sharpness', 'qual-eyes', 'qual-liveness'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = 'flex items-center justify-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl text-slate-400 transition-colors';
+    });
 
     // Hide prompt initially
     const camPrompt = document.getElementById('face-enroll-cam-prompt');
@@ -1287,7 +1442,6 @@ const EmployeeUI = {
       }
     } catch (err) {
       console.warn('Face enroll camera autoplay notice:', err);
-      // Keep modal open and show tap-to-start camera button
       if (camPrompt) {
         camPrompt.classList.remove('hidden');
         if (window.lucide) lucide.createIcons();
@@ -1295,7 +1449,6 @@ const EmployeeUI = {
       return;
     }
 
-    // Initialize FaceService and start live detection feedback
     FaceService.init().then(() => {
       this.startFaceEnrollDetection();
     });
@@ -1324,35 +1477,125 @@ const EmployeeUI = {
 
   startFaceEnrollDetection() {
     const video = document.getElementById('face-enroll-video');
-    const statusEl = document.getElementById('face-enroll-status');
-    const overlayRing = document.querySelector('#face-enroll-overlay > div');
+    const instructionEl = document.getElementById('face-enroll-instruction');
+    const ovalEl = document.getElementById('face-enroll-oval');
 
     if (this.faceEnrollInterval) clearInterval(this.faceEnrollInterval);
 
     this.faceEnrollInterval = setInterval(async () => {
       if (!video || video.paused || video.ended || !this.faceEnrollStream) return;
+      if (this.faceEnrollStep === 'done') return;
 
       try {
-        const detected = await FaceService.extractDescriptor(video);
-        if (detected && detected.descriptor) {
-          if (overlayRing) {
-            overlayRing.className = 'relative w-48 h-56 rounded-[50%] border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center transition-all duration-300';
+        const res = await FaceService.detectSingleFaceWithValidation(video);
+
+        // Update real-time quality indicators
+        const updateQualityChip = (id, isOk) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          if (isOk) {
+            el.className = 'flex items-center justify-center gap-1 bg-emerald-50 dark:bg-emerald-950/30 p-1.5 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold transition-colors';
+          } else {
+            el.className = 'flex items-center justify-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl text-slate-400 transition-colors';
           }
-          if (statusEl) {
-            statusEl.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-300 font-bold">تم التعرف على الوجه! اضغط الزر للحفظ</span>`;
-            if (window.lucide) lucide.createIcons();
+        };
+
+        const isWellLit = !!(res && res.quality && res.quality.isWellLit);
+        const isSharp = !!(res && res.quality && res.quality.isSharp);
+        const eyesOk = !!(res && res.avgEAR >= 0.17);
+        const livenessOk = !!(res && res.valid);
+
+        updateQualityChip('qual-lighting', isWellLit);
+        updateQualityChip('qual-sharpness', isSharp);
+        updateQualityChip('qual-eyes', eyesOk);
+        updateQualityChip('qual-liveness', livenessOk);
+
+        if (!res || !res.valid) {
+          this.faceEnrollHoldFrames = 0;
+          if (ovalEl) {
+            ovalEl.className = 'relative w-44 h-52 rounded-[50%] border-2 border-dashed border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.35)] flex items-center justify-center transition-all duration-300';
           }
-        } else {
-          if (overlayRing) {
-            overlayRing.className = 'relative w-48 h-56 rounded-[50%] border-2 border-dashed border-blue-400/70 shadow-[0_0_20px_rgba(59,130,246,0.35)] flex items-center justify-center animate-pulse transition-all duration-300';
+          if (instructionEl) {
+            instructionEl.textContent = res ? res.message : 'ضع كامل وجهك داخل الإطار واثبت...';
           }
-          if (statusEl) {
-            statusEl.innerHTML = `<i data-lucide="scan" class="w-3.5 h-3.5 text-blue-400"></i><span>ضع وجهك داخل الإطار واثبت لثوانٍ...</span>`;
-            if (window.lucide) lucide.createIcons();
+          return;
+        }
+
+        // Face is valid, now check current Step requirements
+        if (this.faceEnrollStep === 'front') {
+          if (res.pose === 'front') {
+            if (ovalEl) {
+              ovalEl.className = 'relative w-44 h-52 rounded-[50%] border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center transition-all duration-300';
+            }
+            this.faceEnrollHoldFrames++;
+            if (instructionEl) instructionEl.textContent = `اثبت للأمام... (${this.faceEnrollHoldFrames}/2)`;
+
+            if (this.faceEnrollHoldFrames >= 2) {
+              this.faceEnrollDescriptors.front = res.descriptor;
+              this.faceEnrollPhotos.front = this.grabFrameDataUrl(video);
+              this.faceEnrollStep = 'right';
+              this.faceEnrollHoldFrames = 0;
+              this.updateEnrollStepUI();
+              if (instructionEl) instructionEl.textContent = 'أحسنت! أمل وجهك قليلاً لليمين...';
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate(40); } catch (_) {}
+              }
+            }
+          } else {
+            this.faceEnrollHoldFrames = 0;
+            if (instructionEl) instructionEl.textContent = 'انظر مباشرة للأمام داخل الإطار...';
+          }
+        } else if (this.faceEnrollStep === 'right') {
+          if (res.pose === 'right') {
+            if (ovalEl) {
+              ovalEl.className = 'relative w-44 h-52 rounded-[50%] border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center transition-all duration-300';
+            }
+            this.faceEnrollHoldFrames++;
+            if (instructionEl) instructionEl.textContent = `رائع! اثبت لليمين... (${this.faceEnrollHoldFrames}/2)`;
+
+            if (this.faceEnrollHoldFrames >= 2) {
+              this.faceEnrollDescriptors.right = res.descriptor;
+              this.faceEnrollStep = 'left';
+              this.faceEnrollHoldFrames = 0;
+              this.updateEnrollStepUI();
+              if (instructionEl) instructionEl.textContent = 'ممتاز! الآن أمل وجهك قليلاً لليسار...';
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate(40); } catch (_) {}
+              }
+            }
+          } else {
+            this.faceEnrollHoldFrames = 0;
+            if (instructionEl) instructionEl.textContent = 'أمل رأسك قليلاً باتجاه اليمين...';
+          }
+        } else if (this.faceEnrollStep === 'left') {
+          if (res.pose === 'left') {
+            if (ovalEl) {
+              ovalEl.className = 'relative w-44 h-52 rounded-[50%] border-2 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center transition-all duration-300';
+            }
+            this.faceEnrollHoldFrames++;
+            if (instructionEl) instructionEl.textContent = `رائع! اثبت لليسار... (${this.faceEnrollHoldFrames}/2)`;
+
+            if (this.faceEnrollHoldFrames >= 2) {
+              this.faceEnrollDescriptors.left = res.descriptor;
+              this.faceEnrollStep = 'done';
+              this.faceEnrollHoldFrames = 0;
+              this.updateEnrollStepUI();
+              if (instructionEl) instructionEl.textContent = 'اكتمل التقاط كافة تفاصيل الوجه بنجاح! جاري الحفظ...';
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate([60, 40, 80]); } catch (_) {}
+              }
+              // Automatically finalize
+              this.finishAndSaveFaceEnrollment();
+            }
+          } else {
+            this.faceEnrollHoldFrames = 0;
+            if (instructionEl) instructionEl.textContent = 'أمل رأسك قليلاً باتجاه اليسار...';
           }
         }
-      } catch (_) {}
-    }, 450);
+      } catch (loopErr) {
+        console.warn('Face detection loop notice:', loopErr);
+      }
+    }, 320);
   },
 
   stopFaceEnrollStream() {
@@ -1372,87 +1615,101 @@ const EmployeeUI = {
     this.stopFaceEnrollStream();
   },
 
-  async captureAndEnrollFace() {
+  async finishAndSaveFaceEnrollment() {
     const video = document.getElementById('face-enroll-video');
     const preview = document.getElementById('face-enroll-preview');
     const captureBtn = document.getElementById('face-enroll-capture-btn');
-    const statusEl = document.getElementById('face-enroll-status');
+    const btnText = document.getElementById('face-enroll-btn-text');
 
-    if (!video) return;
+    if (!this.faceEnrollDescriptors.front || !this.faceEnrollDescriptors.right || !this.faceEnrollDescriptors.left) {
+      showToast('يرجى إكمال خطوات التحقق الثلاثة أولاً', 'warning');
+      return;
+    }
 
     if (captureBtn) {
       captureBtn.disabled = true;
-      captureBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>جاري تحليل وحفظ ملامح الوجه...</span>`;
+      if (btnText) btnText.textContent = 'جاري دمج وحفظ تفاصيل الوجه...';
     }
 
     try {
-      // Draw frame to canvas
-      const maxDim = 640;
-      let w = video.videoWidth || 640;
-      let h = video.videoHeight || 480;
-      if (w > maxDim || h > maxDim) {
-        if (w > h) {
-          h = Math.round((h * maxDim) / w);
-          w = maxDim;
-        } else {
-          w = Math.round((w * maxDim) / h);
-          h = maxDim;
-        }
-      }
+      // Fuse 3 multi-angle descriptors into a robust composite 128-d vector
+      const fusedDescriptor = FaceService.fuseDescriptors([
+        this.faceEnrollDescriptors.front,
+        this.faceEnrollDescriptors.right,
+        this.faceEnrollDescriptors.left
+      ]);
 
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const photoData = this.faceEnrollPhotos.front || (video ? this.grabFrameDataUrl(video) : null);
 
-      const photoData = canvas.toDataURL('image/jpeg', 0.70);
-
-      // Extract descriptor
-      const detected = await FaceService.extractDescriptor(canvas);
-      if (!detected || !detected.descriptor) {
-        throw new Error('لم يتم التقاط ملامح الوجه بوضوح. يرجى النظر مباشرة إلى الكاميرا في مكان جيد الإضاءة.');
-      }
-
-      // Freeze frame in preview
       this.stopFaceEnrollStream();
-      video.classList.add('hidden');
-      if (preview) {
+      if (video) video.classList.add('hidden');
+      if (preview && photoData) {
         preview.src = photoData;
         preview.classList.remove('hidden');
       }
 
-      // Send to server
-      await API.faceEnroll(detected.descriptor, photoData);
+      await API.faceEnroll(fusedDescriptor, photoData);
 
-      // Update local user state
+      // Update local state
       const user = API.getCurrentUser() || {};
       user.has_face_enrolled = 1;
-      user.face_descriptor = detected.descriptor;
+      user.face_descriptor = fusedDescriptor;
       user.face_enrolled_at = new Date().toISOString();
       API.setCurrentUser(user);
 
-      showToast('تم حفظ بصمة وجهك بنجاح! يمكنك الآن تسجيل الحضور والانصراف بكل أمان.', 'success');
+      showToast('تم تسجيل وتوثيق بصمة وجهك البيومترية بنجاح!', 'success');
 
       setTimeout(() => {
         this.closeFaceEnrollModal();
         this.renderAttendanceTab();
+        if (this.activeTab === 'profile') {
+          this.renderProfileTab();
+        }
       }, 900);
-
     } catch (err) {
-      console.error('Face enrollment failed:', err);
-      showToast(err.message, 'danger');
+      console.error('Face enrollment error:', err);
+      showToast(err.message || 'فشل في حفظ بصمة الوجه', 'danger');
       if (captureBtn) {
         captureBtn.disabled = false;
-        captureBtn.innerHTML = `<i data-lucide="scan-face" class="w-5 h-5"></i><span>التقاط وحفظ بصمة الوجه</span>`;
-        if (window.lucide) lucide.createIcons();
+        if (btnText) btnText.textContent = 'إعادة المحاولة';
       }
-      // Resume video if it was stopped
-      if (!this.faceEnrollStream) {
-        this.openFaceEnrollModal();
-      }
+    }
+  },
+
+  // Face Reset Request Modal
+  openFaceResetModal() {
+    const modal = document.getElementById('face-reset-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      const reasonEl = document.getElementById('face-reset-reason');
+      if (reasonEl) reasonEl.value = '';
+    }
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closeFaceResetModal() {
+    const modal = document.getElementById('face-reset-modal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  async submitFaceResetRequest(e) {
+    if (e) e.preventDefault();
+    const reasonEl = document.getElementById('face-reset-reason');
+    const reason = reasonEl ? reasonEl.value.trim() : '';
+    const btn = document.getElementById('submit-face-reset-btn');
+
+    if (btn) btn.disabled = true;
+
+    try {
+      showToast('جاري إرسال الطلب للمدير...', 'info');
+      const res = await API.requestFaceReset(reason);
+      showToast(res.message, 'success');
+      this.closeFaceResetModal();
+      this.renderProfileTab();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    } finally {
+      if (btn) btn.disabled = false;
     }
   },
 
@@ -2227,11 +2484,16 @@ const EmployeeUI = {
     }
   },
 
-  renderProfileTab() {
+  async renderProfileTab() {
     const container = document.getElementById('employee-content');
     if (!container) return;
 
     const u = API.getCurrentUser() || {};
+    let resetStatus = null;
+    try {
+      const res = await API.getFaceResetStatus();
+      if (res && res.success) resetStatus = res.request;
+    } catch (_) {}
 
     container.innerHTML = `
       <div class="max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6">
@@ -2241,7 +2503,7 @@ const EmployeeUI = {
             <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <i data-lucide="user-cog" class="w-5 h-5 text-emerald-500"></i> الملف الشخصي وتعديل البيانات
             </h3>
-            <p class="text-xs text-slate-500 mt-0.5">يمكنك تعديل اسمك الكامل وصورتك الشخصية ورقم الهاتف وكلمة المرور</p>
+            <p class="text-xs text-slate-500 mt-0.5">يمكنك تعديل اسمك الكامل وصورتك الشخصية ورقم الهاتف وإدارة بصمة الوجه</p>
           </div>
           <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             ${u.department_name || 'القسم العام'}
@@ -2270,6 +2532,72 @@ const EmployeeUI = {
                 </label>
               </div>
             </div>
+          </div>
+
+          <!-- Biometric Face ID Security Card -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <i data-lucide="scan-face" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white">بصمة الوجه البيومترية (Face ID)</h4>
+                  <p class="text-[11px] text-slate-500">حماية بيومترية ثلاثية الأبعاد لمنع التسجيل بالنيابة والتحقق من الهوية</p>
+                </div>
+              </div>
+              ${u.has_face_enrolled ? `
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                  <span>مفعلة وموثقة</span>
+                </span>
+              ` : `
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                  <span>غير مسجلة</span>
+                </span>
+              `}
+            </div>
+
+            ${resetStatus && resetStatus.status === 'pending' ? `
+              <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                <i data-lucide="clock" class="w-4 h-4 shrink-0"></i>
+                <div class="flex-1">
+                  <span class="font-bold">طلب تغيير البصمة قيد المراجعة حالياً لدى المدير</span>
+                  ${resetStatus.reason ? `<div class="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">السبب: ${resetStatus.reason}</div>` : ''}
+                </div>
+              </div>
+            ` : resetStatus && resetStatus.status === 'rejected' && u.has_face_enrolled ? `
+              <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
+                  <span>تم رفض طلب تغيير البصمة الأخير من قبل المدير.</span>
+                </div>
+                <button type="button" onclick="EmployeeUI.openFaceResetModal()" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50">
+                  تقديم طلب جديد
+                </button>
+              </div>
+            ` : u.has_face_enrolled ? `
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-[11px] text-slate-400">
+                  تم توثيق البصمة بأحدث المعايير البيومترية. يمكنك طلب إعادة التعيين بموافقة المدير.
+                </span>
+                <button type="button" onclick="EmployeeUI.openFaceResetModal()" class="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 flex items-center gap-1.5 transition-colors">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-500"></i>
+                  <span>طلب تغيير بصمة الوجه</span>
+                </button>
+              </div>
+            ` : `
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-[11px] text-amber-600 dark:text-amber-400">
+                  يلزم تسجيل بصمة وجهك لتتمكن من إثبات الحضور والانصراف.
+                </span>
+                <button type="button" onclick="EmployeeUI.openFaceEnrollModal()" class="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm">
+                  <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                  <span>تسجيل بصمة الوجه الآن</span>
+                </button>
+              </div>
+            `}
           </div>
 
           <!-- Name & Phone Fields -->

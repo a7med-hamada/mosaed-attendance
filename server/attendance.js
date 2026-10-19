@@ -282,8 +282,8 @@ router.post('/check-in', authenticateToken, async (req, res) => {
     const { latitude, longitude, accuracy } = req.body;
     const photo = req.body.photo || req.body.photo_data;
 
-    // Lookup employee's manager and assigned shift
-    const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id FROM users WHERE id = ?').get(employeeId);
+    // Lookup employee's manager, assigned shift, and biometric face descriptor
+    const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id, face_descriptor FROM users WHERE id = ?').get(employeeId);
     const managerId = empUser ? (empUser.manager_id || 1) : 1;
 
     // Get active workplace location & allowed radius for this manager
@@ -313,6 +313,40 @@ router.post('/check-in', authenticateToken, async (req, res) => {
 
     if (!photo) {
       return res.status(400).json({ success: false, error: 'التقاط صورة سيلفي لإثبات التواجد مطلوب لإتمام الحضور' });
+    }
+
+    // Biometric Face ID Verification (if employee has enrolled face)
+    if (empUser && empUser.face_descriptor) {
+      try {
+        const registeredDesc = typeof empUser.face_descriptor === 'string' ? JSON.parse(empUser.face_descriptor) : empUser.face_descriptor;
+        if (registeredDesc && Array.isArray(registeredDesc) && registeredDesc.length === 128) {
+          const incomingDesc = req.body.face_descriptor;
+          if (!incomingDesc || !Array.isArray(incomingDesc) || incomingDesc.length !== 128) {
+            return res.status(400).json({
+              success: false,
+              biometricRequired: true,
+              error: 'التحقق من بصمة الوجه إلزامي لتسجيل الحضور. يرجى توجيه الكاميرا نحو وجهك بوضوح.'
+            });
+          }
+          let sum = 0;
+          for (let i = 0; i < 128; i++) {
+            const diff = registeredDesc[i] - incomingDesc[i];
+            sum += diff * diff;
+          }
+          const distance = Math.sqrt(sum);
+          if (distance > 0.58) {
+            const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+            logAudit(employeeId, req.user.full_name, 'BIOMETRIC_MISMATCH_CHECKIN', 'attendance_records', null, null, { distance }, 'محاولة تسجيل حضور ببصمة وجه غير مطابقة', clientIp);
+            return res.status(400).json({
+              success: false,
+              biometricMismatch: true,
+              error: 'فشل التحقق البيومتري: ملامح الوجه لا تتطابق مع الموظف المسجل بهذا الحساب! لا يمكن تسجيل الحضور نيابة عن شخص آخر.'
+            });
+          }
+        }
+      } catch (faceErr) {
+        console.warn('Biometric check error:', faceErr);
+      }
     }
 
     const today = getTodayString();
@@ -684,7 +718,7 @@ router.post('/check-out', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: `تم تسجيل الانصراف مسبقاً لهذا اليوم في الساعة ${record.check_out_time}` });
     }
 
-    const empUser = db.prepare('SELECT manager_id, shift_id FROM users WHERE id = ?').get(employeeId);
+    const empUser = db.prepare('SELECT manager_id, shift_id, face_descriptor FROM users WHERE id = ?').get(employeeId);
     const managerId = empUser ? (empUser.manager_id || 1) : 1;
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
     if (!workplace && managerId === 1) {
@@ -709,6 +743,35 @@ router.post('/check-out', authenticateToken, (req, res) => {
 
     if (isPhotoRequired && !photo) {
       return res.status(400).json({ success: false, error: 'يتطلب النظام التقاط صورة إثبات تواجد عند تسجيل الانصراف' });
+    }
+
+    // Biometric Face ID Verification on checkout if photo and registered descriptor exist
+    if (photo && empUser && empUser.face_descriptor && req.body.face_descriptor) {
+      try {
+        const registeredDesc = typeof empUser.face_descriptor === 'string' ? JSON.parse(empUser.face_descriptor) : empUser.face_descriptor;
+        if (registeredDesc && Array.isArray(registeredDesc) && registeredDesc.length === 128) {
+          const incomingDesc = req.body.face_descriptor;
+          if (Array.isArray(incomingDesc) && incomingDesc.length === 128) {
+            let sum = 0;
+            for (let i = 0; i < 128; i++) {
+              const diff = registeredDesc[i] - incomingDesc[i];
+              sum += diff * diff;
+            }
+            const distance = Math.sqrt(sum);
+            if (distance > 0.58) {
+              const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+              logAudit(employeeId, req.user.full_name, 'BIOMETRIC_MISMATCH_CHECKOUT', 'attendance_records', null, null, { distance }, 'محاولة انصراف ببصمة وجه غير مطابقة', clientIp);
+              return res.status(400).json({
+                success: false,
+                biometricMismatch: true,
+                error: 'فشل التحقق البيومتري: ملامح الوجه لا تتطابق مع الموظف المسجل بهذا الحساب!'
+              });
+            }
+          }
+        }
+      } catch (faceErr) {
+        console.warn('Checkout biometric error:', faceErr);
+      }
     }
 
     const photoUrl = photo ? saveBase64Image(photo, `checkout_emp${employeeId}`) : null;
@@ -1842,6 +1905,207 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
   } catch (error) {
     console.error('Batch manual records error:', error);
     res.status(500).json({ success: false, error: 'فشل في حفظ سجلات الحضور: ' + error.message });
+  }
+});
+
+// ==========================================
+// BIOMETRIC FACE ID RESET REQUESTS & REVIEW
+// ==========================================
+
+// 1. Employee submits Face Reset Request (POST /api/attendance/face-reset-request)
+router.post('/face-reset-request', authenticateToken, (req, res) => {
+  try {
+    const employeeId = req.user.id;
+    const { reason } = req.body;
+
+    const emp = db.prepare('SELECT id, full_name, manager_id, face_descriptor FROM users WHERE id = ?').get(employeeId);
+    if (!emp) {
+      return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+    }
+
+    if (!emp.face_descriptor) {
+      return res.status(400).json({ success: false, error: 'لا توجد بصمة وجه مسجلة لهذا الحساب حالياً ليتم تغييرها' });
+    }
+
+    // Check if employee already has a pending request
+    const pending = db.prepare(`SELECT id FROM face_reset_requests WHERE employee_id = ? AND status = 'pending'`).get(employeeId);
+    if (pending) {
+      return res.status(400).json({ success: false, error: 'لديك طلب معلق بالفعل قيد مراجعة المدير' });
+    }
+
+    const managerId = emp.manager_id || 1;
+    const info = db.prepare(`
+      INSERT INTO face_reset_requests (employee_id, manager_id, reason, status)
+      VALUES (?, ?, ?, 'pending')
+    `).run(employeeId, managerId, (reason || '').trim() || null);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(employeeId, emp.full_name, 'REQUEST_FACE_RESET', 'face_reset_requests', info.lastInsertRowid, null, { reason }, 'طلب إعادة تعيين بصمة الوجه', clientIp);
+
+    // Notify manager with action-ready notification
+    createNotification(
+      managerId,
+      'طلب تغيير بصمة الوجه',
+      `طلب الموظف ${emp.full_name} إعادة تعيين بصمة الوجه الخاصة به${reason ? ': ' + reason : ''}`,
+      'face_reset_request',
+      info.lastInsertRowid
+    );
+
+    res.json({
+      success: true,
+      message: 'تم إرسال طلب إعادة تعيين بصمة الوجه إلى المدير بنجاح، وستتلقى إشعاراً فور مراجعته.'
+    });
+  } catch (err) {
+    console.error('Face reset request error:', err);
+    res.status(500).json({ success: false, error: 'حدث خطأ أثناء إرسال طلب تغيير البصمة' });
+  }
+});
+
+// 2. Employee gets latest Face Reset Status (GET /api/attendance/face-reset-status)
+router.get('/face-reset-status', authenticateToken, (req, res) => {
+  try {
+    const employeeId = req.user.id;
+    const latest = db.prepare(`
+      SELECT id, employee_id, status, reason, reviewed_at, created_at
+      FROM face_reset_requests
+      WHERE employee_id = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(employeeId);
+
+    res.json({ success: true, request: latest || null });
+  } catch (err) {
+    console.error('Get face reset status error:', err);
+    res.status(500).json({ success: false, error: 'فشل في جلب حالة طلب البصمة' });
+  }
+});
+
+// 3. Manager lists Face Reset Requests (GET /api/attendance/face-reset-requests)
+router.get('/face-reset-requests', authenticateToken, requireManager, (req, res) => {
+  try {
+    const managerId = req.user.manager_id || req.user.id;
+    let requests;
+    if (managerId === 1) {
+      requests = db.prepare(`
+        SELECT r.*, u.full_name as employee_name, u.employee_code, u.profile_photo
+        FROM face_reset_requests r
+        JOIN users u ON r.employee_id = u.id
+        ORDER BY r.created_at DESC LIMIT 50
+      `).all();
+    } else {
+      requests = db.prepare(`
+        SELECT r.*, u.full_name as employee_name, u.employee_code, u.profile_photo
+        FROM face_reset_requests r
+        JOIN users u ON r.employee_id = u.id
+        WHERE r.manager_id = ?
+        ORDER BY r.created_at DESC LIMIT 50
+      `).all(managerId);
+    }
+
+    res.json({ success: true, requests });
+  } catch (err) {
+    console.error('Get face reset requests error:', err);
+    res.status(500).json({ success: false, error: 'فشل في جلب طلبات تغيير البصمة' });
+  }
+});
+
+// 4. Manager reviews Face Reset Request (PUT /api/attendance/face-reset-requests/:id/review)
+router.put('/face-reset-requests/:id/review', authenticateToken, requireManager, (req, res) => {
+  try {
+    const reqId = parseInt(req.params.id, 10);
+    const { action, notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(action)) {
+      return res.status(400).json({ success: false, error: 'إجراء غير صالح، يجب أن يكون قبول أو رفض' });
+    }
+
+    const resetReq = db.prepare(`SELECT * FROM face_reset_requests WHERE id = ?`).get(reqId);
+    if (!resetReq) {
+      return res.status(404).json({ success: false, error: 'طلب تغيير البصمة غير موجود' });
+    }
+
+    const managerId = req.user.manager_id || req.user.id;
+    if (resetReq.manager_id !== managerId && managerId !== 1) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بمراجعة طلب لمؤسسة أخرى' });
+    }
+
+    if (resetReq.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'تمت مراجعة هذا الطلب مسبقاً' });
+    }
+
+    const emp = db.prepare('SELECT id, full_name FROM users WHERE id = ?').get(resetReq.employee_id);
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const nowIso = new Date().toISOString();
+
+    if (action === 'approved') {
+      // Approve: Reset face descriptor so employee can re-enroll fresh
+      db.prepare(`
+        UPDATE users SET
+          face_descriptor = NULL,
+          face_photo = NULL,
+          face_enrolled_at = NULL
+        WHERE id = ?
+      `).run(resetReq.employee_id);
+
+      db.prepare(`
+        UPDATE face_reset_requests SET
+          status = 'approved',
+          reviewed_by = ?,
+          reviewed_at = ?
+        WHERE id = ?
+      `).run(req.user.id, nowIso, reqId);
+
+      // Notify employee of approval
+      createNotification(
+        resetReq.employee_id,
+        'تم قبول طلب تغيير بصمة الوجه',
+        'وافق المدير على طلب إعادة تعيين بصمة الوجه الخاصة بك. يرجى إعادة تسجيل بصمتك الجديدة الآن.',
+        'success',
+        reqId
+      );
+
+      logAudit(req.user.id, req.user.full_name, 'APPROVE_FACE_RESET', 'face_reset_requests', reqId, null, null, `موافقة على إعادة تعيين بصمة الموظف ${emp ? emp.full_name : resetReq.employee_id}`, clientIp);
+
+      // Mark the original manager notification as read
+      db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(reqId);
+
+      return res.json({
+        success: true,
+        status: 'approved',
+        message: `تمت الموافقة على إعادة تعيين بصمة الموظف ${emp ? emp.full_name : ''} بنجاح، وسيطلب منه النظام تسجيل بصمته الجديدة.`
+      });
+    } else {
+      // Reject
+      db.prepare(`
+        UPDATE face_reset_requests SET
+          status = 'rejected',
+          reviewed_by = ?,
+          reviewed_at = ?
+        WHERE id = ?
+      `).run(req.user.id, nowIso, reqId);
+
+      // Notify employee of rejection
+      createNotification(
+        resetReq.employee_id,
+        'تم رفض طلب تغيير بصمة الوجه',
+        'نحيطكم علماً بأن المدير قد رفض طلب إعادة تعيين بصمة الوجه.' + (notes ? ` السبب: ${notes}` : ''),
+        'danger',
+        reqId
+      );
+
+      logAudit(req.user.id, req.user.full_name, 'REJECT_FACE_RESET', 'face_reset_requests', reqId, null, { notes }, `رفض إعادة تعيين بصمة الموظف ${emp ? emp.full_name : resetReq.employee_id}`, clientIp);
+
+      // Mark the original manager notification as read
+      db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(reqId);
+
+      return res.json({
+        success: true,
+        status: 'rejected',
+        message: `تم رفض طلب إعادة تعيين بصمة الموظف ${emp ? emp.full_name : ''}.`
+      });
+    }
+  } catch (err) {
+    console.error('Review face reset error:', err);
+    res.status(500).json({ success: false, error: 'حدث خطأ أثناء مراجعة الطلب' });
   }
 });
 

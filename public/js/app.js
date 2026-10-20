@@ -212,6 +212,7 @@ const App = {
   },
 
   logout() {
+    this.closeMobileMenu();
     API.setToken(null);
     API.setCurrentUser(null);
     this.currentUser = null;
@@ -219,6 +220,43 @@ const App = {
     if (ManagerUI.stopLivePolling) ManagerUI.stopLivePolling();
     this.showLoginView();
     showToast('تم تسجيل الخروج بنجاح', 'info');
+  },
+
+  toggleMobileMenu() {
+    const drawer = document.getElementById('mobile-drawer');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (!drawer || !backdrop) return;
+    const isClosed = drawer.classList.contains('translate-x-full');
+    if (isClosed) {
+      this.openMobileMenu();
+    } else {
+      this.closeMobileMenu();
+    }
+  },
+
+  openMobileMenu() {
+    const drawer = document.getElementById('mobile-drawer');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (!drawer || !backdrop) return;
+    backdrop.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      backdrop.classList.remove('opacity-0');
+      drawer.classList.remove('translate-x-full');
+    });
+    document.body.classList.add('overflow-hidden');
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closeMobileMenu() {
+    const drawer = document.getElementById('mobile-drawer');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (!drawer || !backdrop) return;
+    drawer.classList.add('translate-x-full');
+    backdrop.classList.add('opacity-0');
+    setTimeout(() => {
+      backdrop.classList.add('hidden');
+    }, 300);
+    document.body.classList.remove('overflow-hidden');
   },
 
   showLoginView() {
@@ -243,24 +281,44 @@ const App = {
       roleEl.textContent = user.role === 'manager' ? 'المدير العام (Manager)' : (user.job_title || 'موظف');
     }
 
+    // Update Mobile Drawer user info
+    const drawerAvatar = document.getElementById('mobile-drawer-avatar');
+    const drawerName = document.getElementById('mobile-drawer-name');
+    const drawerRole = document.getElementById('mobile-drawer-role');
+    const drawerPkgBtn = document.getElementById('mobile-drawer-packages-btn');
+
+    if (drawerAvatar) drawerAvatar.src = user.profile_photo || '/uploads/avatar.svg';
+    if (drawerName) drawerName.textContent = user.full_name || '';
+    if (drawerRole) {
+      drawerRole.textContent = user.role === 'manager' ? 'المدير العام (Manager)' : (user.job_title || 'موظف');
+    }
+
+    const sub = user.subscription || {};
+    const isLifetime = !!(
+      sub.isLifetime ||
+      sub.plan === 'lifetime' ||
+      sub.plan === 'open' ||
+      user.subscription_plan === 'lifetime' ||
+      user.subscription_plan === 'open'
+    );
+
     // Update Header packages button for managers (hidden for companies with open/lifetime package)
     const pkgBtn = document.getElementById('header-packages-btn');
     if (pkgBtn) {
-      const sub = user.subscription || {};
-      const isLifetime = !!(
-        sub.isLifetime ||
-        sub.plan === 'lifetime' ||
-        sub.plan === 'open' ||
-        user.subscription_plan === 'lifetime' ||
-        user.subscription_plan === 'open'
-      );
-
       if (user.role === 'manager' && !isLifetime) {
         pkgBtn.classList.remove('hidden');
         const remaining = (sub.remainingDays !== undefined ? sub.remainingDays : (sub.daysRemaining !== undefined ? sub.daysRemaining : (sub.days_remaining !== undefined ? sub.days_remaining : 0))) ?? 0;
         pkgBtn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> <span class="hidden md:inline">الباقات (${remaining} يوم)</span>`;
       } else {
         pkgBtn.classList.add('hidden');
+      }
+    }
+
+    if (drawerPkgBtn) {
+      if (user.role === 'manager' && !isLifetime) {
+        drawerPkgBtn.classList.remove('hidden');
+      } else {
+        drawerPkgBtn.classList.add('hidden');
       }
     }
 
@@ -353,12 +411,12 @@ const App = {
 
           ${n.type === 'face_reset_request' ? `
             <div class="mt-2.5 flex items-center gap-2">
-              <button onclick="App.reviewFaceReset(${n.related_id || n.id}, 'approved', ${n.id})"
+              <button onclick="App.reviewFaceReset(${n.related_id || 0}, 'approved', ${n.id}, event)"
                 class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition-all">
                 <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 <span>قبول الطلب</span>
               </button>
-              <button onclick="App.reviewFaceReset(${n.related_id || n.id}, 'rejected', ${n.id})"
+              <button onclick="App.reviewFaceReset(${n.related_id || 0}, 'rejected', ${n.id}, event)"
                 class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs active:scale-95 transition-all">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 <span>رفض الطلب</span>
@@ -375,20 +433,39 @@ const App = {
     if (window.lucide) lucide.createIcons();
   },
 
-  async reviewFaceReset(reqId, action, notifId) {
+  async reviewFaceReset(reqId, action, notifId, event) {
+    if (event && event.currentTarget) {
+      const parent = event.currentTarget.parentElement;
+      if (parent) {
+        parent.querySelectorAll('button').forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'pointer-events-none');
+        });
+      }
+    }
     try {
-      showToast('جاري معالجة الطلب...', 'info');
-      const res = await API.reviewFaceReset(reqId, action);
-      showToast(res.message, action === 'approved' ? 'success' : 'info');
+      const res = await API.reviewFaceReset(reqId || 0, action, '', notifId);
       if (notifId) {
         window.latestNotifications = (window.latestNotifications || []).filter(n => n.id !== notifId);
+        const countEl = document.getElementById('notif-badge');
+        if (countEl) {
+          const newCount = (window.latestNotifications || []).length;
+          if (newCount > 0) {
+            countEl.textContent = newCount;
+          } else {
+            countEl.classList.add('hidden');
+            countEl.textContent = '0';
+          }
+        }
       }
       this.renderNotificationsList();
+      showToast(res.message || (action === 'approved' ? 'تمت الموافقة بنجاح' : 'تم الرفض بنجاح'), action === 'approved' ? 'success' : 'info');
       if (window.ManagerUI && typeof ManagerUI.loadEmployees === 'function') {
         ManagerUI.loadEmployees();
       }
     } catch (err) {
-      showToast(err.message, 'danger');
+      showToast(err.message || 'حدث خطأ أثناء معالجة الطلب', 'danger');
+      this.renderNotificationsList();
     }
   },
 

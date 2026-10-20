@@ -136,10 +136,10 @@ const API = {
     return this.request('/attendance/face-reset-requests');
   },
 
-  reviewFaceReset(id, action, notes = '') {
-    return this.request(`/attendance/face-reset-requests/${id}/review`, {
+  reviewFaceReset(id, action, notes = '', notif_id = null) {
+    return this.request(`/attendance/face-reset-requests/${id || 0}/review`, {
       method: 'PUT',
-      body: { action, notes }
+      body: { action, notes, notif_id }
     });
   },
 

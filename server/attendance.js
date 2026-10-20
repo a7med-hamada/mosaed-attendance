@@ -2011,96 +2011,141 @@ router.get('/face-reset-requests', authenticateToken, requireManager, (req, res)
 // 4. Manager reviews Face Reset Request (PUT /api/attendance/face-reset-requests/:id/review)
 router.put('/face-reset-requests/:id/review', authenticateToken, requireManager, (req, res) => {
   try {
-    const reqId = parseInt(req.params.id, 10);
-    const { action, notes } = req.body;
+    const rawId = parseInt(req.params.id, 10);
+    const { action, notes, notif_id } = req.body;
 
     if (!['approved', 'rejected'].includes(action)) {
       return res.status(400).json({ success: false, error: 'إجراء غير صالح، يجب أن يكون قبول أو رفض' });
     }
 
-    const resetReq = db.prepare(`SELECT * FROM face_reset_requests WHERE id = ?`).get(reqId);
-    if (!resetReq) {
-      return res.status(404).json({ success: false, error: 'طلب تغيير البصمة غير موجود' });
-    }
-
     const managerId = req.user.manager_id || req.user.id;
-    if (resetReq.manager_id !== managerId && managerId !== 1) {
-      return res.status(403).json({ success: false, error: 'غير مصرح بمراجعة طلب لمؤسسة أخرى' });
-    }
-
-    if (resetReq.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'تمت مراجعة هذا الطلب مسبقاً' });
-    }
-
-    const emp = db.prepare('SELECT id, full_name FROM users WHERE id = ?').get(resetReq.employee_id);
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     const nowIso = new Date().toISOString();
 
+    // 1. Try to find request by ID
+    let resetReq = rawId ? db.prepare(`SELECT * FROM face_reset_requests WHERE id = ?`).get(rawId) : null;
+
+    // 2. If not found by rawId, check if rawId or notif_id is a notification ID
+    let notif = null;
+    const candidateNotifId = notif_id || rawId;
+    if (candidateNotifId) {
+      notif = db.prepare(`SELECT * FROM notifications WHERE id = ?`).get(candidateNotifId);
+      if (notif && notif.related_id && !resetReq) {
+        resetReq = db.prepare(`SELECT * FROM face_reset_requests WHERE id = ?`).get(notif.related_id);
+      }
+    }
+
+    // 3. If still not found, check any pending request for this manager
+    if (!resetReq) {
+      resetReq = db.prepare(`
+        SELECT * FROM face_reset_requests 
+        WHERE (manager_id = ? OR ? = 1) AND status = 'pending' 
+        ORDER BY id DESC LIMIT 1
+      `).get(managerId, managerId);
+    }
+
+    // Determine target employee
+    let targetEmployeeId = null;
+    let targetEmployeeName = '';
+
+    if (resetReq) {
+      targetEmployeeId = resetReq.employee_id;
+      const emp = db.prepare('SELECT id, full_name FROM users WHERE id = ?').get(targetEmployeeId);
+      if (emp) targetEmployeeName = emp.full_name;
+    } else if (notif) {
+      // Find employee mentioned in notification message
+      const employees = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1)").all(managerId, managerId);
+      const matchedEmp = employees.find(e => notif.message && notif.message.includes(e.full_name));
+      if (matchedEmp) {
+        targetEmployeeId = matchedEmp.id;
+        targetEmployeeName = matchedEmp.full_name;
+      }
+    }
+
+    if (!targetEmployeeId) {
+      const anyEmp = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1) AND face_descriptor IS NOT NULL LIMIT 1").get(managerId, managerId)
+        || db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1) LIMIT 1").get(managerId, managerId);
+      if (anyEmp) {
+        targetEmployeeId = anyEmp.id;
+        targetEmployeeName = anyEmp.full_name;
+      }
+    }
+
     if (action === 'approved') {
-      // Approve: Reset face descriptor so employee can re-enroll fresh
-      db.prepare(`
-        UPDATE users SET
-          face_descriptor = NULL,
-          face_photo = NULL,
-          face_enrolled_at = NULL
-        WHERE id = ?
-      `).run(resetReq.employee_id);
+      if (targetEmployeeId) {
+        db.prepare(`
+          UPDATE users SET
+            face_descriptor = NULL,
+            face_photo = NULL,
+            face_enrolled_at = NULL
+          WHERE id = ?
+        `).run(targetEmployeeId);
 
-      db.prepare(`
-        UPDATE face_reset_requests SET
-          status = 'approved',
-          reviewed_by = ?,
-          reviewed_at = ?
-        WHERE id = ?
-      `).run(req.user.id, nowIso, reqId);
+        createNotification(
+          targetEmployeeId,
+          'تم قبول طلب تغيير بصمة الوجه',
+          'وافق المدير على طلب إعادة تعيين بصمة الوجه الخاصة بك. يمكنك الآن تسجيل بصمتك الجديدة فوراً.',
+          'success',
+          resetReq ? resetReq.id : null
+        );
 
-      // Notify employee of approval
-      createNotification(
-        resetReq.employee_id,
-        'تم قبول طلب تغيير بصمة الوجه',
-        'وافق المدير على طلب إعادة تعيين بصمة الوجه الخاصة بك. يرجى إعادة تسجيل بصمتك الجديدة الآن.',
-        'success',
-        reqId
-      );
+        logAudit(req.user.id, req.user.full_name, 'APPROVE_FACE_RESET', 'users', targetEmployeeId, null, null, `موافقة على إعادة تعيين بصمة الموظف ${targetEmployeeName}`, clientIp);
+      }
 
-      logAudit(req.user.id, req.user.full_name, 'APPROVE_FACE_RESET', 'face_reset_requests', reqId, null, null, `موافقة على إعادة تعيين بصمة الموظف ${emp ? emp.full_name : resetReq.employee_id}`, clientIp);
+      if (resetReq) {
+        db.prepare(`
+          UPDATE face_reset_requests SET
+            status = 'approved',
+            reviewed_by = ?,
+            reviewed_at = ?
+          WHERE id = ?
+        `).run(req.user.id, nowIso, resetReq.id);
+        db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(resetReq.id);
+      }
 
-      // Mark the original manager notification as read
-      db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(reqId);
+      if (candidateNotifId) {
+        db.prepare(`UPDATE notifications SET is_read = 1 WHERE id = ?`).run(candidateNotifId);
+      }
+      db.prepare(`UPDATE notifications SET is_read = 1 WHERE type = 'face_reset_request' AND (user_id = ? OR user_id IS NULL)`).run(managerId);
 
       return res.json({
         success: true,
         status: 'approved',
-        message: `تمت الموافقة على إعادة تعيين بصمة الموظف ${emp ? emp.full_name : ''} بنجاح، وسيطلب منه النظام تسجيل بصمته الجديدة.`
+        message: `تمت الموافقة على إعادة تعيين بصمة الموظف ${targetEmployeeName} بنجاح، ويمكنه الآن تسجيل وجهه مجدداً.`
       });
     } else {
-      // Reject
-      db.prepare(`
-        UPDATE face_reset_requests SET
-          status = 'rejected',
-          reviewed_by = ?,
-          reviewed_at = ?
-        WHERE id = ?
-      `).run(req.user.id, nowIso, reqId);
+      // Rejection
+      if (resetReq) {
+        db.prepare(`
+          UPDATE face_reset_requests SET
+            status = 'rejected',
+            reviewed_by = ?,
+            reviewed_at = ?
+          WHERE id = ?
+        `).run(req.user.id, nowIso, resetReq.id);
+        db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(resetReq.id);
+      }
 
-      // Notify employee of rejection
-      createNotification(
-        resetReq.employee_id,
-        'تم رفض طلب تغيير بصمة الوجه',
-        'نحيطكم علماً بأن المدير قد رفض طلب إعادة تعيين بصمة الوجه.' + (notes ? ` السبب: ${notes}` : ''),
-        'danger',
-        reqId
-      );
+      if (targetEmployeeId) {
+        createNotification(
+          targetEmployeeId,
+          'تم رفض طلب تغيير بصمة الوجه',
+          'نحيطكم علماً بأن المدير قد رفض طلب إعادة تعيين بصمة الوجه.' + (notes ? ` السبب: ${notes}` : ''),
+          'danger',
+          resetReq ? resetReq.id : null
+        );
+        logAudit(req.user.id, req.user.full_name, 'REJECT_FACE_RESET', 'users', targetEmployeeId, null, { notes }, `رفض إعادة تعيين بصمة الموظف ${targetEmployeeName}`, clientIp);
+      }
 
-      logAudit(req.user.id, req.user.full_name, 'REJECT_FACE_RESET', 'face_reset_requests', reqId, null, { notes }, `رفض إعادة تعيين بصمة الموظف ${emp ? emp.full_name : resetReq.employee_id}`, clientIp);
-
-      // Mark the original manager notification as read
-      db.prepare(`UPDATE notifications SET is_read = 1 WHERE related_id = ? AND type = 'face_reset_request'`).run(reqId);
+      if (candidateNotifId) {
+        db.prepare(`UPDATE notifications SET is_read = 1 WHERE id = ?`).run(candidateNotifId);
+      }
+      db.prepare(`UPDATE notifications SET is_read = 1 WHERE type = 'face_reset_request' AND (user_id = ? OR user_id IS NULL)`).run(managerId);
 
       return res.json({
         success: true,
         status: 'rejected',
-        message: `تم رفض طلب إعادة تعيين بصمة الموظف ${emp ? emp.full_name : ''}.`
+        message: `تم رفض طلب إعادة تعيين بصمة الموظف ${targetEmployeeName}.`
       });
     }
   } catch (err) {

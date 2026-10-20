@@ -205,52 +205,123 @@
 
         <!-- Controls: Language, Theme, Support, Packages, Notifications, User Profile -->
         <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
-          <!-- Support Button -->
-          <button onclick="App.openSupportModal()"
-            class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-bold"
-            title="الدعم الفني والمساعدة">
-            <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
-            <span class="hidden md:inline">الدعم الفني</span>
-          </button>
+          <!-- Desktop-only controls (Hidden on mobile) -->
+          <div class="hidden lg:flex items-center gap-2">
+            <!-- Support Button -->
+            <button onclick="App.openSupportModal()"
+              class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-bold"
+              title="الدعم الفني والمساعدة">
+              <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
+              <span>الدعم الفني</span>
+            </button>
 
-          <!-- Packages Button (Shown for manager) -->
-          <button id="header-packages-btn" onclick="App.openPackagesModal()"
-            class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-bold hidden"
-            title="باقات الاشتراك والترقية">
-            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
-            <span class="hidden md:inline">الباقات</span>
-          </button>
+            <!-- Packages Button (Shown for manager) -->
+            <button id="header-packages-btn" onclick="App.openPackagesModal()"
+              class="px-2 sm:px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-bold hidden"
+              title="باقات الاشتراك والترقية">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+              <span>الباقات</span>
+            </button>
 
-          <!-- Theme Toggle Button -->
+            <!-- User Card (Desktop) -->
+            <div onclick="App.openProfile()" class="flex items-center gap-1.5 sm:gap-3 pr-1.5 sm:pr-3 border-r border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" title="الملف الشخصي">
+              <img id="header-user-avatar" src="/uploads/avatar.svg" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+              <div class="text-right">
+                <span id="header-user-name" class="font-bold text-xs text-slate-900 dark:text-white block leading-tight truncate max-w-[100px]">مستخدم</span>
+                <span id="header-user-role" class="text-[10px] text-slate-500 font-medium">موظف</span>
+              </div>
+              <button onclick="event.stopPropagation(); App.logout()" class="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="تسجيل الخروج">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Theme Toggle Button (Mobile & Desktop) -->
           <button onclick="App.toggleTheme()"
-            class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            class="p-2 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
             title="تبديل الوضع الليلي">
-            <i id="theme-toggle-icon" data-lucide="moon" class="w-4 h-4"></i>
+            <i id="theme-toggle-icon" data-lucide="moon" class="w-4.5 h-4.5"></i>
           </button>
 
-          <!-- Notifications Bell -->
+          <!-- Notifications Bell (Mobile & Desktop) -->
           <div class="relative">
             <button onclick="App.toggleNotificationsDropdown()"
-              class="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 relative transition-colors" title="الإشعارات">
-              <i data-lucide="bell" class="w-4 h-4"></i>
+              class="p-2 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 relative transition-colors" title="الإشعارات">
+              <i data-lucide="bell" class="w-4.5 h-4.5"></i>
               <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center hidden">0</span>
             </button>
           </div>
 
-          <!-- User Card -->
-          <div onclick="App.openProfile()" class="flex items-center gap-1.5 sm:gap-3 pr-1.5 sm:pr-3 border-r border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-85 transition-opacity" title="الملف الشخصي">
-            <img id="header-user-avatar" src="/uploads/avatar.svg" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
-            <div class="hidden sm:block text-right">
-              <span id="header-user-name" class="font-bold text-xs text-slate-900 dark:text-white block leading-tight truncate max-w-[100px]">مستخدم</span>
-              <span id="header-user-role" class="text-[10px] text-slate-500 font-medium">موظف</span>
-            </div>
-            <button onclick="event.stopPropagation(); App.logout()" class="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="تسجيل الخروج">
-              <i data-lucide="log-out" class="w-4 h-4"></i>
-            </button>
-          </div>
+          <!-- Mobile Hamburger Menu Button (Mobile ONLY) -->
+          <button id="mobile-menu-toggle-btn" onclick="App.toggleMobileMenu()"
+            class="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors flex items-center justify-center"
+            title="القائمة">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
         </div>
       </div>
     </header>
+
+    <!-- Mobile Navigation Drawer & Backdrop -->
+    <div id="mobile-drawer-backdrop" onclick="App.closeMobileMenu()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden transition-opacity duration-300 opacity-0 lg:hidden"></div>
+
+    <div id="mobile-drawer" class="fixed top-0 bottom-0 right-0 w-[85%] max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 z-50 flex flex-col shadow-2xl transition-transform duration-300 translate-x-full lg:hidden">
+      <!-- Drawer Header -->
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
+        <div class="flex items-center gap-2.5">
+          <img src="/icons/icon-192.png" alt="وقتي" class="w-8 h-8 rounded-xl object-contain shadow-xs" />
+          <div>
+            <span class="font-black text-sm text-slate-900 dark:text-white block leading-tight">وقتي | WAQTY</span>
+            <span class="text-[10px] text-slate-400 font-medium">نظام الحضور الذكي</span>
+          </div>
+        </div>
+        <button onclick="App.closeMobileMenu()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="إغلاق">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Drawer User Card -->
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40">
+        <div onclick="App.openProfile(); App.closeMobileMenu();" class="flex items-center gap-3 cursor-pointer group">
+          <img id="mobile-drawer-avatar" src="/uploads/avatar.svg" class="w-11 h-11 rounded-2xl object-cover bg-slate-200 dark:bg-slate-700 ring-2 ring-emerald-500/30 flex-shrink-0" />
+          <div class="min-w-0 flex-1">
+            <div id="mobile-drawer-name" class="font-bold text-sm text-slate-900 dark:text-white truncate">مستخدم</div>
+            <div id="mobile-drawer-role" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold truncate">موظف</div>
+          </div>
+          <i data-lucide="chevron-left" class="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors"></i>
+        </div>
+      </div>
+
+      <!-- Drawer Navigation List -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-1">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1.5 block">الصفحات والأقسام</span>
+        <ul id="mobile-drawer-nav-list" class="space-y-1"></ul>
+      </div>
+
+      <!-- Drawer Footer Controls -->
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2 bg-slate-50/50 dark:bg-slate-900/80">
+        <!-- Drawer Packages Button (Managers only) -->
+        <button id="mobile-drawer-packages-btn" onclick="App.openPackagesModal(); App.closeMobileMenu();"
+          class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 transition-all hidden">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+          <span>باقات الاشتراك والترقية</span>
+        </button>
+
+        <!-- Technical Support -->
+        <button onclick="App.openSupportModal(); App.closeMobileMenu();"
+          class="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="headphones" class="w-4 h-4 text-emerald-500"></i>
+          <span>الدعم الفني والمساعدة</span>
+        </button>
+
+        <!-- Logout Button -->
+        <button onclick="App.closeMobileMenu(); App.logout();"
+          class="w-full py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 transition-all border border-rose-200/50 dark:border-rose-900/40">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Notifications Dropdown Modal (Mobile Responsive) -->
     <div id="notif-modal" class="fixed top-18 sm:top-20 left-3 right-3 sm:right-auto sm:left-6 z-40 max-w-sm sm:w-84 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 hidden modal-enter">
@@ -289,8 +360,8 @@
       <!-- ========================================== -->
       <div id="manager-layout" class="hidden">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-          <!-- Sidebar Navigation (Horizontal on mobile, vertical on desktop) -->
-          <aside class="lg:col-span-3 xl:col-span-2 min-w-0">
+          <!-- Sidebar Navigation (Desktop only, hidden on mobile) -->
+          <aside class="hidden lg:block lg:col-span-3 xl:col-span-2 min-w-0">
             <div class="bg-white dark:bg-slate-900 rounded-2xl lg:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-slate-200 dark:border-slate-800 sticky top-18 lg:top-24 z-20">
               <span class="hidden lg:block text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2.5">قائمة الإدارة</span>
               <ul id="manager-nav-list" class="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-1 lg:pb-0 scrollbar-none w-full"></ul>
@@ -298,7 +369,7 @@
           </aside>
 
           <!-- Main Content Area -->
-          <section class="lg:col-span-9 xl:col-span-10 min-w-0" id="manager-content"></section>
+          <section class="col-span-1 lg:col-span-9 xl:col-span-10 min-w-0" id="manager-content"></section>
         </div>
       </div>
 

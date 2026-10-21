@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { db, logAudit } = require('./database');
+const { db, logAudit, createNotification } = require('./database');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
@@ -712,11 +712,268 @@ router.delete('/tickets/:id', authenticateSuperAdmin, (req, res) => {
 
     res.json({
       success: true,
-      message: 'تم حذف التذكرة بنجاح 🗑️'
+      message: 'تم حذف التذكرة بنجاح'
     });
   } catch (error) {
     console.error('Super admin delete ticket error:', error);
     res.status(500).json({ success: false, error: 'فشل في حذف التذكرة' });
+  }
+});
+
+// ============================================================
+// BRANCH REQUESTS & MULTI-BRANCH MANAGEMENT
+// ============================================================
+
+// GET /api/super-admin/branch-requests - List all branch requests
+router.get('/branch-requests', authenticateSuperAdmin, (req, res) => {
+  try {
+    const requests = db.prepare(`
+      SELECT br.*, 
+        u.full_name as company_manager_name, 
+        u.email as company_manager_email, 
+        u.phone as company_manager_phone
+      FROM branch_requests br
+      LEFT JOIN users u ON br.company_manager_id = u.id
+      ORDER BY CASE WHEN br.status = 'pending_payment' THEN 0 ELSE 1 END, br.id DESC
+    `).all();
+
+    const counts = {
+      total: requests.length,
+      pending: requests.filter(r => r.status === 'pending_payment').length,
+      approved: requests.filter(r => r.status === 'approved').length,
+      rejected: requests.filter(r => r.status === 'rejected').length
+    };
+
+    res.json({
+      success: true,
+      requests,
+      counts
+    });
+  } catch (error) {
+    console.error('Super admin get branch requests error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استرداد طلبات الفروع' });
+  }
+});
+
+// PUT /api/super-admin/branch-requests/:id/review - Approve or Reject Branch Request
+router.put('/branch-requests/:id/review', authenticateSuperAdmin, (req, res) => {
+  try {
+    const reqId = parseInt(req.params.id, 10);
+    const { action, super_admin_notes } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, error: 'الإجراء المحدد غير صالح' });
+    }
+
+    const branchReq = db.prepare('SELECT * FROM branch_requests WHERE id = ?').get(reqId);
+    if (!branchReq) {
+      return res.status(404).json({ success: false, error: 'طلب الفرع غير موجود' });
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    if (action === 'approve') {
+      if (branchReq.status === 'approved') {
+        return res.status(400).json({ success: false, error: 'هذا الطلب تم اعتماده وتفعيله مسبقاً' });
+      }
+
+      // 1. Verify email not taken in users
+      const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(branchReq.branch_email.trim());
+      if (existingUser) {
+        return res.status(400).json({ success: false, error: 'البريد الإلكتروني للفرع مسجل مسبقاً في النظام لمستخدم آخر' });
+      }
+
+      // 2. Generate branch manager employee code
+      const empCode = 'MGR-BR' + Math.floor(1000 + Math.random() * 9000);
+      const salt = bcrypt.genSaltSync(10);
+      const passwordHash = bcrypt.hashSync(branchReq.branch_password, salt);
+
+      // 3. Create Manager User with parent_manager_id set to primary company manager
+      const insertUserStmt = db.prepare(`
+        INSERT INTO users (
+          employee_code, full_name, email, phone, password_hash, role, parent_manager_id, is_active
+        ) VALUES (?, ?, ?, ?, ?, 'manager', ?, 1)
+      `);
+      const userResult = insertUserStmt.run(
+        empCode,
+        branchReq.branch_manager_name,
+        branchReq.branch_email.trim().toLowerCase(),
+        branchReq.branch_phone || null,
+        passwordHash,
+        branchReq.company_manager_id
+      );
+      const newBranchManagerId = userResult.lastInsertRowid;
+
+      // 4. Create Workplace for Branch
+      const insertWpStmt = db.prepare(`
+        INSERT INTO workplaces (
+          manager_id, company_name, address, latitude, longitude, radius_meters, company_logo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const wpResult = insertWpStmt.run(
+        newBranchManagerId,
+        branchReq.branch_name,
+        branchReq.branch_address || 'المقر الرئيسي للفرع',
+        branchReq.branch_latitude || 30.0444,
+        branchReq.branch_longitude || 31.2357,
+        branchReq.branch_radius || 150,
+        branchReq.branch_logo || null
+      );
+      const newWorkplaceId = wpResult.lastInsertRowid;
+
+      // 5. Clone default schedules from parent company
+      try {
+        const parentSchedules = db.prepare('SELECT * FROM schedules WHERE manager_id = ?').all(branchReq.company_manager_id);
+        if (parentSchedules && parentSchedules.length > 0) {
+          const insertSched = db.prepare(`
+            INSERT INTO schedules (manager_id, name, start_time, end_time, grace_period_minutes, late_threshold_minutes, half_day_threshold_minutes, is_default)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          for (const s of parentSchedules) {
+            insertSched.run(
+              newBranchManagerId,
+              s.name,
+              s.start_time,
+              s.end_time,
+              s.grace_period_minutes,
+              s.late_threshold_minutes,
+              s.half_day_threshold_minutes,
+              s.is_default
+            );
+          }
+        } else {
+          db.prepare(`
+            INSERT INTO schedules (manager_id, name, start_time, end_time, grace_period_minutes, late_threshold_minutes, half_day_threshold_minutes, is_default)
+            VALUES (?, 'الدوام الافتراضي للفرع', '09:00', '17:00', 15, 60, 180, 1)
+          `).run(newBranchManagerId);
+        }
+      } catch (schedErr) {
+        console.warn('Branch schedules clone warning:', schedErr.message);
+      }
+
+      // 6. Update branch request status
+      db.prepare(`
+        UPDATE branch_requests
+        SET status = 'approved',
+            super_admin_notes = ?,
+            created_branch_manager_id = ?,
+            created_workplace_id = ?,
+            reviewed_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        super_admin_notes || 'تم التحقق من الدفع وتفعيل الفرع بنجاح',
+        newBranchManagerId,
+        newWorkplaceId,
+        reqId
+      );
+
+      // 7. Send notification to primary manager
+      try {
+        createNotification(
+          branchReq.company_manager_id,
+          'تم تفعيل الفرع الجديد بنجاح',
+          `تمت الموافقة على تفعيل فرع (${branchReq.branch_name}) بنجاح. يمكن لمدير الفرع الآن تسجيل الدخول وإدارة الموظفين وموقع العمل.`,
+          'success',
+          reqId
+        );
+      } catch (_) {}
+
+      logAudit(
+        0,
+        'SuperAdmin',
+        'APPROVE_BRANCH',
+        'branch_requests',
+        reqId,
+        { status: 'pending_payment' },
+        { status: 'approved', created_branch_manager_id: newBranchManagerId, created_workplace_id: newWorkplaceId },
+        `تفعيل واعتماد فرع جديد (${branchReq.branch_name}) لشركة (${branchReq.parent_company_name})`,
+        clientIp
+      );
+
+      return res.json({
+        success: true,
+        message: `تم اعتماد وتفعيل الفرع (${branchReq.branch_name}) بنجاح، وتم إنشاء حساب مدير الفرع ومقر العمل.`,
+        branch_manager_id: newBranchManagerId,
+        workplace_id: newWorkplaceId
+      });
+    }
+
+    if (action === 'reject') {
+      db.prepare(`
+        UPDATE branch_requests
+        SET status = 'rejected',
+            super_admin_notes = ?,
+            reviewed_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        super_admin_notes || 'لم يتم تأكيد التحويل المالي أو استيفاء الشروط المطلوبة',
+        reqId
+      );
+
+      try {
+        createNotification(
+          branchReq.company_manager_id,
+          'تم رفض طلب الفرع الجديد',
+          `تم رفض طلب إضافة فرع (${branchReq.branch_name}). السبب: ${super_admin_notes || 'عدم استيفاء تأكيد التحويل المالي.'}`,
+          'danger',
+          reqId
+        );
+      } catch (_) {}
+
+      logAudit(
+        0,
+        'SuperAdmin',
+        'REJECT_BRANCH',
+        'branch_requests',
+        reqId,
+        { status: branchReq.status },
+        { status: 'rejected', reason: super_admin_notes },
+        `رفض طلب فرع جديد (${branchReq.branch_name}) لشركة (${branchReq.parent_company_name})`,
+        clientIp
+      );
+
+      return res.json({
+        success: true,
+        message: `تم رفض طلب الفرع (${branchReq.branch_name}) بنجاح وإشعار المنشأة بالسبب.`
+      });
+    }
+  } catch (error) {
+    console.error('Super admin review branch error:', error);
+    res.status(500).json({ success: false, error: 'فشل في مراجعة طلب الفرع: ' + (error.message || '') });
+  }
+});
+
+// DELETE /api/super-admin/branch-requests/:id - Delete Branch Request
+router.delete('/branch-requests/:id', authenticateSuperAdmin, (req, res) => {
+  try {
+    const reqId = parseInt(req.params.id, 10);
+    const branchReq = db.prepare('SELECT * FROM branch_requests WHERE id = ?').get(reqId);
+    if (!branchReq) {
+      return res.status(404).json({ success: false, error: 'الطلب غير موجود' });
+    }
+
+    db.prepare('DELETE FROM branch_requests WHERE id = ?').run(reqId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'DELETE_BRANCH_REQUEST',
+      'branch_requests',
+      reqId,
+      branchReq,
+      null,
+      `حذف سجل طلب الفرع #${reqId} (${branchReq.branch_name})`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: 'تم حذف طلب الفرع بنجاح'
+    });
+  } catch (error) {
+    console.error('Super admin delete branch request error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حذف طلب الفرع' });
   }
 });
 

@@ -12,11 +12,22 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
   try {
     const managerId = req.user.id;
     const today = getTodayString();
-    const { department_id, is_active, search } = req.query;
+    const { department_id, is_active, search, role } = req.query;
+
+    let roleClause = `((u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))) OR (u.role = 'manager' AND u.parent_manager_id = ?))`;
+    const params = [today, managerId, managerId, managerId];
+
+    if (role === 'manager') {
+      roleClause = `(u.role = 'manager' AND u.parent_manager_id = ?)`;
+      params.splice(1, 3, managerId);
+    } else if (role === 'employee') {
+      roleClause = `(u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)))`;
+      params.splice(1, 3, managerId, managerId);
+    }
 
     let query = `
       SELECT
-        u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
+        u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id, u.parent_manager_id,
         u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
         u.profile_photo, (u.face_descriptor IS NOT NULL) as has_face_enrolled, u.face_enrolled_at, u.created_at,
         d.name as department_name,
@@ -28,10 +39,9 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
       LEFT JOIN schedules s ON u.schedule_id = s.id
       LEFT JOIN company_shifts cs ON u.shift_id = cs.id
       LEFT JOIN attendance_records ar ON (u.id = ar.employee_id AND ar.date = ?)
-      WHERE u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+      WHERE ${roleClause}
       AND u.full_name NOT LIKE '%طارق النجار%'
     `;
-    const params = [today, managerId, managerId];
 
     if (department_id) {
       query += ` AND u.department_id = ? `;
@@ -276,11 +286,15 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
 // POST /api/employees (Manager Adds Employee Manually)
 router.post('/', authenticateToken, requireManager, (req, res) => {
   try {
-    const managerId = req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
     let {
       employee_code, full_name, email, password, confirm_password, department_id,
-      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo
+      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo,
+      role, start_mode
     } = req.body;
+
+    const accountRole = (role === 'manager') ? 'manager' : 'employee';
+    const parentManagerId = (accountRole === 'manager') ? managerId : null;
 
     if (!full_name || !email || !password) {
       return res.status(400).json({ success: false, error: 'الاسم الكامل، البريد الإلكتروني، وكلمة المرور حقول إلزامية' });
@@ -295,20 +309,21 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     }
 
     // Auto-generate unique employee_code if not provided
+    const prefix = accountRole === 'manager' ? 'MGR-' : 'EMP-';
     if (!employee_code || employee_code.trim().length === 0) {
       let code;
       let collision = true;
       let attempts = 0;
       while (collision && attempts < 50) {
         attempts++;
-        const candidate = 'EMP-' + String(1000 + Math.floor(Math.random() * 9000));
+        const candidate = prefix + String(1000 + Math.floor(Math.random() * 9000));
         const check = db.prepare('SELECT id FROM users WHERE employee_code = ?').get(candidate);
         if (!check) {
           code = candidate;
           collision = false;
         }
       }
-      employee_code = code || ('EMP-' + Date.now());
+      employee_code = code || (prefix + Date.now());
     } else {
       const existingCode = db.prepare(`SELECT id FROM users WHERE UPPER(employee_code) = UPPER(?)`).get(employee_code.trim());
       if (existingCode) {
@@ -324,8 +339,27 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
 
     const hash = bcrypt.hashSync(password, 10);
 
+    // Compute hire_date and effective start mode
+    const todayParts = getCairoNowParts();
+    const currentYear = parseInt(todayParts.year, 10);
+    const currentMonth = parseInt(todayParts.month, 10);
+    const currentDay = parseInt(todayParts.day, 10);
+
+    let effectiveHireDate = hire_date || todayParts.dateStr;
+    const mode = start_mode || 'today';
+
+    if (accountRole === 'employee') {
+      if (mode === 'month_start') {
+        effectiveHireDate = `${todayParts.year}-${todayParts.month}-01`;
+      } else if (mode === 'tomorrow') {
+        const tomDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const tomParts = getCairoNowParts(tomDate);
+        effectiveHireDate = tomParts.dateStr;
+      }
+    }
+
     // Default schedule for this manager if not selected
-    if (!schedule_id) {
+    if (!schedule_id && accountRole === 'employee') {
       const mgrSched = db.prepare(`SELECT id FROM schedules WHERE manager_id = ? LIMIT 1`).get(managerId);
       if (mgrSched) {
         schedule_id = mgrSched.id;
@@ -343,12 +377,16 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     const activeStatus = is_active !== undefined ? parseInt(is_active, 10) : 1;
     const parsedShiftId = shift_id ? parseInt(shift_id, 10) : null;
 
+    // Get primary manager subscription info to propagate to sub-manager
+    const primaryMgr = db.prepare('SELECT subscription_plan, subscription_expires_at, trial_days FROM users WHERE id = ?').get(managerId) || {};
+
     const stmt = db.prepare(`
       INSERT INTO users (
-        employee_code, full_name, email, password_hash, role, manager_id,
+        employee_code, full_name, email, password_hash, role, manager_id, parent_manager_id,
         department_id, job_title, phone, hire_date, base_salary,
-        schedule_id, shift_id, is_active, profile_photo
-      ) VALUES (?, ?, ?, ?, 'employee', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        schedule_id, shift_id, is_active, profile_photo,
+        subscription_plan, subscription_expires_at, trial_days
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -356,40 +394,98 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
       full_name.trim(),
       email.trim(),
       hash,
+      accountRole,
       managerId,
+      parentManagerId,
       department_id || null,
       job_title || null,
       phone || null,
-      hire_date || getTodayString(),
+      effectiveHireDate,
       base_salary ? parseFloat(base_salary) : 5000,
       schedule_id || null,
       parsedShiftId,
       activeStatus,
-      photoPath
+      photoPath,
+      primaryMgr.subscription_plan || 'trial',
+      primaryMgr.subscription_expires_at || null,
+      primaryMgr.trial_days || 14
     );
+
+    const newUserId = result.lastInsertRowid;
+    let absenceCount = 0;
+
+    // If employee and start_mode is month_start, register absences for all working days from the 1st of month until today
+    if (accountRole === 'employee' && mode === 'month_start') {
+      let workingDays = [0, 1, 2, 3, 4]; // Default Sun-Thu
+      let schedStart = '09:00';
+      let schedEnd = '17:00';
+      if (schedule_id) {
+        const sched = db.prepare('SELECT working_days, start_time, end_time FROM schedules WHERE id = ?').get(schedule_id);
+        if (sched) {
+          if (sched.working_days) workingDays = sched.working_days.split(',').map(d => parseInt(d.trim(), 10));
+          if (sched.start_time) schedStart = sched.start_time;
+          if (sched.end_time) schedEnd = sched.end_time;
+        }
+      }
+
+      const absenceSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'absence_deduction_amount'`).get();
+      const absenceDeduction = absenceSetting ? parseFloat(absenceSetting.value) : 100;
+
+      const insertAbsentStmt = db.prepare(`
+        INSERT OR IGNORE INTO attendance_records (
+          employee_id, date, status, scheduled_start, scheduled_end,
+          worked_hours, estimated_deduction, verification_status, notes
+        ) VALUES (?, ?, 'Absent', ?, ?, 0, ?, 'system_auto', 'تسجيل غياب لبدء مسيرة الموظف من بداية الشهر')
+      `);
+
+      for (let d = 1; d < currentDay; d++) {
+        const dateStr = `${todayParts.year}-${todayParts.month}-${String(d).padStart(2, '0')}`;
+        const dayOfWeek = new Date(currentYear, currentMonth - 1, d).getDay();
+        if (workingDays.includes(dayOfWeek)) {
+          const isHoliday = db.prepare('SELECT id FROM holidays WHERE date = ?').get(dateStr);
+          if (!isHoliday) {
+            insertAbsentStmt.run(newUserId, dateStr, schedStart, schedEnd, absenceDeduction);
+            absenceCount++;
+          }
+        }
+      }
+    }
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
       req.user.id,
       req.user.full_name,
-      'CREATE_EMPLOYEE',
+      accountRole === 'manager' ? 'CREATE_MANAGER' : 'CREATE_EMPLOYEE',
       'users',
-      result.lastInsertRowid,
+      newUserId,
       null,
-      { employee_code, full_name, email, job_title, department_id, manager_id: managerId },
-      'إضافة موظف جديد يدوياً من قبل المدير',
+      { employee_code, full_name, email, job_title, department_id, manager_id: managerId, role: accountRole, start_mode: mode, absences_recorded: absenceCount },
+      accountRole === 'manager' ? 'إضافة مدير مساعد جديد من قبل المدير العام' : 'إضافة موظف جديد يدوياً من قبل المدير',
       clientIp
     );
 
+    let successMsg = 'تم إنشاء الحساب بنجاح ويمكنه الآن تسجيل الدخول';
+    if (accountRole === 'manager') {
+      successMsg = 'تم إنشاء حساب المدير المساعد بنجاح، ولديه الآن صلاحية إدارة المنشأة والمتابعة';
+    } else if (mode === 'month_start') {
+      successMsg = `تم إنشاء حساب الموظف بنجاح وبدأت مسيرته من بداية الشهر (تم احتساب ${absenceCount} يوم غياب للأيام السابقة)`;
+    } else if (mode === 'tomorrow') {
+      successMsg = 'تم إنشاء حساب الموظف بنجاح وسيبدأ احتساب حضوره اعتباراً من الغد';
+    } else {
+      successMsg = 'تم إنشاء حساب الموظف بنجاح ويبدأ احتسابه من اليوم';
+    }
+
     res.json({
       success: true,
-      message: 'تم إنشاء حساب الموظف بنجاح ويمكنه الآن تسجيل الدخول',
-      id: result.lastInsertRowid,
-      employee_code
+      message: successMsg,
+      id: newUserId,
+      employee_code,
+      role: accountRole,
+      absences_recorded: absenceCount
     });
   } catch (error) {
     console.error('Add employee error:', error);
-    res.status(500).json({ success: false, error: 'فشل في إضافة الموظف' });
+    res.status(500).json({ success: false, error: 'فشل في إضافة الحساب: ' + (error.message || '') });
   }
 });
 
@@ -397,15 +493,15 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
 router.put('/:id', authenticateToken, requireManager, (req, res) => {
   try {
     const targetId = parseInt(req.params.id, 10);
-    const managerId = req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
     const oldEmp = db.prepare(`SELECT * FROM users WHERE id = ?`).get(targetId);
     if (!oldEmp) {
-      return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+      return res.status(404).json({ success: false, error: 'الحساب غير موجود' });
     }
 
-    // Security: Only manager who owns employee (or admin 1) can edit
-    if (oldEmp.manager_id !== managerId && managerId !== 1) {
-      return res.status(403).json({ success: false, error: 'غير مصرح بتعديل موظف تابع لجهة أخرى' });
+    // Security: Only manager who owns employee/sub-manager (or admin 1) can edit
+    if (oldEmp.manager_id !== managerId && oldEmp.parent_manager_id !== managerId && managerId !== 1) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بتعديل حساب تابع لجهة أخرى' });
     }
 
     const {
@@ -503,18 +599,22 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 router.delete('/:id', authenticateToken, requireManager, (req, res) => {
   try {
     const targetId = parseInt(req.params.id, 10);
-    const managerId = req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
     const oldEmp = db.prepare(`SELECT * FROM users WHERE id = ?`).get(targetId);
     if (!oldEmp) {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
 
-    if (oldEmp.role === 'manager') {
-      return res.status(400).json({ success: false, error: 'لا يمكن حذف حساب المدير العام' });
+    if (targetId === req.user.id) {
+      return res.status(400).json({ success: false, error: 'لا يمكن حذف حسابك الحالي' });
     }
 
-    if (oldEmp.manager_id !== managerId && managerId !== 1) {
-      return res.status(403).json({ success: false, error: 'غير مصرح بحذف موظف تابع لجهة أخرى' });
+    if (oldEmp.role === 'manager' && !oldEmp.parent_manager_id) {
+      return res.status(400).json({ success: false, error: 'لا يمكن حذف حساب المدير العام للمنشأة' });
+    }
+
+    if (oldEmp.manager_id !== managerId && oldEmp.parent_manager_id !== managerId && managerId !== 1) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بحذف حساب تابع لجهة أخرى' });
     }
 
     // Delete employee and related records

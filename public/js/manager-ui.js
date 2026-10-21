@@ -38,6 +38,7 @@ const ManagerUI = {
       { id: 'leaves', icon: 'calendar-check', label: isEn ? 'Leaves & Permissions' : 'الإجازات والأذونات' },
       { id: 'hours', icon: 'calendar-clock', label: isEn ? 'Working Hours' : 'مواعيد العمل' },
       { id: 'workplace', icon: 'map-pin', label: isEn ? 'Workplace' : 'موقع العمل' },
+      { id: 'branches', icon: 'git-branch', label: isEn ? 'Branches' : 'إدارة الفروع' },
       { id: 'archive', icon: 'coins', label: isEn ? 'Payroll & Monthly Archive' : 'مسير الرواتب والخصومات' },
       { id: 'reports', icon: 'file-text', label: isEn ? 'Reports' : 'التقارير' },
       { id: 'settings', icon: 'sliders', label: isEn ? 'Settings' : 'الإعدادات' },
@@ -122,6 +123,8 @@ const ManagerUI = {
       await this.renderWorkingHoursSection();
     } else if (sectionId === 'workplace') {
       await this.renderWorkplaceSection();
+    } else if (sectionId === 'branches') {
+      await this.renderBranchesSection();
     } else if (sectionId === 'archive') {
       await this.renderMonthlyArchiveSection();
     } else if (sectionId === 'reports') {
@@ -581,17 +584,35 @@ const ManagerUI = {
     const container = document.getElementById('manager-content');
     if (!container) return;
 
+    this.currentEmpRoleFilter = 'all';
+
     container.innerHTML = `
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="users" class="w-5 h-5 text-blue-600"></i> صفحة الموظفين
+              <i data-lucide="users" class="w-5 h-5 text-blue-600"></i> صفحة الموظفين وفريق الإدارة
             </h2>
-            <p class="text-xs text-slate-500">إدارة حسابات الموظفين وإضافتهم يدوياً وضبط بيانات الدخول الخاصة بهم</p>
+            <p class="text-xs text-slate-500">إدارة حسابات الموظفين والمديرين المساعدين وإضافتهم وضبط الصلاحيات</p>
           </div>
           <button onclick="ManagerUI.openAddEmployeeModal()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 flex items-center gap-2 self-start sm:self-auto transform active:scale-98 whitespace-nowrap">
-            <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
+            <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف / مدير
+          </button>
+        </div>
+
+        <!-- Role Filter Tabs -->
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <button id="emp-filter-all" onclick="ManagerUI.filterEmployeeRole('all')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all">
+            الكل (<span id="emp-count-all">0</span>)
+          </button>
+          <button id="emp-filter-employee" onclick="ManagerUI.filterEmployeeRole('employee')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            الموظفون (<span id="emp-count-emp">0</span>)
+          </button>
+          <button id="emp-filter-manager" onclick="ManagerUI.filterEmployeeRole('manager')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            فريق الإدارة والمديرون (<span id="emp-count-mgr">0</span>)
           </button>
         </div>
 
@@ -605,140 +626,193 @@ const ManagerUI = {
     await this.loadEmployeesTable();
   },
 
+  filterEmployeeRole(role) {
+    this.currentEmpRoleFilter = role;
+    const allBtn = document.getElementById('emp-filter-all');
+    const empBtn = document.getElementById('emp-filter-employee');
+    const mgrBtn = document.getElementById('emp-filter-manager');
+
+    const activeCls = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all';
+    const inactiveCls = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all';
+
+    if (allBtn) allBtn.className = role === 'all' ? activeCls : inactiveCls;
+    if (empBtn) empBtn.className = role === 'employee' ? activeCls : inactiveCls;
+    if (mgrBtn) mgrBtn.className = role === 'manager' ? activeCls : inactiveCls;
+
+    this.renderEmployeesTableRows();
+  },
+
   async loadEmployeesTable() {
     const container = document.getElementById('mgr-employees-table-container');
     if (!container) return;
 
     try {
-      const res = await API.getEmployees();
+      const res = await API.getEmployees({ role: 'all' });
       const employees = res.employees || [];
       this.employeesList = employees;
 
-      if (employees.length === 0) {
-        container.innerHTML = `
-          <div class="p-16 text-center space-y-4">
-            <div class="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center mx-auto">
-              <i data-lucide="user-x" class="w-8 h-8"></i>
-            </div>
-            <div>
-              <h3 class="text-lg font-bold text-slate-900 dark:text-white">لا يوجد موظفون حتى الآن</h3>
-              <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                أنت المدير المسؤول عن إنشاء جميع حسابات الموظفين وتزويدهم ببيانات تسجيل الدخول.
-              </p>
-            </div>
-            <button onclick="ManagerUI.openAddEmployeeModal()" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 inline-flex items-center gap-2">
-              <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف
-            </button>
-          </div>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
-      }
+      const totalCount = employees.length;
+      const empCount = employees.filter(e => e.role === 'employee').length;
+      const mgrCount = employees.filter(e => e.role === 'manager').length;
 
+      const elAll = document.getElementById('emp-count-all');
+      const elEmp = document.getElementById('emp-count-emp');
+      const elMgr = document.getElementById('emp-count-mgr');
+
+      if (elAll) elAll.textContent = totalCount;
+      if (elEmp) elEmp.textContent = empCount;
+      if (elMgr) elMgr.textContent = mgrCount;
+
+      this.renderEmployeesTableRows();
+    } catch (err) {
+      container.innerHTML = `<div class="p-8 text-center text-rose-500">${err.message}</div>`;
+    }
+  },
+
+  renderEmployeesTableRows() {
+    const container = document.getElementById('mgr-employees-table-container');
+    if (!container) return;
+
+    const role = this.currentEmpRoleFilter || 'all';
+    const employees = (this.employeesList || []).filter(e => {
+      if (role === 'all') return true;
+      return e.role === role;
+    });
+
+    if (employees.length === 0) {
       container.innerHTML = `
-        <div class="overflow-x-auto lg:overflow-x-visible">
-          <table class="w-full text-right text-xs min-w-[700px] lg:min-w-0">
-            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th class="py-3.5 px-4">اسم الموظف</th>
-                <th class="py-3.5 px-4">البريد الإلكتروني</th>
-                <th class="py-3.5 px-4">رقم الهاتف</th>
-                <th class="py-3.5 px-4">القسم</th>
-                <th class="py-3.5 px-4">المسمى الوظيفي</th>
-                <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
-                <th class="py-3.5 px-4 text-center">بصمة الوجه (Face ID)</th>
-                <th class="py-3.5 px-4 text-center">حالة الحساب</th>
-                <th class="py-3.5 px-4 text-center">حضور اليوم</th>
-                <th class="py-3.5 px-4 text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              ${employees.map(e => `
-                <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                  <td class="py-3.5 px-4 whitespace-nowrap">
-                    <div class="flex items-center gap-3">
-                      <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-9 h-9 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
-                      <div>
+        <div class="p-16 text-center space-y-4">
+          <div class="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center mx-auto">
+            <i data-lucide="user-x" class="w-8 h-8"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">لا توجد حسابات مسجلة ضمن هذا التصنيف</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              يمكنك إضافة موظف أو مدير مساعد وتعيين الصلاحيات ومواعيد العمل له مباشرة.
+            </p>
+          </div>
+          <button onclick="ManagerUI.openAddEmployeeModal()" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 inline-flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> + إضافة موظف / مدير
+          </button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="overflow-x-auto lg:overflow-x-visible">
+        <table class="w-full text-right text-xs min-w-[700px] lg:min-w-0">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="py-3.5 px-4">الاسم والدور</th>
+              <th class="py-3.5 px-4">البريد الإلكتروني</th>
+              <th class="py-3.5 px-4">رقم الهاتف</th>
+              <th class="py-3.5 px-4">القسم</th>
+              <th class="py-3.5 px-4">المسمى الوظيفي / الوردية</th>
+              <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
+              <th class="py-3.5 px-4 text-center">بصمة الوجه (Face ID)</th>
+              <th class="py-3.5 px-4 text-center">حالة الحساب</th>
+              <th class="py-3.5 px-4 text-center">حضور اليوم</th>
+              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            ${employees.map(e => `
+              <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-9 h-9 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
+                    <div>
+                      <div class="flex items-center gap-1.5">
                         <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">${e.full_name}</span>
-                        <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${e.employee_code}</span>
+                        ${e.role === 'manager' ? `
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
+                            <i data-lucide="shield" class="w-3 h-3"></i>
+                            <span>مدير مساعد</span>
+                          </span>
+                        ` : ''}
                       </div>
+                      <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${e.employee_code}</span>
                     </div>
-                  </td>
-                  <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.email}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono">${e.phone || '—'}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.department_name || 'عام'}</td>
-                  <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                    <span class="block font-medium text-slate-800 dark:text-slate-200">${e.job_title || 'موظف'}</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.email}</td>
+                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono">${e.phone || '—'}</td>
+                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.department_name || 'عام'}</td>
+                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  <span class="block font-medium text-slate-800 dark:text-slate-200">${e.job_title || (e.role === 'manager' ? 'مدير مساعد' : 'موظف')}</span>
+                  ${e.role === 'manager' ? `
+                    <span class="text-[10px] text-purple-500 font-semibold block mt-0.5">صلاحيات إدارة كاملة</span>
+                  ` : `
                     <span class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
                       <i data-lucide="layers" class="w-3 h-3"></i>
                       <span>${e.shift_name ? e.shift_name : 'مرن (جميع الورديات)'}</span>
                     </span>
-                  </td>
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20 whitespace-nowrap shadow-2xs">
-                      ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
+                  `}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20 whitespace-nowrap shadow-2xs">
+                    ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  ${e.has_face_enrolled ? `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
+                      <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                      <span>مسجلة</span>
                     </span>
-                  </td>
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  ` : `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                      <span>غير مسجلة</span>
+                    </span>
+                  `}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
+                    ${e.is_active ? 'نشط' : 'معطل'}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  ${(e.today_check_in && !e.today_check_out) ? `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
+                      <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span>على رأس العمل</span>
+                    </span>
+                  ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>'))}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات (تأخير، خروج مبكر، غياب)">
+                      <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="ManagerUI.openEditEmployeeModal(${e.id})" class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="تعديل البيانات">
+                      <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})" class="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+                      <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-4 h-4"></i>
+                    </button>
                     ${e.has_face_enrolled ? `
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
-                        <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
-                        <span>مسجلة</span>
-                      </span>
-                    ` : `
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
-                        <span>غير مسجلة</span>
-                      </span>
-                    `}
-                  </td>
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
-                      ${e.is_active ? 'نشط' : 'معطل'}
-                    </span>
-                  </td>
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    ${(e.today_check_in && !e.today_check_out) ? `
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span>على رأس العمل</span>
-                      </span>
-                    ` : (e.today_status ? getStatusBadge(e.today_status) : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>')}
-                  </td>
-                  <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات الموظف (تأخير، خروج مبكر، غياب)">
-                        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                      <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
+                        <i data-lucide="scan-face" class="w-4 h-4"></i>
                       </button>
-                      <button onclick="ManagerUI.openEditEmployeeModal(${e.id})" class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="تعديل بيانات الموظف">
-                        <i data-lucide="edit" class="w-4 h-4"></i>
-                      </button>
-                      <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})" class="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
-                        <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-4 h-4"></i>
-                      </button>
-                      ${e.has_face_enrolled ? `
-                        <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
-                          <i data-lucide="scan-face" class="w-4 h-4"></i>
-                        </button>
-                      ` : ''}
-                      <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    } catch (err) {
-      container.innerHTML = `<div class="p-8 text-center text-rose-500">${err.message}</div>`;
-    }
+                    ` : ''}
+                    <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
   },
 
   async openAddEmployeeModal() {
@@ -768,8 +842,26 @@ const ManagerUI = {
           </div>
 
           <form onsubmit="ManagerUI.submitAddEmployee(event)" class="space-y-3.5 pt-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">نوع الحساب والصلاحية *</label>
+                <select name="role" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">
+                  <option value="employee">موظف (تسجيل حضور وانصراف)</option>
+                  <option value="manager">مدير مساعد / مشرف (لوحة التحكم وصلاحيات إدارة)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">بدء مسيرة الموظف واحتساب الحضور *</label>
+                <select name="start_mode" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">
+                  <option value="today">من نفس اليوم (يبدأ احتساب دوامه اليوم)</option>
+                  <option value="month_start">من أول الشهر الحالي (تسجيل الأيام السابقة كغياب)</option>
+                  <option value="tomorrow">من بكرا (يبدأ احتساب دوامه اعتباراً من الغد)</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم الموظف الكامل *</label>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم الموظف / المدير الكامل *</label>
               <input type="text" name="full_name" placeholder="مثال: أحمد عبد الله" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
             </div>
 
@@ -861,6 +953,8 @@ const ManagerUI = {
       password: form.password.value,
       confirm_password: form.confirm_password.value,
       phone: form.phone.value.trim() || null,
+      role: form.role ? form.role.value : 'employee',
+      start_mode: form.start_mode ? form.start_mode.value : 'today',
       job_title: form.job_title.value.trim() || null,
       base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
       shift_id: form.shift_id && form.shift_id.value ? parseInt(form.shift_id.value, 10) : null,
@@ -6365,6 +6459,463 @@ const ManagerUI = {
       }
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  // ========================================================
+  // BRANCHES & MULTI-BRANCH MANAGEMENT
+  // ========================================================
+  async renderBranchesSection() {
+    const container = document.getElementById('manager-content');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="git-branch" class="w-5 h-5 text-emerald-600"></i>
+                <span>إدارة فروع المنشأة</span>
+              </h2>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase">Multi-Branch</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              إضافة وإدارة فروع شركتك، تعيين مديري فروع مستقلين، وتخصيص مواقع جغرافية محددة لكل فرع
+            </p>
+          </div>
+
+          <button onclick="ManagerUI.openRequestBranchModal()"
+            class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 flex items-center gap-2 self-start sm:self-auto transform active:scale-95 transition-all whitespace-nowrap">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>+ طلب إضافة فرع جديد</span>
+          </button>
+        </div>
+
+        <div id="mgr-branches-data-container">
+          <div class="p-12 text-center text-slate-400 text-xs">جاري تحميل بيانات الفروع...</div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+    await this.loadBranchesData();
+  },
+
+  async loadBranchesData() {
+    const container = document.getElementById('mgr-branches-data-container');
+    if (!container) return;
+
+    try {
+      const res = await API.getBranches();
+      if (!res.success) {
+        container.innerHTML = `<div class="p-8 text-center text-rose-500 text-xs">${res.error || 'فشل في استرداد بيانات الفروع'}</div>`;
+        return;
+      }
+
+      const workplaces = res.workplaces || [];
+      const requests = res.requests || [];
+      const paymentInfo = res.payment_info || {};
+      const companyName = res.company_name || 'المنشأة';
+
+      const pendingRequests = requests.filter(r => r.status === 'pending_payment');
+      const approvedCount = workplaces.length;
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <!-- KPI Summary -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span class="text-[11px] font-bold text-slate-400 block mb-1">إجمالي الفروع النشطة</span>
+              <div class="text-2xl font-black text-slate-900 dark:text-white font-mono">${approvedCount}</div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span class="text-[11px] font-bold text-amber-500 block mb-1">طلبات قيد الدفع والتفعيل</span>
+              <div class="text-2xl font-black text-amber-500 font-mono">${pendingRequests.length}</div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span class="text-[11px] font-bold text-purple-500 block mb-1">المديرون والمشرفون</span>
+              <div class="text-2xl font-black text-purple-500 font-mono">${(res.branch_managers || []).length + 1}</div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span class="text-[11px] font-bold text-emerald-500 block mb-1">حالة التوسع</span>
+              <div class="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                <span>متاح إضافة فروع</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Requests Warning Box (if any) -->
+          ${pendingRequests.length > 0 ? `
+            <div class="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+                  <h4 class="font-bold text-sm">لديك طلبات فروع بانتظار تحويل الرسوم والتفعيل</h4>
+                </div>
+                <a href="${paymentInfo.whatsapp_url || '#'}" target="_blank" rel="noopener noreferrer"
+                  class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition-all">
+                  <i data-lucide="message-circle" class="w-4 h-4"></i>
+                  <span>تواصل عبر واتساب للتفعيل الفوري</span>
+                </a>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                ${pendingRequests.map(pr => `
+                  <div class="p-3.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-amber-500/20 text-xs flex items-center justify-between gap-3">
+                    <div>
+                      <div class="font-bold text-slate-900 dark:text-white text-sm">${pr.branch_name}</div>
+                      <div class="text-slate-500 mt-0.5">مدير الفرع: ${pr.branch_manager_name} (${pr.branch_phone})</div>
+                      <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">الحالة: قيد مراجعة التحويل من قبل إدارة المنظومة</div>
+                    </div>
+                    <button onclick="ManagerUI.cancelBranchRequest(${pr.id})"
+                      class="px-2.5 py-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-[11px] transition-all flex items-center gap-1"
+                      title="إلغاء الطلب">
+                      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                      <span>إلغاء</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Active Branches List -->
+          <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="building-2" class="w-4 h-4 text-emerald-600"></i>
+                  <span>قائمة الفروع والمقرات المفعلة</span>
+                </h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">كافة المقرات الجغرافية النشطة التابعة لشركة (${companyName})</p>
+              </div>
+            </div>
+
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${workplaces.map((wp, idx) => `
+                <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-3 relative hover:border-emerald-500/40 transition-all">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-9 h-9 rounded-xl ${idx === 0 ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'} flex items-center justify-center font-bold">
+                        <i data-lucide="${idx === 0 ? 'home' : 'git-branch'}" class="w-4.5 h-4.5"></i>
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-slate-900 dark:text-white">${wp.company_name}</h4>
+                        <span class="text-[10px] font-semibold text-slate-400">
+                          ${idx === 0 ? 'المقر الرئيسي (الفرع الأساسي)' : 'فرع مستقل'}
+                        </span>
+                      </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">نشط</span>
+                  </div>
+
+                  <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                      <span class="truncate">${wp.address || 'العنوان غير محدد'}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="crosshair" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                      <span>نطاق البصمة: <strong class="font-mono text-slate-900 dark:text-white">${wp.radius_meters || 150}م</strong></span>
+                    </div>
+                    ${wp.branch_manager_name ? `
+                      <div class="flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                        <span>المدير: <strong>${wp.branch_manager_name}</strong></span>
+                      </div>
+                    ` : ''}
+                    ${wp.branch_manager_phone ? `
+                      <div class="flex items-center gap-2 font-mono text-[11px]">
+                        <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                        <span>${wp.branch_manager_phone}</span>
+                      </div>
+                    ` : ''}
+                  </div>
+
+                  <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                    <span class="text-slate-500">الموظفون المسجلون:</span>
+                    <span class="font-bold font-mono text-slate-900 dark:text-white">${wp.employee_count || 0} موظف</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Payment Info Box -->
+          <div class="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 shadow-xl space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm">كيفية تفعيل فرع جديد وطرق الدفع</h4>
+                <p class="text-xs text-slate-400">إضافة الفروع هي ميزة مدفوعة يتم تفعيلها فورياً بالتواصل مع إدارة المنظومة</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+                <div class="text-[11px] text-slate-400">فودافون كاش (Vodafone Cash)</div>
+                <div class="text-base font-black font-mono text-emerald-400 mt-0.5">01093320211</div>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+                <div class="text-[11px] text-slate-400">إنستاباي (InstaPay)</div>
+                <div class="text-base font-black font-mono text-emerald-400 mt-0.5">01093320211</div>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col justify-center">
+                <div class="text-[11px] text-slate-400">التفعيل الفوري</div>
+                <div class="text-xs font-bold text-white mt-0.5">إرسال إشعار التحويل عبر واتساب</div>
+              </div>
+            </div>
+
+            <div class="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800">
+              <span class="text-xs text-slate-400">
+                بعد تقديم طلب الفرع، تواصل معنا برقم هاتفك المسجل أو عبر زر الواتساب لإتمام التفعيل خلال دقائق.
+              </span>
+              <a href="${paymentInfo.whatsapp_url || '#'}" target="_blank" rel="noopener noreferrer"
+                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                <span>محادثة الإدارة على واتساب</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      container.innerHTML = `<div class="p-8 text-center text-rose-500 text-xs">${err.message || 'حدث خطأ في استرداد بيانات الفروع'}</div>`;
+    }
+  },
+
+  async cancelBranchRequest(id) {
+    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب هذا الفرع؟')) return;
+    try {
+      const res = await API.cancelBranchRequest(id);
+      showToast(res.message || 'تم إلغاء الطلب بنجاح', 'success');
+      this.loadBranchesData();
+    } catch (err) {
+      showToast(err.message || 'فشل في إلغاء الطلب', 'danger');
+    }
+  },
+
+  openRequestBranchModal() {
+    const modal = document.getElementById('branch-crud-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-branch" class="w-5 h-5 text-emerald-600"></i>
+              <span>طلب إضافة فرع جديد للمنشأة</span>
+            </h3>
+            <button onclick="document.getElementById('branch-crud-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="ManagerUI.submitRequestBranch(event)" class="space-y-3.5 pt-4 text-xs">
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم الفرع *</label>
+              <input type="text" name="branch_name" placeholder="مثال: فرع مدينة نصر / فرع الإسكندرية" required
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم مدير الفرع المسؤول *</label>
+                <input type="text" name="branch_manager_name" placeholder="مثال: محمد سعيد" required
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+              </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم هاتف مدير الفرع *</label>
+                <input type="text" name="branch_phone" placeholder="010..." required
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">البريد الإلكتروني لتسجيل دخول مدير الفرع *</label>
+              <input type="email" name="branch_email" placeholder="branch.mgr@company.com" required
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">كلمة مرور حساب الفرع *</label>
+                <input type="password" name="branch_password" minlength="6" placeholder="••••••••" required
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">تأكيد كلمة المرور *</label>
+                <input type="password" name="branch_confirm_password" minlength="6" placeholder="••••••••" required
+                  class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">عنوان الفرع وموقعه التفصيلي</label>
+              <input type="text" name="branch_address" placeholder="مثال: شارع عباس العقاد، بجوار كذا..."
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">خط العرض (Latitude)</label>
+                <input type="number" step="any" id="br-lat" name="branch_latitude" value="30.0444"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs" />
+              </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">خط الطول (Longitude)</label>
+                <input type="number" step="any" id="br-lng" name="branch_longitude" value="31.2357"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs" />
+              </div>
+              <div>
+                <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">نصف القطر (متر)</label>
+                <input type="number" name="branch_radius" value="150" min="20" max="2000"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs" />
+              </div>
+            </div>
+
+            <button type="button" onclick="ManagerUI.getBranchGpsCoordinates()"
+              class="w-full py-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800/60 flex items-center justify-center gap-1.5 transition-all hover:bg-blue-100">
+              <i data-lucide="crosshair" class="w-4 h-4"></i>
+              <span>تحديد إحداثيات موقعي الحالي للفرع (GPS)</span>
+            </button>
+
+            <!-- Notice -->
+            <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] space-y-1">
+              <div class="font-bold flex items-center gap-1">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                <span>ملاحظة هامة:</span>
+              </div>
+              <p>
+                بعد تقديم البيانات، سيظهر لك رقم تحويل الرسوم (01093320211 - فودافون كاش / إنستاباي) للتواصل مع الإدارة وتفعيل الفرع فوراً.
+              </p>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('branch-crud-modal').innerHTML=''"
+                class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 font-bold">إلغاء</button>
+              <button type="submit"
+                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>إرسال طلب الفرع</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  getBranchGpsCoordinates() {
+    if (!navigator.geolocation) {
+      showToast('المتصفح لا يدعم تحديد الموقع الجغرافي', 'warning');
+      return;
+    }
+    showToast('جاري تحديد الإحداثيات الحالية...', 'info');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latInput = document.getElementById('br-lat');
+        const lngInput = document.getElementById('br-lng');
+        if (latInput) latInput.value = pos.coords.latitude.toFixed(6);
+        if (lngInput) lngInput.value = pos.coords.longitude.toFixed(6);
+        showToast('تم التقاط إحداثيات موقعك الحالي بنجاح', 'success');
+      },
+      (err) => {
+        showToast('تعذر التقاط الموقع: ' + err.message, 'danger');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  },
+
+  async submitRequestBranch(e) {
+    e.preventDefault();
+    const form = e.target;
+
+    if (form.branch_password.value !== form.branch_confirm_password.value) {
+      showToast('كلمتا المرور غير متطابقتين', 'danger');
+      return;
+    }
+
+    const payload = {
+      branch_name: form.branch_name.value.trim(),
+      branch_manager_name: form.branch_manager_name.value.trim(),
+      branch_phone: form.branch_phone.value.trim(),
+      branch_email: form.branch_email.value.trim(),
+      branch_password: form.branch_password.value,
+      branch_address: form.branch_address ? form.branch_address.value.trim() : null,
+      branch_latitude: form.branch_latitude ? parseFloat(form.branch_latitude.value) : 30.0444,
+      branch_longitude: form.branch_longitude ? parseFloat(form.branch_longitude.value) : 31.2357,
+      branch_radius: form.branch_radius ? parseFloat(form.branch_radius.value) : 150
+    };
+
+    try {
+      const res = await API.requestBranch(payload);
+      if (res.success) {
+        const payment = res.payment_info || {};
+        const modal = document.getElementById('branch-crud-modal');
+        if (modal) {
+          modal.innerHTML = `
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-center space-y-4">
+                <div class="w-14 h-14 rounded-3xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
+                  <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                </div>
+
+                <div>
+                  <h3 class="text-base font-bold text-slate-900 dark:text-white">تم تسجيل طلب الفرع بنجاح</h3>
+                  <p class="text-xs text-slate-500 mt-1">
+                    طلب إضافة فرع (${res.branch_name || ''}) بانتظار تحويل الرسوم ليتم التفعيل الفوري.
+                  </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-right space-y-2 text-xs border border-slate-200 dark:border-slate-700">
+                  <div class="font-bold text-slate-700 dark:text-slate-300">طرق التحويل المتاحة:</div>
+                  <div class="flex items-center justify-between font-mono">
+                    <span class="text-slate-500">فودافون كاش / إنستاباي:</span>
+                    <strong class="text-emerald-600 dark:text-emerald-400 text-sm">${payment.phone || '01093320211'}</strong>
+                  </div>
+                  <div class="text-[10px] text-slate-400">
+                    يرجى إرسال لقطة شاشة لإيصال التحويل عبر واتساب ليقوم فريق الدعم الفني باعتماد الفرع وتفعيله فوراً.
+                  </div>
+                </div>
+
+                <div class="space-y-2 pt-2">
+                  <a href="${payment.whatsapp_url || '#'}" target="_blank" rel="noopener noreferrer"
+                    class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    <span>مراسلة الإدارة عبر واتساب لتفعيل الفرع</span>
+                  </a>
+
+                  <button type="button" onclick="document.getElementById('branch-crud-modal').innerHTML=''"
+                    class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-200">
+                    إغلاق والعودة للوحة الفروع
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+
+        this.loadBranchesData();
+      } else {
+        showToast(res.error || 'فشل في تسجيل طلب الفرع', 'danger');
+      }
+    } catch (err) {
+      showToast(err.message || 'حدث خطأ في الاتصال بالخادم', 'danger');
     }
   }
 };

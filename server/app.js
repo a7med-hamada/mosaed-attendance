@@ -21,6 +21,7 @@ const { advancesRouter, bonusesRouter } = require('./advances-bonuses');
 const { leavesRouter, permissionsRouter } = require('./leaves-permissions');
 const whatsappModule = require('./whatsapp');
 const superAdminRouter = require('./super-admin');
+const branchesRouter = require('./branches');
 const supportModule = require('./support');
 const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
@@ -93,6 +94,7 @@ app.use('/api/bonuses', bonusesRouter);
 app.use('/api/leaves', leavesRouter);
 app.use('/api/permissions', permissionsRouter);
 app.use('/api/whatsapp', whatsappModule.router);
+app.use('/api/branches', branchesRouter);
 app.use('/api/super-admin', superAdminRouter);
 app.use('/api/support', supportModule.router);
 

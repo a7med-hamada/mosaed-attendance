@@ -344,6 +344,24 @@ const API = {
     return this.request('/settings/reset-attendance-system', { method: 'POST' });
   },
 
+  // Company Branches & Multi-Branch Requests
+  getBranches() {
+    return this.request('/branches');
+  },
+
+  requestBranch(data) {
+    return this.request('/branches/request', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  cancelBranchRequest(id) {
+    return this.request(`/branches/request/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Reports
   getMonthlySummary(params = {}) {
     const qs = new URLSearchParams(params).toString();

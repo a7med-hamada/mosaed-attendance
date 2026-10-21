@@ -174,6 +174,13 @@
             <span>الدعم الفني والشكاوى</span>
             <span id="tab-tickets-badge" class="px-2 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">0</span>
           </button>
+
+          <button id="nav-tab-branches" onclick="switchSuperAdminTab('branches')"
+            class="py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all">
+            <i data-lucide="git-branch" class="w-4 h-4"></i>
+            <span>طلبات الفروع الجديدة</span>
+            <span id="tab-branches-badge" class="px-2 py-0.5 rounded-full text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">0</span>
+          </button>
         </div>
 
         <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
@@ -430,6 +437,134 @@
                   <tr>
                     <td colspan="8" class="py-8 text-center text-slate-500">
                       جاري تحميل تذاكر الدعم الفني...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- TAB 3: BRANCH REQUESTS & MULTI-BRANCH SUBSCRIPTIONS -->
+      <!-- ======================================================== -->
+      <div id="tab-content-branches" class="space-y-8 hidden">
+        <!-- Branch KPI Summary Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- 1. Total Requests -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400">إجمالي طلبات الفروع</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                <i data-lucide="git-branch" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-branches-total" class="text-3xl font-black text-white font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">طلب</span>
+            </div>
+          </div>
+
+          <!-- 2. Pending Payment -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400">بانتظار التحويل والتفعيل</span>
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-branches-pending" class="text-3xl font-black text-amber-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">معلق</span>
+            </div>
+          </div>
+
+          <!-- 3. Approved Branches -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">فروع مفعلة ونشطة</span>
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-branches-approved" class="text-3xl font-black text-emerald-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">مفعل</span>
+            </div>
+          </div>
+
+          <!-- 4. Rejected Requests -->
+          <div class="p-5 rounded-3xl bg-slate-900/70 border border-slate-800 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-rose-400">طلبات مرفوضة</span>
+              <div class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                <i data-lucide="x-circle" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span id="kpi-branches-rejected" class="text-3xl font-black text-rose-400 font-mono">0</span>
+              <span class="text-xs text-slate-500 font-bold">مرفوض</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Branch Requests Table Section -->
+        <section class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-black text-white flex items-center gap-2">
+                <i data-lucide="git-branch" class="w-5 h-5 text-emerald-400"></i>
+                <span>طلبات الفروع واشتراكات التوسع للشركات</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">مراجعة بيانات الفرع، التحقق من تحويل الرسوم، واعتماد إنشاء الفرع تلقائياً</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+              <!-- Search Input -->
+              <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                </span>
+                <input type="text" id="branches-search" oninput="filterBranchRequests()" placeholder="بحث باسم الفرع، الشركة، المدير..."
+                  class="w-full pr-9 pl-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500" />
+              </div>
+
+              <!-- Filter Status -->
+              <select id="branches-status-filter" onchange="filterBranchRequests()"
+                class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="all">كل الحالات</option>
+                <option value="pending_payment">قيد الدفع والتأكيد</option>
+                <option value="approved">المفعلة فقط</option>
+                <option value="rejected">المرفوضة</option>
+              </select>
+
+              <button onclick="loadBranchRequests()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all" title="تحديث طلبات الفروع">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl overflow-hidden">
+            <div class="overflow-x-auto w-full custom-scrollbar">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-800/60 text-slate-400 font-bold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3.5 px-4">رقم الطلب</th>
+                    <th class="py-3.5 px-4">الشركة الأم ومقدم الطلب</th>
+                    <th class="py-3.5 px-4">اسم الفرع والعنوان</th>
+                    <th class="py-3.5 px-4">مدير الفرع والبريد</th>
+                    <th class="py-3.5 px-4 text-center">نطاق الحضور</th>
+                    <th class="py-3.5 px-4 text-center">الحالة</th>
+                    <th class="py-3.5 px-4 text-center">التاريخ</th>
+                    <th class="py-3.5 px-4 text-center">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="branches-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td colspan="8" class="py-8 text-center text-slate-500">
+                      جاري تحميل طلبات الفروع...
                     </td>
                   </tr>
                 </tbody>
@@ -1054,10 +1189,11 @@
     }
 
     let allTickets = [];
+    let allBranchRequests = [];
     let currentDetailsCompanyId = null;
 
     async function loadAllData() {
-      await Promise.all([loadOverview(), loadCompanies(), loadTickets()]);
+      await Promise.all([loadOverview(), loadCompanies(), loadTickets(), loadBranchRequests()]);
     }
 
     async function loadOverview() {
@@ -1457,25 +1593,35 @@
     }
 
     // ============================================================
-    // TABS SWITCHER (COMPANIES vs TICKETS)
+    // TABS SWITCHER (COMPANIES vs TICKETS vs BRANCHES)
     // ============================================================
     function switchSuperAdminTab(tab) {
       const tabCompBtn = document.getElementById('nav-tab-companies');
       const tabTickBtn = document.getElementById('nav-tab-tickets');
+      const tabBranchBtn = document.getElementById('nav-tab-branches');
       const contentComp = document.getElementById('tab-content-companies');
       const contentTick = document.getElementById('tab-content-tickets');
+      const contentBranch = document.getElementById('tab-content-branches');
+
+      if (contentComp) contentComp.classList.add('hidden');
+      if (contentTick) contentTick.classList.add('hidden');
+      if (contentBranch) contentBranch.classList.add('hidden');
+
+      if (tabCompBtn) tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
+      if (tabTickBtn) tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
+      if (tabBranchBtn) tabBranchBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
 
       if (tab === 'companies') {
-        contentComp.classList.remove('hidden');
-        contentTick.classList.add('hidden');
-        tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
-        tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
-      } else {
-        contentComp.classList.add('hidden');
-        contentTick.classList.remove('hidden');
-        tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
-        tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 transition-all';
+        if (contentComp) contentComp.classList.remove('hidden');
+        if (tabCompBtn) tabCompBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
+      } else if (tab === 'tickets') {
+        if (contentTick) contentTick.classList.remove('hidden');
+        if (tabTickBtn) tabTickBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
         loadTickets();
+      } else if (tab === 'branches') {
+        if (contentBranch) contentBranch.classList.remove('hidden');
+        if (tabBranchBtn) tabBranchBtn.className = 'py-3.5 px-4 font-bold text-sm border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2 transition-all';
+        loadBranchRequests();
       }
       if (window.lucide) lucide.createIcons();
     }
@@ -2116,6 +2262,205 @@
     function closeTicketImageModal() {
       const modal = document.getElementById('ticket-image-modal');
       if (modal) modal.classList.add('hidden');
+    }
+
+    // ============================================================
+    // BRANCH REQUESTS LOGIC & HANDLERS
+    // ============================================================
+    async function loadBranchRequests() {
+      const tbody = document.getElementById('branches-table-body');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">جاري تحميل طلبات الفروع...</td></tr>';
+      }
+
+      try {
+        const res = await apiRequest('/api/super-admin/branch-requests');
+        if (res.success && res.requests) {
+          allBranchRequests = res.requests;
+
+          if (res.counts) {
+            document.getElementById('kpi-branches-total').textContent = res.counts.total || 0;
+            document.getElementById('kpi-branches-pending').textContent = res.counts.pending || 0;
+            document.getElementById('kpi-branches-approved').textContent = res.counts.approved || 0;
+            document.getElementById('kpi-branches-rejected').textContent = res.counts.rejected || 0;
+            const badge = document.getElementById('tab-branches-badge');
+            if (badge) badge.textContent = res.counts.pending || 0;
+          }
+
+          renderBranchRequestsTable(allBranchRequests);
+        } else {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-rose-400">${res.error || 'فشل في استرداد طلبات الفروع'}</td></tr>`;
+        }
+      } catch (err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-rose-400">حدث خطأ في استرداد البيانات</td></tr>';
+      }
+    }
+
+    function renderBranchRequestsTable(requests) {
+      const tbody = document.getElementById('branches-table-body');
+      if (!tbody) return;
+
+      if (!requests || requests.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-12 text-center text-slate-500">
+              <div class="flex flex-col items-center gap-2">
+                <i data-lucide="git-branch" class="w-8 h-8 text-slate-600"></i>
+                <span class="text-sm">لا توجد طلبات فروع مسجلة حتى الآن</span>
+              </div>
+            </td>
+          </tr>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      tbody.innerHTML = requests.map(r => {
+        let statusBadge = '';
+        if (r.status === 'pending_payment') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">قيد الدفع والتأكيد</span>';
+        } else if (r.status === 'approved') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">مفعل ونشط</span>';
+        } else if (r.status === 'rejected') {
+          statusBadge = '<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">مرفوض</span>';
+        }
+
+        const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        const phone = r.company_manager_phone || r.branch_phone || '';
+        const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+        const waMsg = encodeURIComponent(`مرحباً بك، نتواصل معك من إدارة منظومة وقتي WAQTY بخصوص طلب فرع (${r.branch_name}) لمنشأة (${r.parent_company_name}).`);
+        const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waMsg}` : '#';
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-slate-400">#${r.id}</td>
+            <td class="py-3 px-4">
+              <div class="font-bold text-white text-xs">${r.parent_company_name || 'منشأة'}</div>
+              <div class="text-[11px] text-slate-400">${r.company_manager_name || 'المدير الرئيسي'}</div>
+              ${phone ? `<div class="text-[10px] text-slate-500 font-mono dir-ltr text-right">${phone}</div>` : ''}
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-bold text-emerald-400 text-xs">${r.branch_name}</div>
+              <div class="text-[11px] text-slate-400">${r.branch_address || 'المقر الرئيسي'}</div>
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-bold text-white text-xs">${r.branch_manager_name}</div>
+              <div class="text-[11px] text-slate-400 font-mono">${r.branch_email}</div>
+              ${r.branch_phone ? `<div class="text-[10px] text-slate-500 font-mono">${r.branch_phone}</div>` : ''}
+            </td>
+            <td class="py-3 px-4 text-center font-mono text-slate-300">
+              ${r.branch_radius || 150} م
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${statusBadge}
+              ${r.super_admin_notes ? `<div class="text-[10px] text-slate-400 mt-1 max-w-[140px] truncate mx-auto" title="${r.super_admin_notes}">${r.super_admin_notes}</div>` : ''}
+            </td>
+            <td class="py-3 px-4 text-center text-slate-400 text-[11px] whitespace-nowrap">
+              ${dateStr}
+            </td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                ${cleanPhone ? `
+                  <a href="${waUrl}" target="_blank" rel="noopener noreferrer"
+                    class="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all"
+                    title="محادثة واتساب مباشرة">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                  </a>
+                ` : ''}
+
+                ${r.status === 'pending_payment' ? `
+                  <button onclick="reviewBranchRequest(${r.id}, 'approve')"
+                    class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm shadow-emerald-500/30 transition-all flex items-center gap-1"
+                    title="تأكيد الدفع واعتماد الفرع">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    <span>تفعيل</span>
+                  </button>
+                  <button onclick="reviewBranchRequest(${r.id}, 'reject')"
+                    class="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs transition-all flex items-center gap-1"
+                    title="رفض الطلب">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    <span>رفض</span>
+                  </button>
+                ` : ''}
+
+                <button onclick="deleteBranchRequest(${r.id})"
+                  class="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 border border-slate-700 transition-all"
+                  title="حذف السجل">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterBranchRequests() {
+      const query = (document.getElementById('branches-search')?.value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('branches-status-filter')?.value || 'all';
+
+      const filtered = allBranchRequests.filter(r => {
+        const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+        const matchQuery = !query ||
+          (r.branch_name && r.branch_name.toLowerCase().includes(query)) ||
+          (r.parent_company_name && r.parent_company_name.toLowerCase().includes(query)) ||
+          (r.company_manager_name && r.company_manager_name.toLowerCase().includes(query)) ||
+          (r.branch_manager_name && r.branch_manager_name.toLowerCase().includes(query)) ||
+          (r.branch_email && r.branch_email.toLowerCase().includes(query)) ||
+          (r.branch_phone && r.branch_phone.includes(query));
+
+        return matchStatus && matchQuery;
+      });
+
+      renderBranchRequestsTable(filtered);
+    }
+
+    async function reviewBranchRequest(id, action) {
+      let notes = '';
+      if (action === 'approve') {
+        notes = prompt('ملاحظات التفعيل (اختياري - مثلاً: تم استلام الرسوم عبر فودافون كاش):', 'تم تأكيد استلام الرسوم وتفعيل الفرع بنجاح');
+        if (notes === null) return;
+      } else if (action === 'reject') {
+        notes = prompt('سبب رفض طلب تفعيل الفرع:', 'لم يتم تأكيد تحويل الرسوم.');
+        if (notes === null) return;
+      }
+
+      try {
+        const res = await apiRequest(`/api/super-admin/branch-requests/${id}/review`, {
+          method: 'PUT',
+          body: JSON.stringify({ action, super_admin_notes: notes })
+        });
+
+        if (res.success) {
+          showToast(res.message || 'تم تحديث حالة طلب الفرع بنجاح', 'success');
+          loadBranchRequests();
+        } else {
+          showToast(res.error || 'فشل في مراجعة الطلب', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال بالخادم', 'danger');
+      }
+    }
+
+    async function deleteBranchRequest(id) {
+      if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً؟')) return;
+
+      try {
+        const res = await apiRequest(`/api/super-admin/branch-requests/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (res.success) {
+          showToast(res.message || 'تم حذف الطلب بنجاح', 'success');
+          loadBranchRequests();
+        } else {
+          showToast(res.error || 'فشل في حذف الطلب', 'danger');
+        }
+      } catch (err) {
+        showToast('حدث خطأ في الاتصال بالخادم', 'danger');
+      }
     }
 
     // On Load Initialization

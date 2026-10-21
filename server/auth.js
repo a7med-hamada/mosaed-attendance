@@ -79,22 +79,26 @@ function authenticateToken(req, res, next) {
     }
 
     // Verify user account is still active (real-time suspension enforcement)
-    const activeCheck = db.prepare('SELECT id, is_active, role, manager_id FROM users WHERE id = ?').get(user.id);
+    const activeCheck = db.prepare('SELECT id, is_active, role, manager_id, parent_manager_id FROM users WHERE id = ?').get(user.id);
     if (!activeCheck || !activeCheck.is_active) {
       return res.status(403).json({ success: false, error: 'تم إيقاف حسابك مؤقتاً، يرجى مراجعة إدارة المنظومة' });
     }
-    // If employee, verify manager company account is also active
-    if (activeCheck.role === 'employee' && activeCheck.manager_id) {
-      const mgrCheck = db.prepare('SELECT is_active FROM users WHERE id = ?').get(activeCheck.manager_id);
+    // If employee or sub-manager, verify primary manager company account is also active
+    const primaryMgrId = activeCheck.role === 'manager' ? (activeCheck.parent_manager_id || null) : activeCheck.manager_id;
+    if (primaryMgrId) {
+      const mgrCheck = db.prepare('SELECT is_active FROM users WHERE id = ?').get(primaryMgrId);
       if (mgrCheck && !mgrCheck.is_active) {
         return res.status(403).json({ success: false, error: 'تم إيقاف حساب هذه المنشأة مؤقتاً، يرجى مراجعة إدارة المنظومة' });
       }
     }
 
     // Check subscription expiration
-    const effectiveMgrId = activeCheck.role === 'manager' ? activeCheck.id : (activeCheck.manager_id || 1);
+    const effectiveMgrId = activeCheck.role === 'manager' ? (activeCheck.parent_manager_id || activeCheck.id) : (activeCheck.manager_id || 1);
     const subCheck = getSubscriptionDetails(effectiveMgrId);
     user.subscription = subCheck;
+    user.parent_manager_id = activeCheck.parent_manager_id || null;
+    user.manager_id = effectiveMgrId;
+    user.effective_manager_id = effectiveMgrId;
 
     if (subCheck.isExpired && req.method !== 'GET' && !req.path.includes('/support')) {
       return res.status(403).json({
@@ -303,7 +307,7 @@ router.post('/login', (req, res) => {
 router.get('/me', authenticateToken, (req, res) => {
   try {
     const user = db.prepare(`
-      SELECT u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
+      SELECT u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id, u.parent_manager_id,
              u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.is_active, u.profile_photo,
              u.face_descriptor, u.face_photo, u.face_enrolled_at,
              d.name as department_name,
@@ -318,7 +322,10 @@ router.get('/me', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, error: 'المستخدم غير موجود أو تم تعطيل حسابه' });
     }
 
-    user.manager_id = user.role === 'manager' ? user.id : (user.manager_id || 1);
+    const effectiveCompanyManagerId = user.role === 'manager' ? (user.parent_manager_id || user.id) : (user.manager_id || 1);
+    user.effective_manager_id = effectiveCompanyManagerId;
+    user.manager_id = effectiveCompanyManagerId;
+    user.is_primary_manager = user.role === 'manager' && !user.parent_manager_id;
 
     let wp = db.prepare('SELECT company_name FROM workplaces WHERE manager_id = ? LIMIT 1').get(user.manager_id);
     if (!wp && user.manager_id === 1) {

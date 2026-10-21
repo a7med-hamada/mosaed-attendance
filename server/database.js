@@ -310,6 +310,11 @@ try {
     db.exec(`ALTER TABLE users ADD COLUMN face_enrolled_at TEXT DEFAULT NULL;`);
   }
 
+  if (!userCols.includes('parent_manager_id')) {
+    db.exec(`ALTER TABLE users ADD COLUMN parent_manager_id INTEGER DEFAULT NULL;`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_parent_mgr ON users(parent_manager_id);`);
+
   // Support Tickets table for technical support from website to super admin
   db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (
@@ -328,6 +333,34 @@ try {
       resolved_at TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_ticket_status ON support_tickets(status);
+  `);
+
+  // Branch Requests table for multi-branch companies with super admin approval
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS branch_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company_manager_id INTEGER NOT NULL,
+      parent_company_name TEXT,
+      branch_name TEXT NOT NULL,
+      branch_manager_name TEXT NOT NULL,
+      branch_phone TEXT NOT NULL,
+      branch_email TEXT NOT NULL,
+      branch_password TEXT NOT NULL,
+      branch_address TEXT,
+      branch_latitude REAL,
+      branch_longitude REAL,
+      branch_radius REAL DEFAULT 150,
+      branch_logo TEXT,
+      status TEXT DEFAULT 'pending_payment',
+      super_admin_notes TEXT,
+      created_branch_manager_id INTEGER,
+      created_workplace_id INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TEXT,
+      FOREIGN KEY(company_manager_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_branch_req_status ON branch_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_branch_req_mgr ON branch_requests(company_manager_id);
   `);
 
   const ticketCols = db.prepare('PRAGMA table_info(support_tickets)').all().map(c => c.name);

@@ -807,19 +807,25 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, async (req, re
       const newBranchManagerId = userResult.lastInsertRowid;
 
       // 4. Create Workplace for Branch
+      const parentWp = db.prepare('SELECT schedule_mode FROM workplaces WHERE manager_id = ? LIMIT 1').get(branchReq.company_manager_id);
+      const scheduleMode = parentWp ? (parentWp.schedule_mode || 'standard') : 'standard';
+
       const insertWpStmt = db.prepare(`
         INSERT INTO workplaces (
-          manager_id, company_name, address, latitude, longitude, radius_meters, company_logo
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          manager_id, company_name, name, latitude, longitude, allowed_radius_meters, max_gps_accuracy_meters, is_active, is_configured, schedule_mode, address
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
       `);
+      const branchAddr = branchReq.branch_address ? branchReq.branch_address.trim() : 'المقر الرئيسي للفرع';
       const wpResult = insertWpStmt.run(
         newBranchManagerId,
         branchReq.branch_name,
-        branchReq.branch_address || 'المقر الرئيسي للفرع',
-        branchReq.branch_latitude || 30.0444,
-        branchReq.branch_longitude || 31.2357,
-        branchReq.branch_radius || 150,
-        branchReq.branch_logo || null
+        branchReq.branch_name,
+        branchReq.branch_latitude ? parseFloat(branchReq.branch_latitude) : 30.0444,
+        branchReq.branch_longitude ? parseFloat(branchReq.branch_longitude) : 31.2357,
+        branchReq.branch_radius ? parseFloat(branchReq.branch_radius) : 150,
+        150,
+        scheduleMode,
+        branchAddr
       );
       const newWorkplaceId = wpResult.lastInsertRowid;
 
@@ -828,8 +834,11 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, async (req, re
         const parentSchedules = db.prepare('SELECT * FROM schedules WHERE manager_id = ?').all(branchReq.company_manager_id);
         if (parentSchedules && parentSchedules.length > 0) {
           const insertSched = db.prepare(`
-            INSERT INTO schedules (manager_id, name, start_time, end_time, grace_period_minutes, late_threshold_minutes, half_day_threshold_minutes, is_default)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO schedules (
+              manager_id, name, start_time, end_time, grace_period_minutes,
+              half_day_threshold, absence_threshold, working_days, is_default,
+              is_configured, early_leave_grace_minutes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
           `);
           for (const s of parentSchedules) {
             insertSched.run(
@@ -837,16 +846,21 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, async (req, re
               s.name,
               s.start_time,
               s.end_time,
-              s.grace_period_minutes,
-              s.late_threshold_minutes,
-              s.half_day_threshold_minutes,
-              s.is_default
+              s.grace_period_minutes || 15,
+              s.half_day_threshold || '12:00',
+              s.absence_threshold || '13:00',
+              s.working_days || '0,1,2,3,4',
+              s.is_default !== undefined ? s.is_default : 1,
+              s.early_leave_grace_minutes || 15
             );
           }
         } else {
           db.prepare(`
-            INSERT INTO schedules (manager_id, name, start_time, end_time, grace_period_minutes, late_threshold_minutes, half_day_threshold_minutes, is_default)
-            VALUES (?, 'الدوام الافتراضي للفرع', '09:00', '17:00', 15, 60, 180, 1)
+            INSERT INTO schedules (
+              manager_id, name, start_time, end_time, grace_period_minutes,
+              half_day_threshold, absence_threshold, working_days, is_default,
+              is_configured, early_leave_grace_minutes
+            ) VALUES (?, 'الدوام الافتراضي للفرع', '09:00', '17:00', 15, '12:00', '13:00', '0,1,2,3,4', 1, 1, 15)
           `).run(newBranchManagerId);
         }
       } catch (schedErr) {

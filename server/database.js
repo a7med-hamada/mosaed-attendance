@@ -396,6 +396,9 @@ try {
   }
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
+  if (!wpCols.includes('address')) {
+    db.exec(`ALTER TABLE workplaces ADD COLUMN address TEXT;`);
+  }
   if (!wpCols.includes('manager_id')) {
     db.exec(`ALTER TABLE workplaces ADD COLUMN manager_id INTEGER;`);
     db.exec(`UPDATE workplaces SET manager_id = 1;`);

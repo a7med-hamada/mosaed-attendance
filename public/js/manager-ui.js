@@ -6618,11 +6618,11 @@ const ManagerUI = {
                   <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
                     <div class="flex items-center gap-2">
                       <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                      <span class="truncate">${wp.address || 'العنوان غير محدد'}</span>
+                      <span class="truncate">${wp.address || wp.name || 'العنوان غير محدد'}</span>
                     </div>
                     <div class="flex items-center gap-2">
                       <i data-lucide="crosshair" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                      <span>نطاق البصمة: <strong class="font-mono text-slate-900 dark:text-white">${wp.radius_meters || 150}م</strong></span>
+                      <span>نطاق البصمة: <strong class="font-mono text-slate-900 dark:text-white">${wp.allowed_radius_meters || wp.radius_meters || 150}م</strong></span>
                     </div>
                     ${wp.branch_manager_name ? `
                       <div class="flex items-center gap-2">

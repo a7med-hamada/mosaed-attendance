@@ -363,6 +363,33 @@ try {
     CREATE INDEX IF NOT EXISTS idx_branch_req_mgr ON branch_requests(company_manager_id);
   `);
 
+  try {
+    const existingBranch = db.prepare(`SELECT id FROM branch_requests WHERE branch_name = 'فرع القاهره' LIMIT 1`).get();
+    if (!existingBranch) {
+      db.prepare(`
+        INSERT INTO branch_requests (
+          company_manager_id, parent_company_name, branch_name, branch_manager_name,
+          branch_phone, branch_email, branch_password, branch_address, branch_latitude,
+          branch_longitude, branch_radius, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', datetime('now'))
+      `).run(
+        1,
+        'mosaed',
+        'فرع القاهره',
+        'محمد علي',
+        '01097076035',
+        'cairo@mosaed.local',
+        'cairo123456',
+        'القاهرة - جمهورية مصر العربية',
+        30.0444,
+        31.2357,
+        150
+      );
+    }
+  } catch (err) {
+    console.warn('Branch requests init warning:', err.message);
+  }
+
   const ticketCols = db.prepare('PRAGMA table_info(support_tickets)').all().map(c => c.name);
   if (!ticketCols.includes('attachment_photo')) {
     db.exec(`ALTER TABLE support_tickets ADD COLUMN attachment_photo TEXT;`);

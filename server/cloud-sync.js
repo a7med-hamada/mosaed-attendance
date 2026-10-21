@@ -26,7 +26,8 @@ const SYNC_TABLES = [
   'whatsapp_logs',
   'notifications',
   'company_shifts',
-  'support_tickets'
+  'support_tickets',
+  'branch_requests'
 ];
 
 let initialLoadDone = false;

@@ -6646,45 +6646,6 @@ const ManagerUI = {
               `).join('')}
             </div>
           </div>
-
-          <!-- Payment Info Box -->
-          <div class="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 shadow-xl space-y-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <i data-lucide="credit-card" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h4 class="font-bold text-sm">كيفية تفعيل فرع جديد وطرق الدفع</h4>
-                <p class="text-xs text-slate-400">إضافة الفروع هي ميزة مدفوعة يتم تفعيلها فورياً بالتواصل مع إدارة المنظومة</p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-                <div class="text-[11px] text-slate-400">فودافون كاش (Vodafone Cash)</div>
-                <div class="text-base font-black font-mono text-emerald-400 mt-0.5">01093320211</div>
-              </div>
-              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-                <div class="text-[11px] text-slate-400">إنستاباي (InstaPay)</div>
-                <div class="text-base font-black font-mono text-emerald-400 mt-0.5">01093320211</div>
-              </div>
-              <div class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col justify-center">
-                <div class="text-[11px] text-slate-400">التفعيل الفوري</div>
-                <div class="text-xs font-bold text-white mt-0.5">إرسال إشعار التحويل عبر واتساب</div>
-              </div>
-            </div>
-
-            <div class="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800">
-              <span class="text-xs text-slate-400">
-                بعد تقديم طلب الفرع، تواصل معنا برقم هاتفك المسجل أو عبر زر الواتساب لإتمام التفعيل خلال دقائق.
-              </span>
-              <a href="${paymentInfo.whatsapp_url || '#'}" target="_blank" rel="noopener noreferrer"
-                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
-                <i data-lucide="message-circle" class="w-4 h-4"></i>
-                <span>محادثة الإدارة على واتساب</span>
-              </a>
-            </div>
-          </div>
         </div>
       `;
 

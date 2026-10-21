@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { db, logAudit, createNotification } = require('./database');
+const { loadFromCloud, saveToCloud } = require('./cloud-sync');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
@@ -725,8 +726,9 @@ router.delete('/tickets/:id', authenticateSuperAdmin, (req, res) => {
 // ============================================================
 
 // GET /api/super-admin/branch-requests - List all branch requests
-router.get('/branch-requests', authenticateSuperAdmin, (req, res) => {
+router.get('/branch-requests', authenticateSuperAdmin, async (req, res) => {
   try {
+    try { await loadFromCloud(true); } catch (_) {}
     const requests = db.prepare(`
       SELECT br.*, 
         u.full_name as company_manager_name, 
@@ -756,7 +758,7 @@ router.get('/branch-requests', authenticateSuperAdmin, (req, res) => {
 });
 
 // PUT /api/super-admin/branch-requests/:id/review - Approve or Reject Branch Request
-router.put('/branch-requests/:id/review', authenticateSuperAdmin, (req, res) => {
+router.put('/branch-requests/:id/review', authenticateSuperAdmin, async (req, res) => {
   try {
     const reqId = parseInt(req.params.id, 10);
     const { action, super_admin_notes } = req.body;
@@ -890,6 +892,8 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, (req, res) => 
         clientIp
       );
 
+      try { await saveToCloud(); } catch (_) {}
+
       return res.json({
         success: true,
         message: `تم اعتماد وتفعيل الفرع (${branchReq.branch_name}) بنجاح، وتم إنشاء حساب مدير الفرع ومقر العمل.`,
@@ -932,6 +936,8 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, (req, res) => 
         clientIp
       );
 
+      try { await saveToCloud(); } catch (_) {}
+
       return res.json({
         success: true,
         message: `تم رفض طلب الفرع (${branchReq.branch_name}) بنجاح وإشعار المنشأة بالسبب.`
@@ -944,7 +950,7 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, (req, res) => 
 });
 
 // DELETE /api/super-admin/branch-requests/:id - Delete Branch Request
-router.delete('/branch-requests/:id', authenticateSuperAdmin, (req, res) => {
+router.delete('/branch-requests/:id', authenticateSuperAdmin, async (req, res) => {
   try {
     const reqId = parseInt(req.params.id, 10);
     const branchReq = db.prepare('SELECT * FROM branch_requests WHERE id = ?').get(reqId);
@@ -953,6 +959,7 @@ router.delete('/branch-requests/:id', authenticateSuperAdmin, (req, res) => {
     }
 
     db.prepare('DELETE FROM branch_requests WHERE id = ?').run(reqId);
+    try { await saveToCloud(); } catch (_) {}
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(

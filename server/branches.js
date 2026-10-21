@@ -1,13 +1,15 @@
 const express = require('express');
 const { db, logAudit, createNotification } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
+const { loadFromCloud, saveToCloud } = require('./cloud-sync');
 
 const router = express.Router();
 const OWNER_PHONE = '01093320211';
 
 // GET /api/branches - List all company branches and branch requests
-router.get('/', authenticateToken, requireManager, (req, res) => {
+router.get('/', authenticateToken, requireManager, async (req, res) => {
   try {
+    try { await loadFromCloud(); } catch (_) {}
     const managerId = req.user.manager_id || req.user.id;
 
     // 1. Get primary workplace and all branch workplaces
@@ -66,7 +68,7 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
 });
 
 // POST /api/branches/request - Submit new branch request
-router.post('/request', authenticateToken, requireManager, (req, res) => {
+router.post('/request', authenticateToken, requireManager, async (req, res) => {
   try {
     const managerId = req.user.manager_id || req.user.id;
     const {
@@ -126,6 +128,8 @@ router.post('/request', authenticateToken, requireManager, (req, res) => {
 
     const reqId = result.lastInsertRowid;
 
+    try { await saveToCloud(); } catch (_) {}
+
     // Send notification to Super Admin / System
     createNotification(
       null,
@@ -173,7 +177,7 @@ router.post('/request', authenticateToken, requireManager, (req, res) => {
 });
 
 // DELETE /api/branches/request/:id - Cancel a pending branch request
-router.delete('/request/:id', authenticateToken, requireManager, (req, res) => {
+router.delete('/request/:id', authenticateToken, requireManager, async (req, res) => {
   try {
     const managerId = req.user.manager_id || req.user.id;
     const reqId = parseInt(req.params.id, 10);
@@ -192,6 +196,7 @@ router.delete('/request/:id', authenticateToken, requireManager, (req, res) => {
     }
 
     db.prepare(`DELETE FROM branch_requests WHERE id = ?`).run(reqId);
+    try { await saveToCloud(); } catch (_) {}
 
     res.json({ success: true, message: 'تم إلغاء طلب الفرع بنجاح' });
   } catch (error) {

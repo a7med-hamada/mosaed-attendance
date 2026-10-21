@@ -44,56 +44,65 @@ body {
 /* ========================================================
    DARK THEME (Unified Qasetly Fintech Palette)
    ======================================================== */
-html,
 html.dark,
-body,
 html.dark body,
 body.dark,
-#app-view {
+html.dark #app-view {
   background-color: #06131e !important;
   color: #e2eaf1 !important;
   min-height: 100vh !important;
 }
 
-.dark .bg-slate-950 {
+html.dark .bg-slate-950 {
   background-color: #06131e !important;
 }
 
-.dark .bg-slate-900,
-.dark .bg-slate-850 {
+html.dark .bg-slate-900,
+html.dark .bg-slate-850 {
   background-color: #091c2e !important;
   border-color: #14334f !important;
 }
 
-.dark .bg-slate-800 {
+html.dark .bg-slate-800 {
   background-color: #0d2238 !important;
   border-color: #193d5e !important;
 }
 
-.dark .bg-slate-50 {
+html.dark .bg-slate-50 {
   background-color: #06131e !important;
 }
 
-.dark .border-slate-800,
-.dark .border-slate-700,
-.dark .border-slate-200 {
+html.dark .border-slate-800,
+html.dark .border-slate-700,
+html.dark .border-slate-200 {
   border-color: #14334f !important;
 }
 
-.dark .text-slate-900,
-.dark .text-slate-800 {
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
   color: #ffffff !important;
 }
 
-.dark .text-slate-400,
-.dark .text-slate-500 {
+html.dark .text-slate-400,
+html.dark .text-slate-500 {
   color: #7d96ab !important;
+}
+
+/* ========================================================
+   LIGHT THEME ENFORCEMENT (Pure, unified light palette)
+   ======================================================== */
+html:not(.dark),
+html:not(.dark) body,
+html:not(.dark) #app-view {
+  background-color: #f4f8fb !important;
+  color: #10243b !important;
+  min-height: 100vh !important;
 }
 
 /* ========================================================
    HEADER & NAVBAR (Frosted glass with identical base color)
    ======================================================== */
-header {
+html.dark header {
   background-color: rgba(6, 19, 30, 0.94) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
@@ -155,7 +164,7 @@ button.bg-blue-600:active {
 /* ========================================================
    SIDEBAR & NAVIGATION
    ======================================================== */
-aside > div {
+html.dark aside > div {
   background: #091c2e !important;
   border: 1px solid #14334f !important;
   border-radius: 20px !important;
@@ -176,16 +185,22 @@ html:not(.dark) aside > div {
   border-radius: 14px !important;
 }
 
-#manager-nav-list button:not(.bg-blue-600):hover,
-#employee-subnav button:not(.bg-blue-600):hover {
+html.dark #manager-nav-list button:not(.bg-blue-600):hover,
+html.dark #employee-subnav button:not(.bg-blue-600):hover {
   background-color: rgba(15, 105, 216, 0.08) !important;
   color: #ffffff !important;
+}
+
+html:not(.dark) #manager-nav-list button:not(.bg-blue-600):hover,
+html:not(.dark) #employee-subnav button:not(.bg-blue-600):hover {
+  background-color: rgba(0, 168, 102, 0.08) !important;
+  color: #008d57 !important;
 }
 
 /* ========================================================
    STAT / METRIC CARDS (Dashboard Widgets)
    ======================================================== */
-#mgr-metrics-grid > div {
+html.dark #mgr-metrics-grid > div {
   background: #091c2e !important;
   border: 1px solid #14334f !important;
   border-radius: 18px !important;
@@ -193,7 +208,7 @@ html:not(.dark) aside > div {
   transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-#mgr-metrics-grid > div:hover {
+html.dark #mgr-metrics-grid > div:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3) !important;
 }
@@ -207,19 +222,19 @@ html:not(.dark) #mgr-metrics-grid > div {
 /* ========================================================
    TABLES & LISTS
    ======================================================== */
-.dark table thead,
-thead.bg-slate-50,
-thead {
+html.dark table thead,
+html.dark thead {
   background-color: #071726 !important;
   border-bottom: 1px solid #14334f !important;
 }
 
+html:not(.dark) table thead,
 html:not(.dark) thead {
   background-color: #f5f8fb !important;
   border-bottom: 1px solid #dbe6ef !important;
 }
 
-thead th {
+html.dark thead th {
   color: #7b94a8 !important;
   font-weight: 700 !important;
   font-size: 11.5px !important;
@@ -227,18 +242,26 @@ thead th {
   padding: 14px 16px !important;
 }
 
-tbody tr {
+html:not(.dark) thead th {
+  color: #475569 !important;
+  font-weight: 700 !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.5px;
+  padding: 14px 16px !important;
+}
+
+html.dark tbody tr {
   border-bottom: 1px solid #0e253a !important;
   transition: background-color 0.15s ease !important;
 }
 
-.dark tbody tr:hover,
-tbody tr:hover {
+html.dark tbody tr:hover {
   background-color: #0c243a !important;
 }
 
 html:not(.dark) tbody tr {
   border-bottom: 1px solid #eef2f6 !important;
+  transition: background-color 0.15s ease !important;
 }
 
 html:not(.dark) tbody tr:hover {
@@ -400,19 +423,22 @@ textarea {
 html:not(.dark) input[type="text"],
 html:not(.dark) input[type="email"],
 html:not(.dark) input[type="password"],
+html:not(.dark) input[type="number"],
+html:not(.dark) input[type="date"],
+html:not(.dark) input[type="time"],
 html:not(.dark) select,
 html:not(.dark) textarea {
-  background-color: #f8fafc;
-  border: 1px solid #dbe6ef;
-  color: #10243b;
+  background-color: #ffffff !important;
+  border: 1px solid #dbe6ef !important;
+  color: #10243b !important;
 }
 
 html:not(.dark) input:focus,
 html:not(.dark) select:focus,
 html:not(.dark) textarea:focus {
-  border-color: #00a866;
-  box-shadow: 0 0 0 3px rgba(0, 168, 102, 0.2);
-  outline: none;
+  border-color: #00a866 !important;
+  box-shadow: 0 0 0 3px rgba(0, 168, 102, 0.2) !important;
+  outline: none !important;
 }
 
 /* ========================================================
@@ -575,7 +601,7 @@ html:not(.dark) .modal-enter {
    ======================================================== */
 
 /* 1. Glassmorphism Panels & Cards */
-.glass-card {
+html.dark .glass-card {
   background: rgba(9, 28, 46, 0.72) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
@@ -584,11 +610,22 @@ html:not(.dark) .modal-enter {
 }
 
 html:not(.dark) .glass-card {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
+  background: #ffffff !important;
+  border: 1px solid #dbe6ef !important;
+  box-shadow: 0 8px 25px rgba(3, 45, 79, 0.05) !important;
+}
+
+/* Drawer & Notification Modals Theming */
+html.dark #mobile-drawer,
+html.dark #notif-modal {
+  background-color: #091c2e !important;
+  border-color: #14334f !important;
+}
+
+html:not(.dark) #mobile-drawer,
+html:not(.dark) #notif-modal {
+  background-color: #ffffff !important;
+  border-color: #dbe6ef !important;
 }
 
 /* 2. Hover Ambient Glow */

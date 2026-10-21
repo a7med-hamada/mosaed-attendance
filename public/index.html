@@ -87,7 +87,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet with Cache Buster -->
-  <link rel="stylesheet" href="/css/style.css?v=20261017_2115" />
+  <link rel="stylesheet" href="/css/style.css?v=20261021_1600" />
 </head>
 <body class="min-h-screen bg-[#f4f8fb] dark:bg-[#06131e] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -348,8 +348,8 @@
       <!-- VIEW A: EMPLOYEE PORTAL -->
       <!-- ========================================== -->
       <div id="employee-layout" class="hidden space-y-6">
-        <!-- Subnavigation Tabs -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800" id="employee-subnav"></div>
+        <!-- Subnavigation Tabs (Desktop only, hidden on mobile) -->
+        <div class="hidden lg:flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800" id="employee-subnav"></div>
 
         <!-- Tab Content -->
         <div id="employee-content"></div>

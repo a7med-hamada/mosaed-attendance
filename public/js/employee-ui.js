@@ -3231,6 +3231,7 @@ const EmployeeUI = {
       const stats = res.stats || {};
       const bonuses = res.bonuses || [];
       const advances = res.advances || [];
+      const manualDeductions = res.manualDeductions || res.deductions || [];
 
       const baseSalary = stats.baseSalary || parseFloat(emp.base_salary || 3000);
       const totalBonuses = stats.totalBonuses || 0;
@@ -3238,7 +3239,8 @@ const EmployeeUI = {
       const totalAbsenceDeductions = stats.totalAbsenceDeductions || 0;
       const totalDeductions = stats.totalDeductions || (totalLateDeductions + totalAbsenceDeductions);
       const totalAdvances = stats.totalAdvances || 0;
-      const netSalary = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances);
+      const totalManualDeductions = stats.totalManualDeductions || manualDeductions.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+      const netSalary = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions);
 
       const mainContainer = document.getElementById('emp-finances-main-container');
       if (!mainContainer) return;
@@ -3246,7 +3248,7 @@ const EmployeeUI = {
       mainContainer.innerHTML = `
         <div class="space-y-6">
           <!-- 1. Financial Overview Cards -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
               <span class="text-xs text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
               <span class="text-xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${baseSalary.toLocaleString('ar-EG')} ج.م</span>
@@ -3260,9 +3262,15 @@ const EmployeeUI = {
             </div>
 
             <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
-              <span class="text-xs text-rose-500 font-bold block">الخصومات (تأخير+غياب)</span>
+              <span class="text-xs text-rose-500 font-bold block">خصم (تأخير+غياب)</span>
               <span class="text-xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductions.toLocaleString('ar-EG')} ج.م</span>
               <span class="text-[10px] text-rose-400 mt-0.5 block font-mono">تأخير: ${stats.lateDays || 0}ي • غياب: ${stats.absentDays || 0}ي</span>
+            </div>
+
+            <div class="p-4 rounded-3xl bg-rose-600/10 border border-rose-600/25 shadow-sm text-right">
+              <span class="text-xs text-rose-600 dark:text-rose-400 font-bold block">جزاءات وخصومات</span>
+              <span class="text-xl font-black text-rose-600 dark:text-rose-400 mt-1 block font-mono">-${totalManualDeductions.toLocaleString('ar-EG')} ج.م</span>
+              <span class="text-[10px] text-rose-500/80 mt-0.5 block font-semibold">${manualDeductions.length} جزاء مسجل</span>
             </div>
 
             <div class="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
@@ -3372,6 +3380,38 @@ const EmployeeUI = {
               </div>
             `}
           </div>
+
+          <!-- 4. Manual Deductions Showcase (If any) -->
+          ${manualDeductions.length > 0 ? `
+            <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i> سجل الجزاءات والخصومات المالية لشهر ${targetMonth}
+                  </h3>
+                  <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل القرارات والخصومات المباشرة المطبقة من الإدارة</p>
+                </div>
+                <span class="text-xs text-rose-600 dark:text-rose-400 font-bold font-mono">-${totalManualDeductions.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${manualDeductions.map(d => `
+                  <div class="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/20 flex items-center justify-between">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-lg flex items-center justify-center"><i data-lucide="minus-circle" class="w-5 h-5 text-rose-500"></i></span>
+                        <span class="font-bold text-slate-900 dark:text-white text-xs">${d.reason}</span>
+                      </div>
+                      <span class="text-[10px] text-slate-400 font-mono mt-1 block">${d.date} • بواسطة: ${d.creator_name || 'الإدارة'}</span>
+                      ${d.notes ? `<p class="text-[11px] text-rose-700 dark:text-rose-300 mt-1">${d.notes}</p>` : ''}
+                    </div>
+                    <div class="text-left font-mono font-black text-rose-600 dark:text-rose-400 text-base">
+                      -${parseFloat(d.amount).toLocaleString('ar-EG')} ج.م
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
         </div>
       `;
       if (window.lucide) lucide.createIcons();

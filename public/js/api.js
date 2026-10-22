@@ -450,6 +450,25 @@ const API = {
     });
   },
 
+  // Employee Deductions & Penalties (الخصومات والجزاءات اليدوية)
+  getDeductions(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    return this.request(`/deductions?${qs}`);
+  },
+
+  createDeduction(data) {
+    return this.request('/deductions', {
+      method: 'POST',
+      body: data
+    });
+  },
+
+  deleteDeduction(id) {
+    return this.request(`/deductions/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   // Leaves & Permissions (الإجازات والأذونات الرسمية)
   getLeaveBalance(employeeId) {
     const qs = employeeId ? `?employee_id=${employeeId}` : '';

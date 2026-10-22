@@ -21,6 +21,7 @@ const SYNC_TABLES = [
   'attendance_corrections',
   'salary_advances',
   'employee_bonuses',
+  'employee_deductions',
   'leave_requests',
   'permission_requests',
   'whatsapp_logs',

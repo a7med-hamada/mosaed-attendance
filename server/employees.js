@@ -238,11 +238,27 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
       totalBonuses += parseFloat(b.amount || 0);
     });
 
+    // Fetch manual deductions/penalties for this employee
+    let dedQuery = `SELECT * FROM employee_deductions WHERE employee_id = ?`;
+    const dedParams = [targetId];
+    if (filterMonth !== 'all') {
+      dedQuery += ` AND month = ?`;
+      dedParams.push(filterMonth);
+    }
+    dedQuery += ` ORDER BY date DESC, created_at DESC`;
+    const manualDeductions = db.prepare(dedQuery).all(...dedParams);
+
+    let totalManualDeductions = 0;
+    manualDeductions.forEach(d => {
+      totalManualDeductions += parseFloat(d.amount || 0);
+    });
+
     totalAdvances = parseFloat(totalAdvances.toFixed(2));
     totalBonuses = parseFloat(totalBonuses.toFixed(2));
+    totalManualDeductions = parseFloat(totalManualDeductions.toFixed(2));
 
     const baseSalary = parseFloat(employee.base_salary || 3000);
-    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     const totalTrackedDays = records.length;
     const disciplineRate = presentDays > 0 ? Math.round((onTimeDays / presentDays) * 100) : 0;
@@ -257,6 +273,7 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
         baseSalary,
         totalBonuses,
         totalAdvances,
+        totalManualDeductions,
         netSalary,
         totalLateDeductions,
         totalAbsenceDeductions,
@@ -275,7 +292,9 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
       },
       recentRecords: records,
       advances,
-      bonuses
+      bonuses,
+      manualDeductions,
+      deductions: manualDeductions
     });
   } catch (error) {
     console.error('Get employee stats error:', error);
@@ -620,6 +639,9 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
     // Delete employee and related records
     db.prepare(`DELETE FROM attendance_records WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM attendance_corrections WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM salary_advances WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM employee_bonuses WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM employee_deductions WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM users WHERE id = ?`).run(targetId);
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

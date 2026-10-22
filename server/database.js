@@ -209,6 +209,20 @@ db.exec(`
     FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS employee_deductions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    reason TEXT NOT NULL,
+    month TEXT NOT NULL, -- YYYY-MM
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    created_by INTEGER NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS whatsapp_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     recipient_phone TEXT NOT NULL,
@@ -265,6 +279,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
   CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
+  CREATE INDEX IF NOT EXISTS idx_ded_emp_month ON employee_deductions(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_leave_emp ON leave_requests(employee_id, status);
   CREATE INDEX IF NOT EXISTS idx_leave_dates ON leave_requests(start_date, end_date, status);
   CREATE INDEX IF NOT EXISTS idx_perm_emp_date ON permission_requests(employee_id, date, status);
@@ -394,6 +409,24 @@ try {
   if (!ticketCols.includes('attachment_photo')) {
     db.exec(`ALTER TABLE support_tickets ADD COLUMN attachment_photo TEXT;`);
   }
+
+  // Ensure employee_deductions table exists in existing databases
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS employee_deductions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employee_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      reason TEXT NOT NULL,
+      month TEXT NOT NULL,
+      date TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      notes TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_ded_emp_month ON employee_deductions(employee_id, month);
+  `);
 
   const wpCols = db.prepare('PRAGMA table_info(workplaces)').all().map(c => c.name);
   if (!wpCols.includes('address')) {

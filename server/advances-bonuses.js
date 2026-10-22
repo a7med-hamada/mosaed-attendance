@@ -4,6 +4,7 @@ const { authenticateToken, requireManager } = require('./auth');
 
 const advancesRouter = express.Router();
 const bonusesRouter = express.Router();
+const deductionsRouter = express.Router();
 
 const getCurrentDateString = getTodayString;
 
@@ -419,7 +420,168 @@ bonusesRouter.delete('/:id', authenticateToken, requireManager, (req, res) => {
   }
 });
 
+// ==========================================
+// 3. DEDUCTIONS ROUTER (/api/deductions)
+// ==========================================
+
+// GET /api/deductions - List deductions
+deductionsRouter.get('/', authenticateToken, (req, res) => {
+  try {
+    const isManager = req.user.role === 'manager';
+    const { employee_id, month } = req.query;
+
+    let query = `
+      SELECT
+        d.*,
+        u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo,
+        dept.name as department_name,
+        creator.full_name as creator_name
+      FROM employee_deductions d
+      JOIN users u ON d.employee_id = u.id
+      LEFT JOIN departments dept ON u.department_id = dept.id
+      LEFT JOIN users creator ON d.created_by = creator.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (!isManager) {
+      query += ` AND d.employee_id = ? `;
+      params.push(req.user.id);
+    } else {
+      query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      params.push(req.user.id, req.user.id);
+      if (employee_id) {
+        query += ` AND d.employee_id = ? `;
+        params.push(parseInt(employee_id, 10));
+      }
+    }
+
+    if (month) {
+      query += ` AND d.month = ? `;
+      params.push(month);
+    }
+
+    query += ` ORDER BY d.date DESC, d.created_at DESC `;
+
+    const deductions = db.prepare(query).all(...params);
+    res.json({ success: true, count: deductions.length, deductions });
+  } catch (error) {
+    console.error('Get deductions error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استرداد بيانات الخصومات والجزاءات' });
+  }
+});
+
+// POST /api/deductions - Add manual deduction / penalty (Manager only)
+deductionsRouter.post('/', authenticateToken, requireManager, (req, res) => {
+  try {
+    const { employee_id, amount, reason, month, date, notes } = req.body;
+
+    const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال مبلغ خصم صحيح أكبر من الصفر' });
+    }
+
+    if (!employee_id) {
+      return res.status(400).json({ success: false, error: 'يرجى اختيار الموظف المراد تسجيل الخصم أو الجزاء عليه' });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, error: 'يرجى كتابة سبب أو تفاصيل الخصم (مثال: جزاء إداري، إتلاف عهدة، مخالفة سلوك)' });
+    }
+
+    const emp = db.prepare('SELECT id, full_name, manager_id FROM users WHERE id = ?').get(parseInt(employee_id, 10));
+    if (!emp) {
+      return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+    }
+
+    // Tenant check
+    if (emp.manager_id && emp.manager_id !== req.user.id && req.user.id !== 1) {
+      return res.status(403).json({ success: false, error: 'غير مصرح لك بإضافة خصم لموظف في فرع آخر' });
+    }
+
+    const deductionDate = date || getCurrentDateString();
+    const deductionMonth = month || deductionDate.substring(0, 7);
+
+    const stmt = db.prepare(`
+      INSERT INTO employee_deductions (employee_id, amount, reason, month, date, created_by, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      emp.id,
+      parsedAmount,
+      reason.trim(),
+      deductionMonth,
+      deductionDate,
+      req.user.id,
+      notes ? notes.trim() : null
+    );
+
+    const deductionId = result.lastInsertRowid;
+
+    // Create notification for employee (STRICT RULE: NO EMOJIS! Pure Arabic)
+    createNotification(
+      emp.id,
+      'إشعار تسجيل خصم أو جزاء مالي',
+      `تم تسجيل خصم بقيمة ${parsedAmount.toLocaleString('ar-EG')} ج.م من حسابك لشهر ${deductionMonth}: ${reason.trim()}.`,
+      'danger'
+    );
+
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'ADD_EMPLOYEE_DEDUCTION',
+      'employee_deductions',
+      deductionId,
+      null,
+      { employee_id: emp.id, amount: parsedAmount, reason: reason.trim(), month: deductionMonth },
+      `تسجيل خصم مالي للموظف ${emp.full_name}`,
+      req.ip
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'تم تسجيل الخصم بنجاح وخصمه من كشف حساب وراتب الموظف',
+      deductionId
+    });
+  } catch (error) {
+    console.error('Create deduction error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حفظ بيانات الخصم' });
+  }
+});
+
+// DELETE /api/deductions/:id - Delete deduction (Manager only)
+deductionsRouter.delete('/:id', authenticateToken, requireManager, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deduction = db.prepare('SELECT * FROM employee_deductions WHERE id = ?').get(id);
+    if (!deduction) {
+      return res.status(404).json({ success: false, error: 'سجل الخصم غير موجود' });
+    }
+
+    db.prepare('DELETE FROM employee_deductions WHERE id = ?').run(id);
+
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'DELETE_EMPLOYEE_DEDUCTION',
+      'employee_deductions',
+      id,
+      deduction,
+      null,
+      `حذف خصم بقيمة ${deduction.amount} للموظف ID: ${deduction.employee_id}`,
+      req.ip
+    );
+
+    res.json({ success: true, message: 'تم حذف الخصم بنجاح' });
+  } catch (error) {
+    console.error('Delete deduction error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حذف الخصم' });
+  }
+});
+
 module.exports = {
   advancesRouter,
-  bonusesRouter
+  bonusesRouter,
+  deductionsRouter
 };

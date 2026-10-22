@@ -100,8 +100,14 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       `).get(emp.id, month);
       const totalBonuses = parseFloat(((bonusesSum && bonusesSum.total) || 0).toFixed(2));
 
+      const deductionsSum = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total FROM employee_deductions
+        WHERE employee_id = ? AND month = ?
+      `).get(emp.id, month);
+      const totalManualDeductions = parseFloat(((deductionsSum && deductionsSum.total) || 0).toFixed(2));
+
       const baseSalary = parseFloat(emp.base_salary || 3000);
-      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
+      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
       return {
         employee: emp,
@@ -122,6 +128,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         totalDeductions: parseFloat(totalDeductions.toFixed(2)),
         totalBonuses,
         totalAdvances,
+        totalManualDeductions,
         netSalary
       };
     });
@@ -304,8 +311,23 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
       totalBonuses += parseFloat(b.amount || 0);
     });
 
+    // Query manual deductions for this employee in this month
+    const deductions = db.prepare(`
+      SELECT d.*, creator.full_name as creator_name
+      FROM employee_deductions d
+      LEFT JOIN users creator ON d.created_by = creator.id
+      WHERE d.employee_id = ? AND d.month = ?
+      ORDER BY d.date DESC, d.created_at DESC
+    `).all(employeeId, month);
+
+    let totalManualDeductions = 0;
+    deductions.forEach(d => {
+      totalManualDeductions += parseFloat(d.amount || 0);
+    });
+    totalManualDeductions = parseFloat(totalManualDeductions.toFixed(2));
+
     const baseSalary = parseFloat(employee.base_salary || 3000);
-    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     res.json({
       success: true,
@@ -327,6 +349,7 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
         totalDeductions: parseFloat(totalDeductions.toFixed(2)),
         totalBonuses: parseFloat(totalBonuses.toFixed(2)),
         totalAdvances: parseFloat(totalAdvances.toFixed(2)),
+        totalManualDeductions,
         netSalary,
         absentDaysList,
         lateDaysList,
@@ -334,7 +357,9 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
       },
       records,
       advances,
-      bonuses
+      bonuses,
+      deductions,
+      manualDeductions: deductions
     });
   } catch (error) {
     console.error('Employee month details error:', error);

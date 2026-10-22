@@ -4077,6 +4077,7 @@ const ManagerUI = {
       const records = res.recentRecords || [];
       const advances = res.advances || [];
       const bonuses = res.bonuses || [];
+      const manualDeductions = res.manualDeductions || res.deductions || [];
       const availMonths = res.availableMonths || [];
       const activeMonth = res.selectedMonth || res.currentMonth;
 
@@ -4086,10 +4087,11 @@ const ManagerUI = {
       const baseSalary = parseFloat(s.baseSalary || emp.base_salary || 3000);
       const totalBonuses = parseFloat(s.totalBonuses || 0);
       const totalAdvances = parseFloat(s.totalAdvances || 0);
+      const totalManualDeductions = parseFloat(s.totalManualDeductions || manualDeductions.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0));
       const totalLateDeductions = parseFloat(s.totalLateDeductions || 0);
       const totalAbsenceDeductions = parseFloat(s.totalAbsenceDeductions || 0);
       const totalDeductions = parseFloat(s.totalDeductions || (totalLateDeductions + totalAbsenceDeductions));
-      const netSalary = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances);
+      const netSalary = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions);
 
       content.innerHTML = `
         <div class="space-y-5 overflow-y-auto pr-1 max-h-[78vh] text-right">
@@ -4121,6 +4123,10 @@ const ManagerUI = {
               <button onclick="ManagerUI.openAddBonusModal(${employeeId}, '${activeMonth}')"
                 class="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="إضافة مكافأة للموظف">
                 <i data-lucide="gift" class="w-3.5 h-3.5"></i> + مكافأة
+              </button>
+              <button onclick="ManagerUI.openAddDeductionModal(${employeeId}, '${activeMonth}')"
+                class="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="تسجيل خصم / جزاء للموظف">
+                <i data-lucide="minus-circle" class="w-3.5 h-3.5"></i> + خصم
               </button>
               <button onclick="ManagerUI.openAddAdvanceModal(${employeeId}, '${activeMonth}')"
                 class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs" title="تسجيل سلفة للموظف">
@@ -4181,12 +4187,12 @@ const ManagerUI = {
             </div>
           </div>
 
-          <!-- Comprehensive Financial & Payroll Breakdown Cards (5 Cards) -->
+          <!-- Comprehensive Financial & Payroll Breakdown Cards (6 Cards) -->
           <div>
             <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
-              <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i> الحساب المالي ومسير الراتب والسلف (${activeMonth}):
+              <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i> الحساب المالي ومسير الراتب والسلف والجزاءات (${activeMonth}):
             </h4>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-right">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-right">
               <!-- Base Salary -->
               <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
                 <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
@@ -4206,6 +4212,13 @@ const ManagerUI = {
                 <span class="text-[11px] text-rose-500 dark:text-rose-400 font-bold block">خصومات الدوام (-)</span>
                 <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-base mt-1 block">-${totalDeductions.toLocaleString('ar-EG')} ج.م</span>
                 <span class="text-[10px] text-rose-500/80 block mt-0.5 font-mono">تأخير: ${totalLateDeductions} • غياب: ${totalAbsenceDeductions}</span>
+              </div>
+
+              <!-- Manual Deductions / Penalties (-) -->
+              <div class="p-3.5 rounded-2xl bg-rose-600/10 border border-rose-600/25">
+                <span class="text-[11px] text-rose-600 dark:text-rose-400 font-bold block">جزاءات وخصومات (-)</span>
+                <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-base mt-1 block">-${totalManualDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-rose-500/80 block mt-0.5 font-semibold">${manualDeductions.length} جزاء مسجل</span>
               </div>
 
               <!-- Advances (-) -->
@@ -4241,6 +4254,32 @@ const ManagerUI = {
                       <span class="text-[10px] text-slate-400 font-mono">${b.date} • شهر: ${b.month}</span>
                     </div>
                     <span class="font-mono font-bold text-purple-600 dark:text-purple-400 text-xs">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Deductions Detail Section (If any) -->
+          ${manualDeductions.length > 0 ? `
+            <div class="border border-rose-200 dark:border-rose-900/40 rounded-2xl overflow-hidden bg-rose-50/20 dark:bg-rose-950/10">
+              <div class="p-2.5 bg-rose-50/80 dark:bg-rose-900/30 border-b border-rose-200 dark:border-rose-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                  <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i> تفاصيل الخصومات والجزاءات اليدوية (${manualDeductions.length}):
+                </span>
+                <span class="text-[11px] font-bold font-mono text-rose-600 dark:text-rose-400">-${totalManualDeductions.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="divide-y divide-rose-100 dark:divide-rose-900/30 p-2 space-y-1">
+                ${manualDeductions.map(d => `
+                  <div class="flex items-center justify-between py-1.5 px-2 hover:bg-rose-100/30 rounded-xl transition-colors">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${d.reason}</span>
+                        <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">جزاء مالي</span>
+                      </div>
+                      <span class="text-[10px] text-slate-400 font-mono">${d.date} • شهر: ${d.month} ${d.notes ? '• ' + d.notes : ''}</span>
+                    </div>
+                    <span class="font-mono font-bold text-rose-600 dark:text-rose-400 text-xs">-${parseFloat(d.amount).toLocaleString('ar-EG')} ج.م</span>
                   </div>
                 `).join('')}
               </div>
@@ -4389,13 +4428,21 @@ const ManagerUI = {
             class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-500/20 flex items-center gap-1.5 transition-all">
             <i data-lucide="gift" class="w-4 h-4"></i> + إضافة مكافأة
           </button>
+          <button onclick="ManagerUI.openAddDeductionModal(null, '${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-500/20 flex items-center gap-1.5 transition-all">
+            <i data-lucide="minus-circle" class="w-4 h-4"></i> + إضافة خصم / جزاء
+          </button>
           <button onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
             class="px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold flex items-center gap-1.5 transition-all">
-            <i data-lucide="award" class="w-4 h-4"></i> إدارة وحذف المكافآت
+            <i data-lucide="award" class="w-4 h-4"></i> إدارة المكافآت
+          </button>
+          <button onclick="ManagerUI.openDeductionsManagementModal('${targetMonth}')"
+            class="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i> إدارة الخصومات
           </button>
           <button onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
             class="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
-            <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة وحذف ومراجعة السلف
+            <i data-lucide="hand-coins" class="w-4 h-4"></i> إدارة ومراجعة السلف
           </button>
           <button onclick="ManagerUI.exportMonthCsv('${targetMonth}')"
             class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
@@ -4417,6 +4464,7 @@ const ManagerUI = {
       let totalBaseSalariesCompany = 0;
       let totalBonusesCompany = 0;
       let totalAdvancesCompany = 0;
+      let totalManualDeductionsCompany = 0;
       let totalNetSalariesCompany = 0;
 
       summaries.forEach(s => {
@@ -4428,7 +4476,8 @@ const ManagerUI = {
         totalBaseSalariesCompany += (s.baseSalary || 3000);
         totalBonusesCompany += (s.totalBonuses || 0);
         totalAdvancesCompany += (s.totalAdvances || 0);
-        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0)));
+        totalManualDeductionsCompany += (s.totalManualDeductions || 0);
+        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0)));
       });
 
       const mainContainer = document.getElementById('mgr-archive-main-container');
@@ -4438,40 +4487,46 @@ const ManagerUI = {
 
       mainContainer.innerHTML = `
         <!-- Month Payroll & Attendance Executive Stat Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5 sm:gap-3">
           <div class="p-3.5 sm:p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-right">
             <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold block">المرتبات الأساسية</span>
-            <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 block font-mono">${totalBaseSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1 block font-mono">${totalBaseSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
             <span class="text-[10px] text-slate-400 mt-0.5 block">${summaries.length} موظف</span>
           </div>
 
           <div class="p-3.5 sm:p-4 rounded-3xl bg-purple-500/10 border border-purple-500/20 shadow-sm text-right">
             <span class="text-[11px] sm:text-xs text-purple-600 dark:text-purple-400 font-bold block">المكافآت والحوافز</span>
-            <span class="text-lg sm:text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonusesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-base sm:text-lg font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonusesCompany.toLocaleString('ar-EG')} ج.م</span>
             <span class="text-[10px] text-purple-400/80 mt-0.5 block font-semibold">حوافز شهرية</span>
           </div>
 
           <div class="p-3.5 sm:p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
-            <span class="text-[11px] sm:text-xs text-rose-500 font-bold block">خصومات (تأخير+غياب)</span>
-            <span class="text-lg sm:text-xl font-black text-rose-500 mt-1 block font-mono">-${totalDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[11px] sm:text-xs text-rose-500 font-bold block">خصم (تأخير+غياب)</span>
+            <span class="text-base sm:text-lg font-black text-rose-500 mt-1 block font-mono">-${totalDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
             <span class="text-[10px] text-rose-400 mt-0.5 block font-mono truncate">تأخير: ${formatMinutesArabic(totalLateMinsCompany)}</span>
+          </div>
+
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-rose-600/10 border border-rose-600/25 shadow-sm text-right">
+            <span class="text-[11px] sm:text-xs text-rose-600 dark:text-rose-400 font-bold block">جزاءات وخصومات</span>
+            <span class="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 mt-1 block font-mono">-${totalManualDeductionsCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-[10px] text-rose-500/80 mt-0.5 block font-semibold">خصومات إدارية</span>
           </div>
 
           <div class="p-3.5 sm:p-4 rounded-3xl bg-amber-500/10 border border-amber-500/20 shadow-sm text-right">
             <span class="text-[11px] sm:text-xs text-amber-600 dark:text-amber-400 font-bold block">السلف والمسحوبات</span>
-            <span class="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvancesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 mt-1 block font-mono">-${totalAdvancesCompany.toLocaleString('ar-EG')} ج.م</span>
             <span class="text-[10px] text-amber-500/80 mt-0.5 block font-semibold">سلف معتمدة</span>
           </div>
 
-          <div class="p-3.5 sm:p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right">
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 shadow-sm text-right col-span-2 sm:col-span-1">
             <span class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-bold block">صافي مسيرات الرواتب</span>
-            <span class="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${totalNetSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
+            <span class="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">${totalNetSalariesCompany.toLocaleString('ar-EG')} ج.م</span>
             <span class="text-[10px] text-emerald-500/80 mt-0.5 block font-semibold">المبلغ المستحق للصرف</span>
           </div>
 
-          <div class="p-3.5 sm:p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 shadow-sm text-right">
+          <div class="p-3.5 sm:p-4 rounded-3xl bg-blue-500/10 border border-blue-500/20 shadow-sm text-right col-span-2 sm:col-span-1">
             <span class="text-[11px] sm:text-xs text-blue-500 font-bold block">ساعات العمل</span>
-            <span class="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
+            <span class="text-base sm:text-lg font-black text-blue-600 dark:text-blue-400 mt-1 block font-mono">${totalWorkedHoursCompany.toFixed(1)} س</span>
             <span class="text-[10px] text-blue-400/80 mt-0.5 block">خلال ${activeMonthObj.label}</span>
           </div>
         </div>
@@ -4480,7 +4535,7 @@ const ManagerUI = {
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-between text-xs font-semibold">
           <div class="flex items-center gap-2.5">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
-            <span>نظام الرواتب الذكي: يتم احتساب صافي القبض وفق المعادلة: <strong>(المرتب الأساسي + المكافآت - خصومات التأخير والغياب - السلف المعتمدة)</strong>.</span>
+            <span>نظام الرواتب الذكي: يتم احتساب صافي القبض وفق المعادلة: <strong>(المرتب الأساسي + المكافآت - خصومات التأخير والغياب - الجزاءات والخصومات - السلف المعتمدة)</strong>.</span>
           </div>
         </div>
 
@@ -4492,7 +4547,7 @@ const ManagerUI = {
                 <i data-lucide="coins" class="w-4 h-4 text-emerald-500"></i>
                 مسير رواتب وكشف حساب الموظفين لشهر: <span class="text-emerald-500 font-bold">${activeMonthObj.label}</span>
               </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، المكافآت، الخصومات بالشرائح، السلف، وصافي القبض مع طباعة قسيمة الراتب</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">تفاصيل المرتب الأساسي، المكافآت، الخصومات بالشرائح، الجزاءات، السلف، وصافي القبض مع طباعة قسيمة الراتب</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <button onclick="ManagerUI.sendAllPayslipsWhatsApp('${targetMonth}')"
@@ -4508,7 +4563,7 @@ const ManagerUI = {
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
             <div class="overflow-x-auto lg:overflow-x-visible">
-              <table class="w-full text-right text-xs min-w-[680px] lg:min-w-0">
+              <table class="w-full text-right text-xs min-w-[760px] lg:min-w-0">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th class="py-3 px-3">الموظف</th>
@@ -4517,6 +4572,7 @@ const ManagerUI = {
                     <th class="py-3 px-2.5">التأخير (الشرائح)</th>
                     <th class="py-3 px-2 text-center">الغياب</th>
                     <th class="py-3 px-2 text-center">المكافآت (+)</th>
+                    <th class="py-3 px-2 text-center">الخصومات / الجزاءات (-)</th>
                     <th class="py-3 px-2 text-center">السلف (-)</th>
                     <th class="py-3 px-2 text-center">صافي القبض</th>
                     <th class="py-3 px-3 text-center">الإجراءات والطباعة</th>
@@ -4525,7 +4581,7 @@ const ManagerUI = {
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                   ${summaries.map(s => {
                     const baseSal = s.baseSalary || 3000;
-                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0));
+                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
                     return `
                     <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                       <td class="py-3 px-3">
@@ -4564,6 +4620,14 @@ const ManagerUI = {
                           <button type="button" onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
                             class="px-2 py-0.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف مكافآت الموظفين">
                             +${s.totalBonuses.toLocaleString('ar-EG')} ج.م
+                          </button>
+                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
+                      </td>
+                      <td class="py-3 px-2 text-center whitespace-nowrap">
+                        ${(s.totalManualDeductions || 0) > 0 ? `
+                          <button type="button" onclick="ManagerUI.openDeductionsManagementModal('${targetMonth}')"
+                            class="px-2 py-0.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف خصومات وجزاءات الموظفين">
+                            -${s.totalManualDeductions.toLocaleString('ar-EG')} ج.م
                           </button>
                         ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
                       </td>
@@ -4664,6 +4728,7 @@ const ManagerUI = {
       const records = res.records || [];
       const bonuses = res.bonuses || [];
       const advances = res.advances || [];
+      const deductions = res.deductions || res.manualDeductions || [];
 
       let lateDeductions = stats.totalLateDeductions || 0;
       let absenceDeductions = stats.totalAbsenceDeductions || 0;
@@ -4677,8 +4742,9 @@ const ManagerUI = {
       const baseSal = stats.baseSalary || parseFloat(emp.base_salary || 3000);
       const totalBonuses = stats.totalBonuses || bonuses.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
       const totalAdvances = stats.totalAdvances || advances.filter(a => a.status === 'approved').reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+      const totalManualDeductions = stats.totalManualDeductions || deductions.reduce((s, d) => s + parseFloat(d.amount || 0), 0);
       const totalDed = (lateDeductions + absenceDeductions);
-      const netSal = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSal + totalBonuses - totalDed - totalAdvances);
+      const netSal = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSal + totalBonuses - totalDed - totalAdvances - totalManualDeductions);
 
       const titleEl = document.getElementById('month-details-title');
       const subEl = document.getElementById('month-details-sub');
@@ -4703,6 +4769,10 @@ const ManagerUI = {
                   class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
                   <i data-lucide="gift" class="w-3.5 h-3.5"></i> + إضافة مكافأة
                 </button>
+                <button onclick="ManagerUI.openAddDeductionModal(${emp.id}, '${month}')"
+                  class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <i data-lucide="minus-circle" class="w-3.5 h-3.5"></i> + إضافة خصم / جزاء
+                </button>
                 <button onclick="ManagerUI.openAddAdvanceModal(${emp.id}, '${month}')"
                   class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all">
                   <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i> + تسجيل سلفة
@@ -4710,31 +4780,35 @@ const ManagerUI = {
               </div>
             </div>
 
-            <!-- 1. Executive Financial Payroll Breakdown (6 Cards) -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+            <!-- 1. Executive Financial Payroll Breakdown (7 Cards) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+              <div class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
                 <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">المرتب الأساسي</span>
-                <span class="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">${baseSal.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-sm font-black text-slate-900 dark:text-white font-mono mt-0.5 block">${baseSal.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+              <div class="p-2.5 rounded-2xl bg-purple-500/10 border border-purple-500/20">
                 <span class="text-[10px] text-purple-600 dark:text-purple-400 font-bold block">المكافآت (+)</span>
-                <span class="text-base font-black text-purple-600 dark:text-purple-400 font-mono mt-0.5 block">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-sm font-black text-purple-600 dark:text-purple-400 font-mono mt-0.5 block">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+              <div class="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                 <span class="text-[10px] text-amber-500 font-bold block">خصم التأخير (-)</span>
-                <span class="text-base font-black text-amber-500 font-mono mt-0.5 block">-${lateDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-sm font-black text-amber-500 font-mono mt-0.5 block">-${lateDeductions.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+              <div class="p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                 <span class="text-[10px] text-rose-400 font-bold block">خصم الغياب (-)</span>
-                <span class="text-base font-black text-rose-500 font-mono mt-0.5 block">-${absenceDeductions.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-sm font-black text-rose-500 font-mono mt-0.5 block">-${absenceDeductions.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-amber-600/10 border border-amber-600/20">
-                <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold block">السلف المعتمدة (-)</span>
-                <span class="text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 block">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+              <div class="p-2.5 rounded-2xl bg-rose-600/10 border border-rose-600/20">
+                <span class="text-[10px] text-rose-600 dark:text-rose-400 font-bold block">جزاءات وخصومات (-)</span>
+                <span class="text-sm font-black text-rose-600 dark:text-rose-400 font-mono mt-0.5 block">-${totalManualDeductions.toLocaleString('ar-EG')} ج.م</span>
               </div>
-              <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
-                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض المستحق</span>
-                <span class="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">${netSal.toLocaleString('ar-EG')} ج.م</span>
+              <div class="p-2.5 rounded-2xl bg-amber-600/10 border border-amber-600/20">
+                <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold block">السلف (-)</span>
+                <span class="text-sm font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 block">-${totalAdvances.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              <div class="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 col-span-2 sm:col-span-1">
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">صافي القبض</span>
+                <span class="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">${netSal.toLocaleString('ar-EG')} ج.م</span>
               </div>
             </div>
 
@@ -4812,6 +4886,43 @@ const ManagerUI = {
                       </div>
                     `;
                   }).join('')}
+                </div>
+              `}
+            </div>
+
+            <!-- 3.5. Deductions & Penalties List Section -->
+            <div class="border border-rose-200 dark:border-rose-900/50 rounded-2xl overflow-hidden bg-rose-50/20 dark:bg-rose-950/10">
+              <div class="p-3 bg-rose-50/80 dark:bg-rose-900/30 border-b border-rose-200 dark:border-rose-800/40 flex items-center justify-between">
+                <span class="font-bold text-xs text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                  <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i> الخصومات والجزاءات اليدوية لهذا الشهر (${deductions.length})
+                </span>
+                <button onclick="ManagerUI.openAddDeductionModal(${emp.id}, '${month}')" class="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline">
+                  + إضافة خصم جديد
+                </button>
+              </div>
+              ${deductions.length === 0 ? `
+                <div class="p-4 text-center text-slate-400 text-xs">لا توجد خصومات أو جزاءات مسجلة لهذا الموظف في شهر ${month}.</div>
+              ` : `
+                <div class="divide-y divide-rose-100 dark:divide-rose-900/30 p-2">
+                  ${deductions.map(d => `
+                    <div class="flex items-center justify-between py-2 px-2 hover:bg-rose-100/30 rounded-xl transition-colors">
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-slate-800 dark:text-slate-200 text-xs">${d.reason}</span>
+                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[10px] font-bold">جزاء مالي</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-mono">${d.date} • بواسطة: ${d.creator_name || 'الإدارة'} ${d.notes ? '• ' + d.notes : ''}</span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">-${parseFloat(d.amount).toLocaleString('ar-EG')} ج.م</span>
+                        <button onclick="ManagerUI.deleteDeduction(${d.id}, ${emp.id}, '${month}')"
+                          class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف الخصم بالكامل">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          <span>حذف الخصم</span>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
                 </div>
               `}
             </div>
@@ -5420,6 +5531,252 @@ const ManagerUI = {
       }
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  // ========================================================
+  // 7.5. MANUAL DEDUCTIONS & PENALTIES (الخصومات والجزاءات اليدوية)
+  // ========================================================
+
+  // Modal: Add / Record Direct Deduction (خصم / جزاء)
+  async openAddDeductionModal(preselectedEmployeeId = null, preselectedMonth = null, defaultReason = null, defaultAmount = null) {
+    const modal = document.getElementById('deductions-modal');
+    if (!modal) return;
+
+    const todayDate = new Date().toISOString().substring(0, 10);
+    const targetMonth = preselectedMonth || todayDate.substring(0, 7);
+
+    let employees = [];
+    try {
+      const empRes = await API.getEmployees({ is_active: 1 });
+      employees = empRes.employees || [];
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+    }
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="minus-circle" class="w-5 h-5 text-rose-500"></i> تسجيل خصم / جزاء مالي لموظف
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">يخصم المبلغ تلقائياً من راتب الموظف في كشف حساب الشهر وقسيمة القبض</p>
+            </div>
+            <button onclick="document.getElementById('deductions-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form onsubmit="ManagerUI.submitAddDeduction(event, '${targetMonth}')" class="space-y-3.5 pt-4">
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">الموظف *</label>
+              <select id="deduction-emp-select" required class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <option value="">-- اختر الموظف --</option>
+                ${employees.map(e => `
+                  <option value="${e.id}" ${e.id === parseInt(preselectedEmployeeId, 10) ? 'selected' : ''}>
+                    ${e.full_name} (${e.employee_code} - ${e.job_title || 'موظف'})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">مبلغ الخصم / الجزاء (ج.م) *</label>
+              <input type="number" id="deduction-amount-input" step="1" min="1" required placeholder="مثال: 150" value="${defaultAmount || ''}"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-rose-600 text-sm" />
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب أو تفاصيل الخصم *</label>
+              <input type="text" id="deduction-reason-input" required placeholder="مثال: جزاء إداري، إتلاف عهدة، مخالفة سلوك، تأخير إضافي" value="${defaultReason ? defaultReason.replace(/"/g, '&quot;') : ''}"
+                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الخصم *</label>
+                <input type="month" id="deduction-month-input" required value="${targetMonth}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ الخصم</label>
+                <input type="date" id="deduction-date-input" required value="${todayDate}"
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">ملاحظات إضافية (اختياري)</label>
+              <textarea id="deduction-notes-input" placeholder="أي تفاصيل خاصة بسبب القرار أو الجزاء..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-16"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('deductions-modal').innerHTML=''"
+                class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">إلغاء</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-rose-500/25">
+                <i data-lucide="check" class="w-4 h-4"></i> اعتماد الخصم
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitAddDeduction(event, currentMonth) {
+    event.preventDefault();
+    const employee_id = document.getElementById('deduction-emp-select').value;
+    const amount = document.getElementById('deduction-amount-input').value;
+    const reason = document.getElementById('deduction-reason-input').value;
+    const month = document.getElementById('deduction-month-input').value;
+    const date = document.getElementById('deduction-date-input').value;
+    const notes = document.getElementById('deduction-notes-input').value;
+
+    try {
+      const res = await API.createDeduction({ employee_id, amount, reason, month, date, notes });
+      showToast(res.message || 'تم تسجيل الخصم بنجاح!', 'success');
+      document.getElementById('deductions-modal').innerHTML = '';
+
+      // Refresh relevant views
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+      const detailsModal = document.getElementById('month-details-modal');
+      if (detailsModal && detailsModal.innerHTML) {
+        await this.openEmployeeMonthDetailsModal(employee_id, month);
+      }
+      const statsModal = document.getElementById('employee-stats-modal');
+      if (statsModal && statsModal.innerHTML) {
+        await this.openEmployeeStatsModal(employee_id, '', month);
+      }
+      const hubBody = document.getElementById('deductions-hub-body');
+      if (hubBody) {
+        await this.openDeductionsManagementModal(month);
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async deleteDeduction(deductionId, employeeId = null, month = null) {
+    if (!confirm('هل أنت متأكد من حذف هذا الخصم / الجزاء من حساب الموظف؟')) return;
+    try {
+      const res = await API.deleteDeduction(deductionId);
+      showToast(res.message || 'تم حذف الخصم بنجاح', 'success');
+      if (employeeId && month) {
+        await this.openEmployeeMonthDetailsModal(employeeId, month);
+      }
+      const hubBody = document.getElementById('deductions-hub-body');
+      if (hubBody) {
+        await this.openDeductionsManagementModal(month);
+      }
+      if (this.activeSection === 'archive') {
+        await this.renderMonthlyArchiveSection(month);
+      }
+      const statsModal = document.getElementById('employee-stats-modal');
+      if (statsModal && statsModal.innerHTML && employeeId) {
+        await this.openEmployeeStatsModal(employeeId, '', month || '');
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async openDeductionsManagementModal(selectedMonth = null) {
+    const modal = document.getElementById('deductions-modal');
+    if (!modal) return;
+
+    const targetMonth = selectedMonth || new Date().toISOString().substring(0, 7);
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[90vh] flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-5 h-5 text-rose-500"></i> إدارة وحذف الخصومات والجزاءات المالية
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">عرض وسجل جميع الخصومات والجزاءات اليدوية لشهر ${targetMonth} مع إمكانية حذف أي خصم أضيف بالخطأ</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="ManagerUI.openAddDeductionModal(null, '${targetMonth}')"
+                class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-rose-500/25">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> + إضافة خصم جديد
+              </button>
+              <button onclick="document.getElementById('deductions-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Deductions Table Container -->
+          <div class="py-3 flex-1 overflow-y-auto" id="deductions-hub-body">
+            <div class="p-8 text-center text-slate-400">جاري تحميل سجل الخصومات...</div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await API.getDeductions({ month: targetMonth });
+      const deductions = res.deductions || [];
+      const hubBody = document.getElementById('deductions-hub-body');
+      if (!hubBody) return;
+
+      if (deductions.length === 0) {
+        hubBody.innerHTML = `<div class="p-12 text-center text-slate-400">لا توجد خصومات أو جزاءات مسجلة في شهر ${targetMonth}.</div>`;
+        return;
+      }
+
+      hubBody.innerHTML = `
+        <table class="w-full text-right text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 font-semibold uppercase">
+            <tr>
+              <th class="py-2.5 px-3">الموظف</th>
+              <th class="py-2.5 px-3">المبلغ</th>
+              <th class="py-2.5 px-3">السبب والتاريخ</th>
+              <th class="py-2.5 px-3">بواسطة</th>
+              <th class="py-2.5 px-3 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+            ${deductions.map(d => `
+              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                <td class="py-3 px-3 font-sans">
+                  <span class="font-bold text-slate-800 dark:text-slate-200 block">${d.full_name}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${d.employee_code} • ${d.department_name || 'عام'}</span>
+                </td>
+                <td class="py-3 px-3 font-black text-rose-600 dark:text-rose-400 text-sm">
+                  -${parseFloat(d.amount).toLocaleString('ar-EG')} ج.م
+                </td>
+                <td class="py-3 px-3 font-sans">
+                  <span class="font-bold text-slate-700 dark:text-slate-300 block">${d.reason}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${d.date} (شهر: ${d.month})</span>
+                </td>
+                <td class="py-3 px-3 font-sans text-slate-500 text-[11px]">
+                  ${d.creator_name || 'الإدارة'}
+                </td>
+                <td class="py-3 px-3 text-center font-sans">
+                  <button onclick="ManagerUI.deleteDeduction(${d.id}, null, '${targetMonth}')"
+                    class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors mx-auto" title="حذف الخصم نهائياً">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>حذف الخصم</span>
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      const hubBody = document.getElementById('deductions-hub-body');
+      if (hubBody) hubBody.innerHTML = `<div class="p-6 text-center text-rose-500">${err.message}</div>`;
     }
   },
 

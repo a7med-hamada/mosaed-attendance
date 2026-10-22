@@ -144,15 +144,17 @@
     const month = data.month || '';
     const advances = (data.advances || []).filter(a => a.status === 'approved');
     const bonuses = data.bonuses || [];
+    const deductions = data.deductions || data.manualDeductions || [];
 
     const baseSalary = stats.baseSalary || parseFloat(emp.base_salary || 3000);
     const totalBonuses = stats.totalBonuses !== undefined ? stats.totalBonuses : bonuses.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
     const totalLateDeductions = stats.totalLateDeductions || 0;
     const totalAbsenceDeductions = stats.totalAbsenceDeductions || 0;
     const totalAdvances = stats.totalAdvances !== undefined ? stats.totalAdvances : advances.reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+    const totalManualDeductions = stats.totalManualDeductions !== undefined ? stats.totalManualDeductions : deductions.reduce((s, d) => s + parseFloat(d.amount || 0), 0);
 
     const totalEarnings = parseFloat((baseSalary + totalBonuses).toFixed(2));
-    const totalDeductions = parseFloat((totalLateDeductions + totalAbsenceDeductions + totalAdvances).toFixed(2));
+    const totalDeductions = parseFloat((totalLateDeductions + totalAbsenceDeductions + totalAdvances + totalManualDeductions).toFixed(2));
     const netSalary = Math.max(0, parseFloat((totalEarnings - totalDeductions).toFixed(2)));
 
     const tafqeetText = tafqeetCurrency(netSalary);
@@ -354,6 +356,17 @@
                     </div>
                   `).join('')}
 
+                  <!-- Manual Deductions / Penalties Breakdown -->
+                  ${deductions.length === 0 ? '' : deductions.map(d => `
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                      <div>
+                        <span class="font-bold text-rose-700 block">جزاء / خصم: ${d.reason}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">${d.date}</span>
+                      </div>
+                      <span class="font-mono font-black text-rose-600">-${parseFloat(d.amount).toLocaleString('ar-EG')} ج.م</span>
+                    </div>
+                  `).join('')}
+
                   <div class="pt-2 flex items-center justify-between font-black text-sm text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
                     <span>إجمالي الاستقطاعات:</span>
                     <span class="font-mono">-${totalDeductions.toLocaleString('ar-EG')} ج.م</span>
@@ -367,7 +380,7 @@
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200 pb-3 mb-3">
                 <div>
                   <span class="text-xs font-bold text-emerald-800 uppercase block tracking-wider">صافي الراتب المستحق للصرف (Net Payable Salary)</span>
-                  <span class="text-[11px] text-slate-600">المبلغ النهائي بعد إضافة المكافآت وخصم التأخيرات والغياب والسلف</span>
+                  <span class="text-[11px] text-slate-600">المبلغ النهائي بعد إضافة المكافآت وخصم التأخيرات والغياب والسلف والجزاءات</span>
                 </div>
                 <div class="text-left sm:text-right">
                   <span class="text-2xl sm:text-3xl font-black text-emerald-700 font-mono tracking-tight block">

@@ -405,6 +405,7 @@ router.delete('/companies/:id', authenticateSuperAdmin, (req, res) => {
       db.prepare(`DELETE FROM permission_requests WHERE employee_id IN (${placeholders})`).run(...empIds);
       db.prepare(`DELETE FROM salary_advances WHERE employee_id IN (${placeholders})`).run(...empIds);
       db.prepare(`DELETE FROM employee_bonuses WHERE employee_id IN (${placeholders})`).run(...empIds);
+      db.prepare(`DELETE FROM employee_deductions WHERE employee_id IN (${placeholders})`).run(...empIds);
       db.prepare(`DELETE FROM notifications WHERE user_id IN (${placeholders})`).run(...empIds);
       db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...empIds);
     }

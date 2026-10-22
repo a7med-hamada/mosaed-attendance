@@ -585,8 +585,15 @@ router.post('/send-payslip', authenticateToken, requireManager, async (req, res)
     `).get(employee_id, month);
     const totalBonuses = bonRow && bonRow.total ? parseFloat(bonRow.total) : 0;
 
+    // Manual Deductions
+    const dedRow = db.prepare(`
+      SELECT SUM(amount) as total FROM employee_deductions
+      WHERE employee_id = ? AND month = ?
+    `).get(employee_id, month);
+    const totalManualDeductions = dedRow && dedRow.total ? parseFloat(dedRow.total) : 0;
+
     const baseSalary = parseFloat(emp.base_salary || 0);
-    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     const settings = getWhatsAppSettings();
     const messageText = buildPayslipMessage(settings.company_name, month, {
@@ -596,7 +603,7 @@ router.post('/send-payslip', authenticateToken, requireManager, async (req, res)
       baseSalary: baseSalary.toLocaleString('en-US'),
       presentDays,
       bonuses: totalBonuses.toLocaleString('en-US'),
-      deductions: totalDeductions.toLocaleString('en-US'),
+      deductions: (totalDeductions + totalManualDeductions).toLocaleString('en-US'),
       advances: totalAdvances.toLocaleString('en-US'),
       netSalary: netSalary.toLocaleString('en-US'),
       netSalaryTafqeet: tafqeet || ''
@@ -667,8 +674,14 @@ router.post('/send-all-payslips', authenticateToken, requireManager, async (req,
       `).get(emp.id, month);
       const totalBonuses = bonRow && bonRow.total ? parseFloat(bonRow.total) : 0;
 
+      const dedRow = db.prepare(`
+        SELECT SUM(amount) as total FROM employee_deductions
+        WHERE employee_id = ? AND month = ?
+      `).get(emp.id, month);
+      const totalManualDeductions = dedRow && dedRow.total ? parseFloat(dedRow.total) : 0;
+
       const baseSalary = parseFloat(emp.base_salary || 0);
-      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances).toFixed(2)));
+      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
       const messageText = buildPayslipMessage(settings.company_name, month, {
         name: emp.full_name,
@@ -677,7 +690,7 @@ router.post('/send-all-payslips', authenticateToken, requireManager, async (req,
         baseSalary: baseSalary.toLocaleString('en-US'),
         presentDays,
         bonuses: totalBonuses.toLocaleString('en-US'),
-        deductions: totalDeductions.toLocaleString('en-US'),
+        deductions: (totalDeductions + totalManualDeductions).toLocaleString('en-US'),
         advances: totalAdvances.toLocaleString('en-US'),
         netSalary: netSalary.toLocaleString('en-US')
       });

@@ -53,8 +53,8 @@ function seedDatabase() {
   settingStmt.run('suspicious_ip_detection', '1', 'security', 'اكتشاف تسجيلات الدخول المشبوهة لنفس الـ IP');
 
   // 5. Default Passwords
-  const hashAdmin = bcrypt.hashSync('admin123', 10);
-  const hashEmp = bcrypt.hashSync('emp123', 10);
+  const hashAdmin = bcrypt.hashSync(process.env.INITIAL_ADMIN_PASSWORD || 'admin123', 10);
+  const hashEmp = bcrypt.hashSync(process.env.DEMO_EMPLOYEE_PASSWORD || 'emp123', 10);
 
   // Helper to generate a placeholder avatar SVG
   function generateAvatar(name, initials, color) {

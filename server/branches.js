@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { db, logAudit, createNotification } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
 const { loadFromCloud, saveToCloud } = require('./cloud-sync');
@@ -33,7 +34,11 @@ router.get('/', authenticateToken, requireManager, async (req, res) => {
 
     // 3. Get all branch requests for this company
     const requests = db.prepare(`
-      SELECT *
+      SELECT id, company_manager_id, parent_company_name, branch_name,
+        branch_manager_name, branch_phone, branch_email, branch_address,
+        branch_latitude, branch_longitude, branch_radius, branch_logo, status,
+        super_admin_notes, created_branch_manager_id, created_workplace_id,
+        created_at, reviewed_at
       FROM branch_requests
       WHERE company_manager_id = ?
       ORDER BY id DESC
@@ -106,7 +111,7 @@ router.post('/request', authenticateToken, requireManager, async (req, res) => {
     const stmt = db.prepare(`
       INSERT INTO branch_requests (
         company_manager_id, parent_company_name, branch_name, branch_manager_name,
-        branch_phone, branch_email, branch_password, branch_address,
+        branch_phone, branch_email, branch_password_hash, branch_address,
         branch_latitude, branch_longitude, branch_radius, branch_logo, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment')
     `);
@@ -118,7 +123,7 @@ router.post('/request', authenticateToken, requireManager, async (req, res) => {
       branch_manager_name.trim(),
       branch_phone.trim(),
       branch_email.trim(),
-      branch_password.trim(),
+      bcrypt.hashSync(String(branch_password).trim(), 10),
       branch_address ? branch_address.trim() : null,
       branch_latitude ? parseFloat(branch_latitude) : 30.0444,
       branch_longitude ? parseFloat(branch_longitude) : 31.2357,
@@ -182,12 +187,15 @@ router.delete('/request/:id', authenticateToken, requireManager, async (req, res
     const managerId = req.user.manager_id || req.user.id;
     const reqId = parseInt(req.params.id, 10);
 
-    const target = db.prepare(`SELECT * FROM branch_requests WHERE id = ?`).get(reqId);
+    const target = db.prepare(`
+      SELECT id, company_manager_id, branch_name, status
+      FROM branch_requests WHERE id = ?
+    `).get(reqId);
     if (!target) {
       return res.status(404).json({ success: false, error: 'الطلب غير موجود' });
     }
 
-    if (target.company_manager_id !== managerId && managerId !== 1) {
+    if (target.company_manager_id !== managerId) {
       return res.status(403).json({ success: false, error: 'غير مصرح بإلغاء هذا الطلب' });
     }
 

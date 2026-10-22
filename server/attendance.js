@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { db, logAudit, createNotification, calculateHaversineDistance, uploadsDir, getTodayString, getCurrentTimeString, getCurrentMonthString } = require('./database');
-const { authenticateToken, requireManager } = require('./auth');
+const { authenticateToken, requireManager, isManagedEmployee, isManagedResource } = require('./auth');
 const {
   sendWhatsAppMessage,
   buildLateAlertMessage,
@@ -1083,7 +1083,7 @@ router.get('/my-today', authenticateToken, (req, res) => {
 router.get('/live-today', authenticateToken, requireManager, (req, res) => {
   try {
     const today = getTodayString();
-    const managerId = req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
 
     // Trigger auto-absence & auto-checkout checks
     checkAndMarkAutoAbsences();
@@ -1193,7 +1193,8 @@ router.get('/history', authenticateToken, (req, res) => {
     const isManager = req.user.role === 'manager';
     const { date_from, date_to, employee_id, department_id, status, verification_status, search } = req.query;
 
-    syncAbsencesForDateRange(date_from, date_to, isManager ? req.user.id : null);
+    const managerId = req.user.manager_id || req.user.id;
+    syncAbsencesForDateRange(date_from, date_to, isManager ? managerId : null);
 
     let query = `
       SELECT
@@ -1213,7 +1214,7 @@ router.get('/history', authenticateToken, (req, res) => {
       params.push(req.user.id);
     } else {
       query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
-      params.push(req.user.id, req.user.id);
+      params.push(managerId, managerId);
       if (employee_id) {
         query += ` AND ar.employee_id = ? `;
         params.push(employee_id);
@@ -1323,6 +1324,9 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
     if (!oldRecord) {
       return res.status(404).json({ success: false, error: 'سجل الحضور غير موجود' });
     }
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, oldRecord.employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بتعديل سجل تابع لمنشأة أخرى' });
+    }
 
     const cleanReason = (reason && reason.trim()) || 'تعديل موعد الحضور بناء على مراجعة الإدارة';
 
@@ -1334,6 +1338,10 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
     let graceMins = 15;
 
     if (shift_id !== undefined && shift_id !== null && shift_id !== '') {
+      const managerId = req.user.manager_id || req.user.id;
+      if (!isManagedResource('company_shifts', managerId, shift_id)) {
+        return res.status(403).json({ success: false, error: 'لا يمكن استخدام وردية تابعة لمنشأة أخرى' });
+      }
       const chosenShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(parseInt(shift_id, 10));
       if (chosenShift) {
         newShiftId = chosenShift.id;
@@ -1473,6 +1481,9 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
     if (!emp) {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بتسجيل حضور لموظف تابع لمنشأة أخرى' });
+    }
 
     let targetShiftId = shift_id !== undefined ? (shift_id ? parseInt(shift_id, 10) : null) : (emp.emp_shift_id || null);
     let targetShiftName = null;
@@ -1481,6 +1492,9 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
     let graceMins = emp.grace_period_minutes;
 
     if (targetShiftId) {
+      if (!isManagedResource('company_shifts', req.user.manager_id || req.user.id, targetShiftId)) {
+        return res.status(403).json({ success: false, error: 'لا يمكن استخدام وردية تابعة لمنشأة أخرى' });
+      }
       const chosenShift = db.prepare('SELECT * FROM company_shifts WHERE id = ?').get(targetShiftId);
       if (chosenShift) {
         targetShiftName = chosenShift.name;
@@ -1588,6 +1602,9 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
     if (!record) {
       return res.status(404).json({ success: false, error: 'السجل غير موجود أو تم حذفه مسبقاً' });
     }
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, record.employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بحذف سجل تابع لمنشأة أخرى' });
+    }
 
     db.prepare(`DELETE FROM attendance_records WHERE id = ?`).run(recordId);
 
@@ -1643,6 +1660,8 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
       return res.status(400).json({ success: false, error: 'سبب الإضافة الجماعية إلزامي للتوثيق في سجل العمليات الرقابي' });
     }
 
+    const managerId = req.user.manager_id || req.user.id;
+
     // Determine target employees
     let employees = [];
     if (employee_id && employee_id !== 'all') {
@@ -1654,9 +1673,12 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
                COALESCE(s.working_days, '0,1,2,3,4') as working_days
         FROM users u
         LEFT JOIN schedules s ON u.schedule_id = s.id
-        WHERE u.id = ?
+        WHERE u.id = ? AND u.role = 'employee'
       `).get(employee_id);
       if (!emp) return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+      if (!isManagedEmployee(managerId, employee_id)) {
+        return res.status(403).json({ success: false, error: 'غير مصرح بإضافة حضور لموظف تابع لمنشأة أخرى' });
+      }
       employees = [emp];
     } else {
       employees = db.prepare(`
@@ -1668,7 +1690,8 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
         FROM users u
         LEFT JOIN schedules s ON u.schedule_id = s.id
         WHERE u.is_active = 1 AND u.role = 'employee'
-      `).all();
+          AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+      `).all(managerId, managerId);
     }
 
     if (employees.length === 0) {
@@ -1795,6 +1818,17 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, error: 'يرجى تقديم صف حضور واحد على الأقل' });
+    }
+
+    const managerId = req.user.manager_id || req.user.id;
+    for (const item of items) {
+      const employeeId = parseInt(item.employee_id, 10);
+      if (!employeeId || !isManagedEmployee(managerId, employeeId)) {
+        return res.status(403).json({ success: false, error: 'تحتوي البيانات على موظف غير تابع لمنشأتك' });
+      }
+      if (item.shift_id && !isManagedResource('company_shifts', managerId, item.shift_id)) {
+        return res.status(403).json({ success: false, error: 'تحتوي البيانات على وردية غير تابعة لمنشأتك' });
+      }
     }
 
     let insertedCount = 0;
@@ -1983,23 +2017,14 @@ router.get('/face-reset-status', authenticateToken, (req, res) => {
 router.get('/face-reset-requests', authenticateToken, requireManager, (req, res) => {
   try {
     const managerId = req.user.manager_id || req.user.id;
-    let requests;
-    if (managerId === 1) {
-      requests = db.prepare(`
-        SELECT r.*, u.full_name as employee_name, u.employee_code, u.profile_photo
-        FROM face_reset_requests r
-        JOIN users u ON r.employee_id = u.id
-        ORDER BY r.created_at DESC LIMIT 50
-      `).all();
-    } else {
-      requests = db.prepare(`
-        SELECT r.*, u.full_name as employee_name, u.employee_code, u.profile_photo
-        FROM face_reset_requests r
-        JOIN users u ON r.employee_id = u.id
-        WHERE r.manager_id = ?
-        ORDER BY r.created_at DESC LIMIT 50
-      `).all(managerId);
-    }
+    const requests = db.prepare(`
+      SELECT r.*, u.full_name as employee_name, u.employee_code, u.profile_photo
+      FROM face_reset_requests r
+      JOIN users u ON r.employee_id = u.id
+      WHERE (r.manager_id = ? OR (r.manager_id IS NULL AND ? = 1))
+        AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+      ORDER BY r.created_at DESC LIMIT 50
+    `).all(managerId, managerId, managerId, managerId);
 
     res.json({ success: true, requests });
   } catch (err) {
@@ -2039,9 +2064,12 @@ router.put('/face-reset-requests/:id/review', authenticateToken, requireManager,
     if (!resetReq) {
       resetReq = db.prepare(`
         SELECT * FROM face_reset_requests 
-        WHERE (manager_id = ? OR ? = 1) AND status = 'pending' 
+        WHERE (manager_id = ? OR (manager_id IS NULL AND ? = 1)) AND status = 'pending' 
         ORDER BY id DESC LIMIT 1
       `).get(managerId, managerId);
+    }
+    if (resetReq && !isManagedEmployee(managerId, resetReq.employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بمراجعة طلب تابع لمنشأة أخرى' });
     }
 
     // Determine target employee
@@ -2054,7 +2082,7 @@ router.put('/face-reset-requests/:id/review', authenticateToken, requireManager,
       if (emp) targetEmployeeName = emp.full_name;
     } else if (notif) {
       // Find employee mentioned in notification message
-      const employees = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1)").all(managerId, managerId);
+      const employees = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))").all(managerId, managerId);
       const matchedEmp = employees.find(e => notif.message && notif.message.includes(e.full_name));
       if (matchedEmp) {
         targetEmployeeId = matchedEmp.id;
@@ -2063,12 +2091,16 @@ router.put('/face-reset-requests/:id/review', authenticateToken, requireManager,
     }
 
     if (!targetEmployeeId) {
-      const anyEmp = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1) AND face_descriptor IS NOT NULL LIMIT 1").get(managerId, managerId)
-        || db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR ? = 1) LIMIT 1").get(managerId, managerId);
+      const anyEmp = db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1)) AND face_descriptor IS NOT NULL LIMIT 1").get(managerId, managerId)
+        || db.prepare("SELECT id, full_name FROM users WHERE role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1)) LIMIT 1").get(managerId, managerId);
       if (anyEmp) {
         targetEmployeeId = anyEmp.id;
         targetEmployeeName = anyEmp.full_name;
       }
+    }
+
+    if (targetEmployeeId && !isManagedEmployee(managerId, targetEmployeeId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بتعديل بصمة موظف تابع لمنشأة أخرى' });
     }
 
     if (action === 'approved') {

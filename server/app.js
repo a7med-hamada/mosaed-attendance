@@ -27,12 +27,45 @@ const { cloudSyncMiddleware, loadFromCloud } = require('./cloud-sync');
 
 // Auto seed on boot
 seedDatabase();
-loadFromCloud(true).catch(() => {});
+loadFromCloud(true).catch((error) => {
+  console.error('[CloudSync] Initial load failed:', error.message);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+);
+
+app.disable('x-powered-by');
+const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || '0', 10);
+if (Number.isInteger(proxyHops) && proxyHops >= 0) {
+  app.set('trust proxy', proxyHops);
+}
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+app.use(cors({
+  origin(origin, callback) {
+    if (allowedOrigins.size === 0 || !origin || allowedOrigins.has(origin.replace(/\/+$/, ''))) {
+      return callback(null, true);
+    }
+    callback(null, false);
+  }
+}));
 // Support large body for camera selfies in base64
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
@@ -71,7 +104,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets
+// Serve static assets with safe path validation
+app.use('/uploads', (req, res, next) => {
+  const safeFilename = path.basename(req.path);
+  if (req.path.includes('..') || !/\.(svg|png|jpe?g|webp|gif)$/i.test(safeFilename)) {
+    return res.sendStatus(404);
+  }
+  next();
+});
 app.use(express.static(publicDir));
 app.use('/uploads', express.static(path.join(publicDir, 'uploads')));
 
@@ -114,8 +154,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`🚀 Workforce Attendance & HR System is running!`);
   console.log(`📡 URL: http://0.0.0.0:${PORT}`);
-  console.log(`👑 Admin Login:    admin@workforce.local  / admin123`);
-  console.log(`👤 Employee Login: sara@workforce.local   / emp123`);
+  console.log('🔐 Use manager registration to create an account.');
   console.log(`=======================================================`);
 });
 

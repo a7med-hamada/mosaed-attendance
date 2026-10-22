@@ -3545,33 +3545,35 @@ const ManagerUI = {
 
   async exportHistoryCsv() {
     try {
-      const token = (typeof API !== 'undefined' && API.getToken()) || localStorage.getItem('token') || '';
-      const url = `/api/reports/export/csv?token=${encodeURIComponent(token)}`;
+      const blob = await API.exportCsv();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error('Export error:', err);
-      window.open(`/api/reports/export/csv?token=${encodeURIComponent(localStorage.getItem('token') || '')}`, '_blank');
+      showToast(err.message || 'تعذر تصدير التقرير', 'danger');
     }
   },
 
-  exportMonthCsv(month) {
+  async exportMonthCsv(month) {
     try {
-      const token = (typeof API !== 'undefined' && API.getToken()) || localStorage.getItem('token') || '';
-      const url = `/api/reports/export/csv?token=${encodeURIComponent(token)}&date_from=${month}-01&date_to=${month}-31`;
+      const blob = await API.exportCsv({ date_from: `${month}-01`, date_to: `${month}-31` });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `payroll_attendance_${month}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       console.error('Export month error:', err);
-      window.open(`/api/reports/export/csv?token=${encodeURIComponent(localStorage.getItem('token') || '')}&date_from=${month}-01&date_to=${month}-31`, '_blank');
+      showToast(err.message || 'تعذر تصدير تقرير الشهر', 'danger');
     }
   },
 

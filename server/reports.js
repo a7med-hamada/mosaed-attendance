@@ -1,6 +1,6 @@
 const express = require('express');
 const { db, getCurrentMonthString } = require('./database');
-const { authenticateToken, requireManager } = require('./auth');
+const { authenticateToken, requireManager, isManagedEmployee } = require('./auth');
 const { syncMissingAbsencesForMonth, syncAbsencesForDateRange } = require('./absence-sync');
 
 const router = express.Router();
@@ -10,7 +10,8 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
   try {
     const isManager = req.user.role === 'manager';
     const month = req.query.month || getCurrentMonthString(); // YYYY-MM
-    syncMissingAbsencesForMonth(month, isManager ? req.user.id : null);
+    const managerId = req.user.manager_id || req.user.id;
+    syncMissingAbsencesForMonth(month, managerId);
     const requestedEmpId = req.query.employee_id;
 
     let targetEmployeeId = null;
@@ -18,6 +19,9 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       targetEmployeeId = req.user.id;
     } else if (requestedEmpId) {
       targetEmployeeId = parseInt(requestedEmpId, 10);
+      if (!isManagedEmployee(managerId, targetEmployeeId)) {
+        return res.status(403).json({ success: false, error: 'غير مصرح بعرض تقرير موظف تابع لمنشأة أخرى' });
+      }
     }
 
     let empQuery = `
@@ -31,7 +35,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
     const empParams = [];
     if (isManager) {
       empQuery += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
-      empParams.push(req.user.id, req.user.id);
+      empParams.push(managerId, managerId);
     }
     if (targetEmployeeId) {
       empQuery += ` AND u.id = ? `;
@@ -143,12 +147,19 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
 // GET /api/reports/available-months (All months with records + current month)
 router.get('/available-months', authenticateToken, (req, res) => {
   try {
+    const managerId = req.user.manager_id || req.user.id;
+    const isManager = req.user.role === 'manager';
     const rawMonths = db.prepare(`
       SELECT DISTINCT SUBSTR(date, 1, 7) as month
-      FROM attendance_records
-      WHERE date IS NOT NULL AND length(date) >= 7
+      FROM attendance_records ar
+      JOIN users u ON u.id = ar.employee_id
+      WHERE ar.date IS NOT NULL AND length(ar.date) >= 7
+        AND (
+          (u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)))
+          OR (? = 0 AND u.id = ?)
+        )
       ORDER BY month DESC
-    `).all().map(r => r.month);
+    `).all(managerId, managerId, isManager ? 1 : 0, req.user.id).map(r => r.month);
 
     const currentMonth = getCurrentMonthString();
     if (!rawMonths.includes(currentMonth)) {
@@ -189,12 +200,16 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     const isManager = req.user.role === 'manager';
     const month = req.query.month || getCurrentMonthString();
     const employeeId = isManager ? parseInt(req.query.employee_id, 10) : req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
 
     if (!employeeId) {
       return res.status(400).json({ success: false, error: 'يرجى تحديد الموظف' });
     }
+    if (isManager && !isManagedEmployee(managerId, employeeId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بعرض تفاصيل موظف تابع لمنشأة أخرى' });
+    }
 
-    syncMissingAbsencesForMonth(month);
+    syncMissingAbsencesForMonth(month, managerId);
 
     const employee = db.prepare(`
       SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.phone, u.hire_date, u.profile_photo, u.base_salary,
@@ -375,9 +390,14 @@ router.get('/department-summary', authenticateToken, requireManager, (req, res) 
     const depts = db.prepare(`
       SELECT d.id, d.name, COUNT(DISTINCT u.id) as employee_count
       FROM departments d
-      LEFT JOIN users u ON (d.id = u.department_id AND u.is_active = 1 AND u.role = 'employee')
+      LEFT JOIN users u ON (
+        d.id = u.department_id AND u.is_active = 1 AND u.role = 'employee'
+        AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+      )
+      WHERE d.manager_id = ? OR (d.manager_id IS NULL AND ? = 1)
       GROUP BY d.id
-    `).all();
+    `).all(req.user.manager_id || req.user.id, req.user.manager_id || req.user.id,
+      req.user.manager_id || req.user.id, req.user.manager_id || req.user.id);
 
     const result = depts.map(dept => {
       const stats = db.prepare(`
@@ -392,7 +412,8 @@ router.get('/department-summary', authenticateToken, requireManager, (req, res) 
         FROM attendance_records ar
         JOIN users u ON ar.employee_id = u.id
         WHERE u.department_id = ? AND ar.date LIKE ?
-      `).get(dept.id, `${month}%`);
+          AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))
+      `).get(dept.id, `${month}%`, req.user.manager_id || req.user.id, req.user.manager_id || req.user.id);
 
       return {
         department: dept,
@@ -417,9 +438,10 @@ router.get('/department-summary', authenticateToken, requireManager, (req, res) 
 router.get('/export/csv', authenticateToken, (req, res) => {
   try {
     const isManager = req.user.role === 'manager';
+    const managerId = req.user.manager_id || req.user.id;
     const { date_from, date_to, employee_id, department_id, status } = req.query;
 
-    syncAbsencesForDateRange(date_from, date_to, isManager ? req.user.id : null);
+    syncAbsencesForDateRange(date_from, date_to, isManager ? managerId : null);
 
     let query = `
       SELECT
@@ -451,7 +473,7 @@ router.get('/export/csv', authenticateToken, (req, res) => {
       params.push(req.user.id);
     } else {
       query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
-      params.push(req.user.id, req.user.id);
+      params.push(managerId, managerId);
       if (employee_id) {
         query += ` AND ar.employee_id = ? `;
         params.push(employee_id);
@@ -549,8 +571,8 @@ router.post('/reset-archive', authenticateToken, requireManager, (req, res) => {
 // 8. Gamification & Attendance Score (مؤشر أداء الالتزام ولوحة شرف موظف الشهر)
 // ==========================================
 
-function calculateEmployeeScore(employeeId, month) {
-  syncMissingAbsencesForMonth(month);
+function calculateEmployeeScore(employeeId, month, managerId = null) {
+  syncMissingAbsencesForMonth(month, managerId);
 
   const records = db.prepare(`
     SELECT * FROM attendance_records
@@ -766,7 +788,7 @@ function getLeaderboardData(month, managerId = null) {
   const employees = db.prepare(query).all(...params);
 
   const list = employees.map(emp => {
-    const scoreData = calculateEmployeeScore(emp.id, month);
+    const scoreData = calculateEmployeeScore(emp.id, month, managerId);
     return {
       employee: emp,
       score: scoreData.score,
@@ -833,7 +855,7 @@ function getLeaderboardData(month, managerId = null) {
 router.get('/leaderboard', authenticateToken, (req, res) => {
   try {
     const month = req.query.month || getCurrentMonthString();
-    const managerId = req.user.role === 'manager' ? req.user.id : null;
+    const managerId = req.user.manager_id || req.user.id;
     const data = getLeaderboardData(month, managerId);
 
     let myRank = null;
@@ -856,9 +878,13 @@ router.get('/leaderboard', authenticateToken, (req, res) => {
 router.get('/my-score', authenticateToken, (req, res) => {
   try {
     const month = req.query.month || getCurrentMonthString();
+    const managerId = req.user.manager_id || req.user.id;
     const employeeId = req.user.role === 'manager' && req.query.employee_id ? parseInt(req.query.employee_id, 10) : req.user.id;
-    const scoreData = calculateEmployeeScore(employeeId, month);
-    const leaderboardData = getLeaderboardData(month, null);
+    if (req.user.role === 'manager' && !isManagedEmployee(managerId, employeeId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بعرض تقييم موظف تابع لمنشأة أخرى' });
+    }
+    const scoreData = calculateEmployeeScore(employeeId, month, managerId);
+    const leaderboardData = getLeaderboardData(month, managerId);
     const rankedItem = leaderboardData.leaderboard.find(item => item.employee.id === employeeId);
 
     res.json({

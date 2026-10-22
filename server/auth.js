@@ -5,9 +5,20 @@ const fs = require('fs');
 const path = require('path');
 const { db, logAudit, uploadsDir } = require('./database');
 const { PACKAGES, SUPPORT_WHATSAPP } = require('./support');
+const { JWT_SECRET } = require('./security-config');
+const { createRateLimiter } = require('./rate-limit');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
+const loginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.'
+});
+const registrationRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'تم تجاوز عدد محاولات إنشاء الحساب. يرجى المحاولة لاحقاً.'
+});
 
 function getSubscriptionDetails(managerId) {
   const mgr = db.prepare('SELECT id, is_active, subscription_plan, subscription_expires_at, trial_days, created_at FROM users WHERE id = ?').get(managerId);
@@ -64,8 +75,8 @@ function getSubscriptionDetails(managerId) {
 // Middleware to authenticate JWT
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  let token = authHeader && authHeader.split(' ')[1];
-  if (!token && req.query && req.query.token) {
+  let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (authHeader && authHeader.split(' ')[1]);
+  if (!token && req.query && req.query.token && (req.path.includes('/export') || (req.baseUrl && req.baseUrl.includes('/export')) || (req.originalUrl && req.originalUrl.includes('/export')))) {
     token = req.query.token;
   }
 
@@ -83,6 +94,7 @@ function authenticateToken(req, res, next) {
     if (!activeCheck || !activeCheck.is_active) {
       return res.status(403).json({ success: false, error: 'تم إيقاف حسابك مؤقتاً، يرجى مراجعة إدارة المنظومة' });
     }
+    user.role = activeCheck.role;
     // If employee or sub-manager, verify primary manager company account is also active
     const primaryMgrId = activeCheck.role === 'manager' ? (activeCheck.parent_manager_id || null) : activeCheck.manager_id;
     if (primaryMgrId) {
@@ -122,8 +134,36 @@ function requireManager(req, res, next) {
   next();
 }
 
+function isManagedUser(managerId, userId) {
+  return !!db.prepare(`
+    SELECT 1 FROM users
+    WHERE id = ?
+      AND (
+        (role = 'employee' AND (manager_id = ? OR (manager_id IS NULL AND ? = 1)))
+        OR (role = 'manager' AND parent_manager_id = ?)
+      )
+  `).get(userId, managerId, managerId, managerId);
+}
+
+function isManagedEmployee(managerId, employeeId) {
+  return !!db.prepare(`
+    SELECT 1 FROM users
+    WHERE id = ? AND role = 'employee'
+      AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
+  `).get(employeeId, managerId, managerId);
+}
+
+function isManagedResource(table, managerId, resourceId) {
+  const allowedTables = new Set(['departments', 'schedules', 'company_shifts']);
+  if (!allowedTables.has(table)) return false;
+  return !!db.prepare(`
+    SELECT 1 FROM ${table}
+    WHERE id = ? AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
+  `).get(resourceId, managerId, managerId);
+}
+
 // POST /api/auth/register-manager (New Manager Registration)
-router.post('/register-manager', (req, res) => {
+router.post('/register-manager', registrationRateLimiter, (req, res) => {
   try {
     const { company_name, full_name, email, password, confirm_password, phone } = req.body;
 
@@ -179,7 +219,11 @@ router.post('/register-manager', (req, res) => {
       manager_id: newManagerId
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: '7d',
+      issuer: 'workforce-attendance',
+      audience: 'workforce-api'
+    });
 
     res.json({
       success: true,
@@ -202,7 +246,7 @@ router.post('/register-manager', (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', loginRateLimiter, (req, res) => {
   try {
     const { identifier, password } = req.body;
     if (!identifier || !password) {
@@ -272,7 +316,11 @@ router.post('/login', (req, res) => {
       manager_id: effectiveManagerId
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: '7d',
+      issuer: 'workforce-attendance',
+      audience: 'workforce-api'
+    });
 
     // Safe user profile without password hash
     const { password_hash, ...safeUser } = user;
@@ -521,5 +569,8 @@ module.exports = {
   router,
   authenticateToken,
   requireManager,
-  getSubscriptionDetails
+  getSubscriptionDetails,
+  isManagedUser,
+  isManagedEmployee,
+  isManagedResource
 };

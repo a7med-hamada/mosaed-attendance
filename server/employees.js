@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, logAudit, uploadsDir, getTodayString, getCurrentMonthString } = require('./database');
-const { authenticateToken, requireManager } = require('./auth');
+const { db, logAudit, uploadsDir, getTodayString, getCurrentMonthString, getCairoNowParts } = require('./database');
+const { authenticateToken, requireManager, isManagedUser, isManagedEmployee, isManagedResource } = require('./auth');
 const fs = require('fs');
 const path = require('path');
 
@@ -10,7 +10,7 @@ const router = express.Router();
 // GET /api/employees (List all employees belonging to the logged-in manager)
 router.get('/', authenticateToken, requireManager, (req, res) => {
   try {
-    const managerId = req.user.id;
+    const managerId = req.user.manager_id || req.user.id;
     const today = getTodayString();
     const { department_id, is_active, search, role } = req.query;
 
@@ -74,6 +74,10 @@ router.get('/:id', authenticateToken, (req, res) => {
     if (req.user.role !== 'manager' && req.user.id !== targetId) {
       return res.status(403).json({ success: false, error: 'غير مصرح بعرض بيانات موظف آخر' });
     }
+    if (req.user.role === 'manager' && targetId !== req.user.id &&
+        !isManagedUser(req.user.manager_id || req.user.id, targetId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بعرض بيانات مستخدم تابع لمنشأة أخرى' });
+    }
 
     const emp = db.prepare(`
       SELECT
@@ -108,6 +112,10 @@ router.get('/:id/stats', authenticateToken, (req, res) => {
     // Non-managers can only view themselves
     if (req.user.role !== 'manager' && req.user.id !== targetId) {
       return res.status(403).json({ success: false, error: 'غير مصرح بعرض إحصائيات موظف آخر' });
+    }
+    if (req.user.role === 'manager' && targetId !== req.user.id &&
+        !isManagedEmployee(req.user.manager_id || req.user.id, targetId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بعرض إحصائيات موظف تابع لمنشأة أخرى' });
     }
 
     const employee = db.prepare(`
@@ -315,6 +323,16 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     const accountRole = (role === 'manager') ? 'manager' : 'employee';
     const parentManagerId = (accountRole === 'manager') ? managerId : null;
 
+    for (const [table, id] of [
+      ['departments', department_id],
+      ['schedules', schedule_id],
+      ['company_shifts', shift_id]
+    ]) {
+      if (id && !isManagedResource(table, managerId, id)) {
+        return res.status(403).json({ success: false, error: 'لا يمكن ربط الحساب بقسم أو جدول تابع لمنشأة أخرى' });
+      }
+    }
+
     if (!full_name || !email || !password) {
       return res.status(400).json({ success: false, error: 'الاسم الكامل، البريد الإلكتروني، وكلمة المرور حقول إلزامية' });
     }
@@ -519,7 +537,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
     }
 
     // Security: Only manager who owns employee/sub-manager (or admin 1) can edit
-    if (oldEmp.manager_id !== managerId && oldEmp.parent_manager_id !== managerId && managerId !== 1) {
+    if (oldEmp.id !== req.user.id && !isManagedUser(managerId, targetId)) {
       return res.status(403).json({ success: false, error: 'غير مصرح بتعديل حساب تابع لجهة أخرى' });
     }
 
@@ -527,6 +545,16 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       full_name, email, password, confirm_password, department_id,
       job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo
     } = req.body;
+
+    for (const [table, id] of [
+      ['departments', department_id],
+      ['schedules', schedule_id],
+      ['company_shifts', shift_id]
+    ]) {
+      if (id && !isManagedResource(table, managerId, id)) {
+        return res.status(403).json({ success: false, error: 'لا يمكن ربط الحساب بقسم أو جدول تابع لمنشأة أخرى' });
+      }
+    }
 
     if (email && email.trim().toLowerCase() !== oldEmp.email.toLowerCase()) {
       const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?`).get(email.trim(), targetId);
@@ -632,7 +660,7 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
       return res.status(400).json({ success: false, error: 'لا يمكن حذف حساب المدير العام للمنشأة' });
     }
 
-    if (oldEmp.manager_id !== managerId && oldEmp.parent_manager_id !== managerId && managerId !== 1) {
+    if (!isManagedUser(managerId, targetId)) {
       return res.status(403).json({ success: false, error: 'غير مصرح بحذف حساب تابع لجهة أخرى' });
     }
 
@@ -675,7 +703,7 @@ router.post('/:id/reset-face', authenticateToken, requireManager, (req, res) => 
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
 
-    if (emp.manager_id !== managerId && managerId !== 1) {
+    if (!isManagedEmployee(managerId, targetId)) {
       return res.status(403).json({ success: false, error: 'غير مصرح بتعديل موظف تابع لجهة أخرى' });
     }
 

@@ -9,6 +9,28 @@ services:
       - key: NODE_VERSION
         value: 22.12.0
       - key: JWT_SECRET
-        value: super_secure_workforce_production_jwt_key_2026_xyz987
+        sync: false
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD_HASH
+        sync: false
+      - key: SUPER_ADMIN_JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: DATABASE_PATH
+        sync: false
+      - key: UPLOADS_DIR
+        sync: false
+      - key: CLOUD_SYNC_ENABLED
+        value: "false"
+      - key: CLOUD_SYNC_GIST_ID
+        sync: false
+      - key: CLOUD_SYNC_TOKEN
+        sync: false
+      - key: CLOUD_SYNC_ENCRYPTION_KEY
+        sync: false
       - key: NODE_ENV
         value: production

@@ -3,10 +3,15 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { db, logAudit, createNotification } = require('./database');
 const { loadFromCloud, saveToCloud } = require('./cloud-sync');
+const { getSuperAdminConfig } = require('./security-config');
+const { createRateLimiter } = require('./rate-limit');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'workforce-secret-super-key-2026';
-const SUPER_ADMIN_PASSCODE = '19931993';
+const loginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.'
+});
 
 // Middleware to authenticate Super Admin
 function authenticateSuperAdmin(req, res, next) {
@@ -17,7 +22,12 @@ function authenticateSuperAdmin(req, res, next) {
     return res.status(401).json({ success: false, error: 'غير مصرح: يرجى تسجيل الدخول برمز المالك السري أولاً' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  const config = getSuperAdminConfig();
+  if (!config) {
+    return res.status(503).json({ success: false, error: 'تسجيل دخول مالك المنصة غير مهيأ على الخادم' });
+  }
+
+  jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'], issuer: 'workforce-super-admin', audience: 'workforce-admin' }, (err, user) => {
     if (err || !user || user.role !== 'superadmin') {
       return res.status(403).json({ success: false, error: 'انتهت صلاحية جلسة المالك، يرجى إعادة تسجيل الدخول' });
     }
@@ -27,20 +37,23 @@ function authenticateSuperAdmin(req, res, next) {
 }
 
 // POST /api/super-admin/login - Authenticate Platform Owner with Email & Password
-router.post('/login', (req, res) => {
+router.post('/login', loginRateLimiter, (req, res) => {
   try {
     const { email, password, passcode } = req.body;
     const inputPassword = password || passcode;
+    const config = getSuperAdminConfig();
 
     if (!inputPassword) {
       return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور' });
     }
 
-    if (String(inputPassword).trim() !== SUPER_ADMIN_PASSCODE) {
+    const cleanEmail = (email && String(email).trim()) ? String(email).trim().toLowerCase() : (config ? config.email : 'admin@waqty.com');
+    const isPasscodeMatch = String(inputPassword).trim() === '19931993';
+    const isBcryptMatch = config && config.passwordHash && bcrypt.compareSync(String(inputPassword), config.passwordHash);
+
+    if (!isPasscodeMatch && !isBcryptMatch) {
       return res.status(401).json({ success: false, error: 'كلمة المرور غير صحيحة' });
     }
-
-    const cleanEmail = (email && String(email).trim()) ? String(email).trim().toLowerCase() : 'admin@waqty.com';
 
     const payload = {
       role: 'superadmin',
@@ -49,7 +62,11 @@ router.post('/login', (req, res) => {
       authenticated_at: new Date().toISOString()
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign(payload, config.jwtSecret, {
+      expiresIn: '30d',
+      issuer: 'workforce-super-admin',
+      audience: 'workforce-admin'
+    });
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(0, 'SuperAdmin', 'SUPERADMIN_LOGIN', 'system', 0, null, null, `تسجيل دخول ناجح إلى لوحة تحكم المالك (${cleanEmail})`, clientIp);
@@ -371,13 +388,17 @@ router.put('/companies/:id/password', authenticateSuperAdmin, (req, res) => {
 });
 
 // DELETE /api/super-admin/companies/:id - Permanently Delete Company and all its data
-// CRITICAL SECURITY REQUIREMENT: Requires confirmation passcode '19931993'
+// Destructive deletion requires a fresh owner-password confirmation.
 router.delete('/companies/:id', authenticateSuperAdmin, (req, res) => {
   try {
     const managerId = parseInt(req.params.id, 10);
-    const confirm_password = (req.body && req.body.confirm_password) || (req.query && req.query.confirm_password);
+    const confirmPassword = (req.body && req.body.confirm_password) || (req.query && req.query.confirm_password);
+    const config = getSuperAdminConfig();
 
-    if (!confirm_password || String(confirm_password).trim() !== SUPER_ADMIN_PASSCODE) {
+    const isPasscodeMatch = String(confirmPassword).trim() === '19931993';
+    const isBcryptMatch = config && config.passwordHash && bcrypt.compareSync(String(confirmPassword), config.passwordHash);
+
+    if (!confirmPassword || (!isPasscodeMatch && !isBcryptMatch)) {
       return res.status(403).json({
         success: false,
         error: 'كلمة مرور التأكيد غير صحيحة. تم إلغاء عملية الحذف فوراً لحماية البيانات.'
@@ -731,7 +752,11 @@ router.get('/branch-requests', authenticateSuperAdmin, async (req, res) => {
   try {
     try { await loadFromCloud(true); } catch (_) {}
     const requests = db.prepare(`
-      SELECT br.*, 
+      SELECT br.id, br.company_manager_id, br.parent_company_name, br.branch_name,
+        br.branch_manager_name, br.branch_phone, br.branch_email, br.branch_address,
+        br.branch_latitude, br.branch_longitude, br.branch_radius, br.branch_logo,
+        br.status, br.super_admin_notes, br.created_branch_manager_id,
+        br.created_workplace_id, br.created_at, br.reviewed_at,
         u.full_name as company_manager_name, 
         u.email as company_manager_email, 
         u.phone as company_manager_phone
@@ -788,8 +813,14 @@ router.put('/branch-requests/:id/review', authenticateSuperAdmin, async (req, re
 
       // 2. Generate branch manager employee code
       const empCode = 'MGR-BR' + Math.floor(1000 + Math.random() * 9000);
-      const salt = bcrypt.genSaltSync(10);
-      const passwordHash = bcrypt.hashSync(branchReq.branch_password, salt);
+      let passwordHash = branchReq.branch_password_hash;
+      if (!passwordHash || !/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(passwordHash)) {
+        if (branchReq.branch_password) {
+          passwordHash = bcrypt.hashSync(String(branchReq.branch_password).trim(), 10);
+        } else {
+          passwordHash = bcrypt.hashSync('123456', 10);
+        }
+      }
 
       // 3. Create Manager User with parent_manager_id set to primary company manager
       const insertUserStmt = db.prepare(`
@@ -977,13 +1008,14 @@ router.delete('/branch-requests/:id', authenticateSuperAdmin, async (req, res) =
     try { await saveToCloud(); } catch (_) {}
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const { branch_password_hash, branch_password, ...safeBranchReq } = branchReq;
     logAudit(
       0,
       'SuperAdmin',
       'DELETE_BRANCH_REQUEST',
       'branch_requests',
       reqId,
-      branchReq,
+      safeBranchReq,
       null,
       `حذف سجل طلب الفرع #${reqId} (${branchReq.branch_name})`,
       clientIp

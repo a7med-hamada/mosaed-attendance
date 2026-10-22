@@ -2,25 +2,29 @@ process.env.TZ = 'Africa/Cairo';
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const SOURCE_DB_FILE = path.join(__dirname, '..', 'attendance.db');
 let DB_FILE = SOURCE_DB_FILE;
-let uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+let uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'public', 'uploads');
 
 if (process.env.VERCEL) {
-  const tmpDbFile = path.join('/tmp', 'attendance.db');
+  const tmpDbFile = process.env.DATABASE_PATH || path.join('/tmp', 'attendance.db');
   try {
     if (!fs.existsSync(tmpDbFile) && fs.existsSync(SOURCE_DB_FILE)) {
       fs.copyFileSync(SOURCE_DB_FILE, tmpDbFile);
     }
     DB_FILE = tmpDbFile;
-    uploadsDir = path.join('/tmp', 'uploads');
+    uploadsDir = process.env.UPLOADS_DIR || path.join('/tmp', 'uploads');
   } catch (err) {
     console.error('Vercel /tmp setup fallback error:', err);
   }
+} else if (process.env.DATABASE_PATH) {
+  DB_FILE = path.resolve(process.env.DATABASE_PATH);
 }
 
 try {
+  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -275,7 +279,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_att_date ON attendance_records(date);
   CREATE INDEX IF NOT EXISTS idx_att_status ON attendance_records(status);
   CREATE INDEX IF NOT EXISTS idx_att_checkout ON attendance_records(date, check_out_time);
-  CREATE INDEX IF NOT EXISTS idx_users_manager ON users(manager_id);
   CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
   CREATE INDEX IF NOT EXISTS idx_adv_emp_month ON salary_advances(employee_id, month);
   CREATE INDEX IF NOT EXISTS idx_bon_emp_month ON employee_bonuses(employee_id, month);
@@ -285,7 +288,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_perm_emp_date ON permission_requests(employee_id, date, status);
   CREATE INDEX IF NOT EXISTS idx_wa_phone ON whatsapp_logs(recipient_phone);
   CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);
-  CREATE INDEX IF NOT EXISTS idx_shifts_mgr_active ON company_shifts(manager_id, is_active);
 `);
 
 // Safe migrations for multi-manager workspace separation & setup states
@@ -295,6 +297,7 @@ try {
     db.exec(`ALTER TABLE users ADD COLUMN manager_id INTEGER;`);
     db.exec(`UPDATE users SET manager_id = 1 WHERE role = 'employee';`);
   }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_manager ON users(manager_id);`);
   if (!userCols.includes('annual_leave_balance')) {
     db.exec(`ALTER TABLE users ADD COLUMN annual_leave_balance INTEGER DEFAULT 21;`);
   }
@@ -360,7 +363,7 @@ try {
       branch_manager_name TEXT NOT NULL,
       branch_phone TEXT NOT NULL,
       branch_email TEXT NOT NULL,
-      branch_password TEXT NOT NULL,
+      branch_password_hash TEXT NOT NULL,
       branch_address TEXT,
       branch_latitude REAL,
       branch_longitude REAL,
@@ -378,31 +381,32 @@ try {
     CREATE INDEX IF NOT EXISTS idx_branch_req_mgr ON branch_requests(company_manager_id);
   `);
 
-  try {
-    const existingBranch = db.prepare(`SELECT id FROM branch_requests WHERE branch_name = 'فرع القاهره' LIMIT 1`).get();
-    if (!existingBranch) {
-      db.prepare(`
-        INSERT INTO branch_requests (
-          company_manager_id, parent_company_name, branch_name, branch_manager_name,
-          branch_phone, branch_email, branch_password, branch_address, branch_latitude,
-          branch_longitude, branch_radius, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', datetime('now'))
-      `).run(
-        1,
-        'mosaed',
-        'فرع القاهره',
-        'محمد علي',
-        '01097076035',
-        'cairo@mosaed.local',
-        'cairo123456',
-        'القاهرة - جمهورية مصر العربية',
-        30.0444,
-        31.2357,
-        150
-      );
+  const branchRequestCols = db.prepare('PRAGMA table_info(branch_requests)').all().map(c => c.name);
+  if (!branchRequestCols.includes('branch_password_hash')) {
+    db.exec('ALTER TABLE branch_requests ADD COLUMN branch_password_hash TEXT;');
+  }
+  if (branchRequestCols.includes('branch_password')) {
+    const legacyRequests = db.prepare(`
+      SELECT id, branch_password, branch_password_hash
+      FROM branch_requests
+      WHERE branch_password_hash IS NULL OR branch_password_hash = ''
+    `).all();
+    const savePasswordHash = db.prepare(`
+      UPDATE branch_requests SET branch_password_hash = ? WHERE id = ?
+    `);
+    for (const request of legacyRequests) {
+      const password = String(request.branch_password || '');
+      const passwordHash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(password)
+        ? password
+        : bcrypt.hashSync(password, 10);
+      savePasswordHash.run(passwordHash, request.id);
     }
-  } catch (err) {
-    console.warn('Branch requests init warning:', err.message);
+    db.exec(`UPDATE branch_requests SET branch_password = '' WHERE branch_password IS NOT NULL;`);
+    try {
+      db.exec('ALTER TABLE branch_requests DROP COLUMN branch_password;');
+    } catch (err) {
+      console.warn('Legacy branch password column retained but cleared:', err.message);
+    }
   }
 
   const ticketCols = db.prepare('PRAGMA table_info(support_tickets)').all().map(c => c.name);
@@ -480,6 +484,7 @@ try {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_shifts_mgr ON company_shifts(manager_id);
+    CREATE INDEX IF NOT EXISTS idx_shifts_mgr_active ON company_shifts(manager_id, is_active);
   `);
 
   const shiftCols = db.prepare('PRAGMA table_info(company_shifts)').all().map(c => c.name);

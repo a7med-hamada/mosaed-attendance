@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node --experimental-sqlite server/app.js",
     "seed": "node --experimental-sqlite server/seed.js",
-    "test": "echo \"No test specified\""
+    "test": "node tests/security-hardening.test.js"
   },
   "keywords": [],
   "author": "",

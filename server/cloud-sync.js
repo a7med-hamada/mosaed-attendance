@@ -1,13 +1,73 @@
 const { db } = require('./database');
+const crypto = require('node:crypto');
 
+const CLOUD_SYNC_ENABLED = process.env.CLOUD_SYNC_ENABLED !== 'false';
 const GIST_ID = process.env.CLOUD_SYNC_GIST_ID || '849037ac1e7076ebd3523279e961719f';
 const XOR_HEX = '0a071c3e5400161b143642283b271b0304681e100f34585e5b543f213b0e3420085b5c244c16171d';
 const XOR_KEY = 'mosaed_cloud_sync_key_2026';
+const encryptionKeyText = process.env.CLOUD_SYNC_ENCRYPTION_KEY || '';
+const ENCRYPTION_KEY = Buffer.from(encryptionKeyText, 'base64');
 
 function getSyncToken() {
   if (process.env.CLOUD_SYNC_TOKEN) return process.env.CLOUD_SYNC_TOKEN;
   const buf = Buffer.from(XOR_HEX, 'hex');
   return Buffer.from(buf.map((b, i) => b ^ XOR_KEY.charCodeAt(i % XOR_KEY.length))).toString('utf8');
+}
+
+function encryptSnapshot(snapshot) {
+  if (ENCRYPTION_KEY.length !== 32) {
+    return JSON.stringify(snapshot);
+  }
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(snapshot), 'utf8'),
+    cipher.final()
+  ]);
+  return JSON.stringify({
+    version: 2,
+    algorithm: 'aes-256-gcm',
+    iv: iv.toString('base64'),
+    authTag: cipher.getAuthTag().toString('base64'),
+    ciphertext: ciphertext.toString('base64')
+  });
+}
+
+function decryptSnapshot(content) {
+  if (!content) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    console.warn('[CloudSync] Failed to parse snapshot JSON:', e.message);
+    return null;
+  }
+
+  // Handle plain snapshot JSON
+  if (parsed && parsed.tables) {
+    return parsed;
+  }
+
+  // Handle encrypted envelope version 2
+  if (parsed && parsed.version === 2 && parsed.algorithm === 'aes-256-gcm') {
+    if (ENCRYPTION_KEY.length !== 32) {
+      console.warn('[CloudSync] Encrypted snapshot detected but CLOUD_SYNC_ENCRYPTION_KEY is not a valid 32-byte key.');
+      return null;
+    }
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      ENCRYPTION_KEY,
+      Buffer.from(parsed.iv, 'base64')
+    );
+    decipher.setAuthTag(Buffer.from(parsed.authTag, 'base64'));
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(parsed.ciphertext, 'base64')),
+      decipher.final()
+    ]).toString('utf8');
+    return JSON.parse(plaintext);
+  }
+
+  return parsed;
 }
 
 const SYNC_TABLES = [
@@ -184,6 +244,8 @@ function postSyncShiftAlignment() {
 }
 
 async function loadFromCloud(force = false) {
+  if (!CLOUD_SYNC_ENABLED) return;
+
   const now = Date.now();
   if (!force && initialLoadDone && (now - lastSyncTime < 4000)) {
     return;
@@ -199,7 +261,7 @@ async function loadFromCloud(force = false) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 25000);
 
-      const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${now}`, {
+      const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(GIST_ID)}?t=${now}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/vnd.github+json',
@@ -210,9 +272,7 @@ async function loadFromCloud(force = false) {
       });
       clearTimeout(timeout);
 
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) throw new Error(`GitHub Gist load failed with status ${res.status}.`);
 
       const data = await res.json();
       const file = data.files && data.files['mosaed_cloud_db.json'];
@@ -225,11 +285,13 @@ async function loadFromCloud(force = false) {
         });
         if (rawRes.ok) {
           rawContent = await rawRes.text();
+        } else {
+          throw new Error(`GitHub Gist content load failed with status ${rawRes.status}.`);
         }
       }
 
       if (!rawContent) return;
-      const snapshot = JSON.parse(rawContent);
+      const snapshot = decryptSnapshot(rawContent);
 
       if (!initialLoadDone || force || snapshot.updatedAt !== lastKnownUpdatedAt) {
         applySnapshotToDatabase(snapshot);
@@ -248,6 +310,8 @@ async function loadFromCloud(force = false) {
 }
 
 async function saveToCloud() {
+  if (!CLOUD_SYNC_ENABLED) return;
+
   try {
     initialLoadDone = true;
     const token = getSyncToken();
@@ -270,7 +334,7 @@ async function saveToCloud() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);
 
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(GIST_ID)}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -281,7 +345,7 @@ async function saveToCloud() {
       body: JSON.stringify({
         files: {
           'mosaed_cloud_db.json': {
-            content: JSON.stringify(snapshot)
+            content: encryptSnapshot(snapshot)
           }
         }
       }),
@@ -293,6 +357,8 @@ async function saveToCloud() {
       lastKnownUpdatedAt = updatedAt;
       lastSyncTime = Date.now();
       initialLoadDone = true;
+    } else {
+      throw new Error(`GitHub Gist save failed with status ${res.status}.`);
     }
   } catch (err) {
     console.warn('[CloudSync] Save warning:', err.message);
@@ -300,7 +366,7 @@ async function saveToCloud() {
 }
 
 async function cloudSyncMiddleware(req, res, next) {
-  if (!req.path.startsWith('/api')) {
+  if (!CLOUD_SYNC_ENABLED || !req.path.startsWith('/api')) {
     return next();
   }
 
@@ -309,7 +375,9 @@ async function cloudSyncMiddleware(req, res, next) {
 
   try {
     await loadFromCloud(isMutation && !isLoginOnly);
-  } catch (_) {}
+  } catch (error) {
+    console.error('[CloudSync] Request-time load failed:', error.message);
+  }
 
   if (isMutation && !isLoginOnly) {
     const origJson = res.json.bind(res);

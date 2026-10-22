@@ -6,6 +6,11 @@ const { db, uploadsDir } = require('./database');
 function seedDatabase() {
   console.log('--- Starting Seed Data ---');
 
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.SEED_DEMO_DATA !== 'true') {
+    console.log('Demo seed skipped. Only enabled when SEED_DEMO_DATA=true in non-production.');
+    return;
+  }
+
   // Check if already seeded
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   if (userCount > 0) {

@@ -313,6 +313,12 @@ async function saveToCloud() {
   if (!CLOUD_SYNC_ENABLED) return;
 
   try {
+    const userCount = db.prepare('SELECT count(*) as c FROM users').get().c;
+    if (userCount === 0) {
+      console.warn('[CloudSync] Refusing to save empty database to cloud.');
+      return;
+    }
+
     initialLoadDone = true;
     const token = getSyncToken();
     const updatedAt = new Date().toISOString();
@@ -371,15 +377,15 @@ async function cloudSyncMiddleware(req, res, next) {
   }
 
   const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method);
-  const isLoginOnly = req.path.endsWith('/auth/login');
+  const isAuthRoute = req.path.includes('/login') || req.path.includes('/register') || req.path.includes('/refresh');
 
   try {
-    await loadFromCloud(isMutation && !isLoginOnly);
+    await loadFromCloud(isMutation && !isAuthRoute);
   } catch (error) {
     console.error('[CloudSync] Request-time load failed:', error.message);
   }
 
-  if (isMutation && !isLoginOnly) {
+  if (isMutation && !isAuthRoute) {
     const origJson = res.json.bind(res);
     res.json = async function (body) {
       if (res.statusCode < 400 && (!body || body.success !== false)) {

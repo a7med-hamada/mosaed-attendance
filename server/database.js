@@ -363,7 +363,7 @@ try {
       branch_manager_name TEXT NOT NULL,
       branch_phone TEXT NOT NULL,
       branch_email TEXT NOT NULL,
-      branch_password_hash TEXT NOT NULL,
+      branch_password_hash TEXT,
       branch_address TEXT,
       branch_latitude REAL,
       branch_longitude REAL,

@@ -110,6 +110,17 @@ function applySnapshotToDatabase(snapshot) {
       const validCols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
       if (validCols.length === 0) continue;
 
+      if (table === 'branch_requests') {
+        for (const row of rows) {
+          if (!row.branch_password_hash) {
+            const pwd = String(row.branch_password || '123456');
+            row.branch_password_hash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(pwd)
+              ? pwd
+              : crypto.createHash('sha256').update(pwd).digest('hex');
+          }
+        }
+      }
+
       if (table === 'company_settings') {
         // Merge settings so new default keys from code updates remain while user-configured values take priority
         const upsertStmt = db.prepare(`
@@ -293,7 +304,8 @@ async function loadFromCloud(force = false) {
       if (!rawContent) return;
       const snapshot = decryptSnapshot(rawContent);
 
-      if (!initialLoadDone || force || snapshot.updatedAt !== lastKnownUpdatedAt) {
+      const currentCount = db.prepare('SELECT count(*) as c FROM users').get().c;
+      if (!initialLoadDone || force || currentCount === 0 || snapshot.updatedAt !== lastKnownUpdatedAt) {
         applySnapshotToDatabase(snapshot);
         lastKnownUpdatedAt = snapshot.updatedAt;
       }
@@ -380,7 +392,9 @@ async function cloudSyncMiddleware(req, res, next) {
   const isAuthRoute = req.path.includes('/login') || req.path.includes('/register') || req.path.includes('/refresh');
 
   try {
-    await loadFromCloud(isMutation && !isAuthRoute);
+    const userCount = db.prepare('SELECT count(*) as c FROM users').get().c;
+    const mustForce = userCount === 0 || (isMutation && !isAuthRoute);
+    await loadFromCloud(mustForce);
   } catch (error) {
     console.error('[CloudSync] Request-time load failed:', error.message);
   }

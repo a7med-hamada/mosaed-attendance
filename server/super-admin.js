@@ -84,8 +84,9 @@ router.post('/login', loginRateLimiter, (req, res) => {
 });
 
 // GET /api/super-admin/overview - Overall Platform Statistics
-router.get('/overview', authenticateSuperAdmin, (req, res) => {
+router.get('/overview', authenticateSuperAdmin, async (req, res) => {
   try {
+    try { await loadFromCloud(true); } catch (_) {}
     const totalCompanies = db.prepare("SELECT count(*) as c FROM users WHERE role = 'manager'").get().c;
     const activeCompanies = db.prepare("SELECT count(*) as c FROM users WHERE role = 'manager' AND is_active = 1").get().c;
     const suspendedCompanies = db.prepare("SELECT count(*) as c FROM users WHERE role = 'manager' AND is_active = 0").get().c;
@@ -109,8 +110,9 @@ router.get('/overview', authenticateSuperAdmin, (req, res) => {
 });
 
 // GET /api/super-admin/companies - List All Registered Companies & Managers
-router.get('/companies', authenticateSuperAdmin, (req, res) => {
+router.get('/companies', authenticateSuperAdmin, async (req, res) => {
   try {
+    try { await loadFromCloud(true); } catch (_) {}
     const managers = db.prepare(`
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.phone, u.role,
@@ -214,8 +216,9 @@ router.get('/companies', authenticateSuperAdmin, (req, res) => {
 });
 
 // GET /api/super-admin/companies/:id/employees - List Employees of a specific company
-router.get('/companies/:id/employees', authenticateSuperAdmin, (req, res) => {
+router.get('/companies/:id/employees', authenticateSuperAdmin, async (req, res) => {
   try {
+    try { await loadFromCloud(true); } catch (_) {}
     const managerId = parseInt(req.params.id, 10);
     const manager = db.prepare("SELECT id, full_name FROM users WHERE id = ? AND role = 'manager'").get(managerId);
 

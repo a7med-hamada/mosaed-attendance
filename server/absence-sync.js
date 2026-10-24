@@ -31,6 +31,7 @@ function syncMissingAbsencesForMonth(month, managerId = null) {
     const isMgrTracked = settings['manager_track_attendance'] === '1';
     const mgrStartDate = settings['manager_attendance_start_date'] || today;
 
+    const targetMgrId = managerId || 1;
     // Get active employees with schedule info (and manager if manager attendance is enabled)
     let empQuery = `
       SELECT u.id, u.full_name, u.hire_date, u.manager_id, u.role, u.base_salary,
@@ -43,18 +44,12 @@ function syncMissingAbsencesForMonth(month, managerId = null) {
       WHERE u.is_active = 1
         AND (
           (u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)))
-          ${isMgrTracked ? "OR (u.role = 'manager' AND (u.id = ? OR ? IS NULL))" : ''}
+          ${isMgrTracked ? "OR (u.role = 'manager' AND u.id = ?)" : ''}
         )
         AND u.full_name NOT LIKE '%طارق النجار%'
     `;
-    const empParams = [];
-    if (managerId) {
-      empParams.push(managerId, managerId);
-      if (isMgrTracked) empParams.push(managerId, managerId);
-    } else {
-      empParams.push(1, 1);
-      if (isMgrTracked) empParams.push(1, null);
-    }
+    const empParams = [targetMgrId, targetMgrId];
+    if (isMgrTracked) empParams.push(targetMgrId);
     const employees = db.prepare(empQuery).all(...empParams);
 
     const now = new Date();

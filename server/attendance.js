@@ -61,7 +61,7 @@ function checkAndMarkAutoAbsences() {
     // Get all active employees (and manager if manager attendance is enabled)
     let roleCondition = "u.role = 'employee'";
     if (isMgrTracked && today >= mgrStartDate) {
-      roleCondition = "(u.role = 'employee' OR u.role = 'manager')";
+      roleCondition = "(u.role = 'employee' OR (u.role = 'manager' AND u.id = 1))";
     }
 
     // Get all active employees with their schedules
@@ -1265,7 +1265,7 @@ router.get('/history', authenticateToken, (req, res) => {
       query += ` AND ar.employee_id = ? `;
       params.push(req.user.id);
     } else {
-      query += ` AND (u.manager_id = ? OR u.id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      query += ` AND (u.manager_id = ? OR u.id = ? OR (u.role = 'employee' AND u.manager_id IS NULL AND ? = 1)) `;
       params.push(managerId, managerId, managerId);
       if (employee_id) {
         query += ` AND ar.employee_id = ? `;

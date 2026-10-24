@@ -157,6 +157,8 @@ router.get('/', authenticateToken, (req, res) => {
       return { ...s, assigned_employee_ids: empIds };
     });
 
+    const managerUser = db.prepare('SELECT id, base_salary, schedule_id, (face_descriptor IS NOT NULL) as has_face_enrolled, face_enrolled_at FROM users WHERE id = ?').get(managerId);
+
     res.json({
       success: true,
       workplace: workplace || null,
@@ -164,7 +166,15 @@ router.get('/', authenticateToken, (req, res) => {
       schedule_mode: currentMode,
       shifts,
       settings: settingsMap,
-      checklist
+      checklist,
+      manager_config: {
+        enabled: settingsMap['manager_track_attendance'] === '1',
+        start_date: settingsMap['manager_attendance_start_date'] || null,
+        salary: managerUser ? (managerUser.base_salary || 0) : 0,
+        schedule_id: managerUser ? managerUser.schedule_id : null,
+        has_face_enrolled: managerUser ? (managerUser.has_face_enrolled === 1) : false,
+        face_enrolled_at: managerUser ? managerUser.face_enrolled_at : null
+      }
     });
   } catch (error) {
     console.error('Get settings error:', error);
@@ -611,6 +621,106 @@ router.post('/reset-attendance-system', authenticateToken, requireManager, (req,
     success: false,
     error: 'تم تعطيل تصفير المنظومة لحماية سجلات وتقارير الحضور من الحذف غير المقصود'
   });
+});
+
+// PUT /api/settings/manager-attendance (Configure Manager Self-Attendance Tracking)
+router.put('/manager-attendance', authenticateToken, requireManager, (req, res) => {
+  try {
+    const managerId = req.user.id;
+    const { enabled, base_salary, schedule_id } = req.body;
+
+    const isEnabled = (enabled === true || enabled === '1' || enabled === 1) ? '1' : '0';
+    const salaryVal = parseFloat(base_salary) || 0;
+    const schedId = schedule_id ? parseInt(schedule_id, 10) : null;
+
+    // 1. Update company settings
+    const upsertStmt = db.prepare(`
+      INSERT INTO company_settings (key, value)
+      VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `);
+    upsertStmt.run('manager_track_attendance', isEnabled);
+
+    // If enabled, record start date if not yet recorded
+    const existingStart = db.prepare(`SELECT value FROM company_settings WHERE key = 'manager_attendance_start_date'`).get();
+    if (isEnabled === '1' && (!existingStart || !existingStart.value)) {
+      const today = new Date().toISOString().split('T')[0];
+      upsertStmt.run('manager_attendance_start_date', today);
+    }
+
+    // 2. Update manager's user record (base_salary and schedule_id)
+    db.prepare(`
+      UPDATE users SET
+        base_salary = ?,
+        schedule_id = ?
+      WHERE id = ?
+    `).run(salaryVal, schedId, managerId);
+
+    // 3. Check face enrollment status
+    const mgrUser = db.prepare('SELECT (face_descriptor IS NOT NULL) as has_face_enrolled FROM users WHERE id = ?').get(managerId);
+    const hasFace = !!(mgrUser && mgrUser.has_face_enrolled);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      managerId,
+      req.user.full_name,
+      'UPDATE_MANAGER_ATTENDANCE_CONFIG',
+      'company_settings',
+      null,
+      null,
+      { enabled: isEnabled, base_salary: salaryVal, schedule_id: schedId },
+      `تحديث إعدادات تسجيل حضور المدير (${isEnabled === '1' ? 'مفعل' : 'معطل'})`,
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: isEnabled === '1'
+        ? 'تم تفعيل نظام تسجيل حضور المدير بنجاح'
+        : 'تم تعطيل نظام تسجيل حضور المدير، وتم الاحتفاظ بسجلات الأيام السابقة',
+      enabled: isEnabled === '1',
+      requires_face_enrollment: isEnabled === '1' && !hasFace,
+      has_face_enrolled: hasFace
+    });
+  } catch (error) {
+    console.error('Update manager attendance settings error:', error);
+    res.status(500).json({ success: false, error: 'فشل في تحديث إعدادات حضور المدير' });
+  }
+});
+
+// POST /api/settings/manager-face-reset (Reset Manager's Own Face Biometric Baseline)
+router.post('/manager-face-reset', authenticateToken, requireManager, (req, res) => {
+  try {
+    const managerId = req.user.id;
+    db.prepare(`
+      UPDATE users SET
+        face_descriptor = NULL,
+        face_photo = NULL,
+        face_enrolled_at = NULL
+      WHERE id = ?
+    `).run(managerId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      managerId,
+      req.user.full_name,
+      'RESET_MANAGER_FACE_BIOMETRIC',
+      'users',
+      managerId,
+      null,
+      null,
+      'إعادة تعيين بصمة الوجه للمدير العام',
+      clientIp
+    );
+
+    res.json({
+      success: true,
+      message: 'تمت إعادة تعيين بصمة الوجه بنجاح، يمكنك الآن تسجيل بصمة وجه جديدة'
+    });
+  } catch (error) {
+    console.error('Reset manager face error:', error);
+    res.status(500).json({ success: false, error: 'فشل في إعادة تعيين بصمة الوجه' });
+  }
 });
 
 module.exports = router;

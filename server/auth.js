@@ -135,6 +135,7 @@ function requireManager(req, res, next) {
 }
 
 function isManagedUser(managerId, userId) {
+  if (managerId === userId) return true;
   return !!db.prepare(`
     SELECT 1 FROM users
     WHERE id = ?
@@ -146,11 +147,12 @@ function isManagedUser(managerId, userId) {
 }
 
 function isManagedEmployee(managerId, employeeId) {
+  if (managerId === employeeId) return true;
   return !!db.prepare(`
     SELECT 1 FROM users
-    WHERE id = ? AND role = 'employee'
-      AND (manager_id = ? OR (manager_id IS NULL AND ? = 1))
-  `).get(employeeId, managerId, managerId);
+    WHERE id = ? AND (role = 'employee' OR id = ?)
+      AND (manager_id = ? OR (manager_id IS NULL AND ? = 1) OR id = ?)
+  `).get(employeeId, managerId, managerId, managerId, managerId);
 }
 
 function isManagedResource(table, managerId, resourceId) {

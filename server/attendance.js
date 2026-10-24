@@ -52,16 +52,28 @@ function checkAndMarkAutoAbsences() {
     const currentTime = getCurrentTimeString();
     const currentMins = timeToMinutes(currentTime);
 
+    // Check if manager attendance is enabled
+    const mgrAttSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'manager_track_attendance'`).get();
+    const isMgrTracked = mgrAttSetting && mgrAttSetting.value === '1';
+    const mgrStartDateSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'manager_attendance_start_date'`).get();
+    const mgrStartDate = mgrStartDateSetting ? mgrStartDateSetting.value : today;
+
+    // Get all active employees (and manager if manager attendance is enabled)
+    let roleCondition = "u.role = 'employee'";
+    if (isMgrTracked && today >= mgrStartDate) {
+      roleCondition = "(u.role = 'employee' OR u.role = 'manager')";
+    }
+
     // Get all active employees with their schedules
     const employees = db.prepare(`
-      SELECT u.id, u.full_name, u.schedule_id,
+      SELECT u.id, u.full_name, u.schedule_id, u.role, u.base_salary,
              COALESCE(s.start_time, '09:00') as start_time,
              COALESCE(s.end_time, '17:00') as end_time,
              COALESCE(s.absence_threshold, '13:00') as absence_threshold,
              COALESCE(s.working_days, '0,1,2,3,4') as working_days
       FROM users u
       LEFT JOIN schedules s ON u.schedule_id = s.id
-      WHERE u.is_active = 1 AND u.role = 'employee'
+      WHERE u.is_active = 1 AND ${roleCondition}
     `).all();
 
     const dayOfWeek = String(new Date(today + 'T12:00:00').getDay());
@@ -100,16 +112,22 @@ function checkAndMarkAutoAbsences() {
         // Check if attendance record exists for today
         const existing = db.prepare(`SELECT id, check_in_time, status FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, today);
         if (!existing) {
+          const finalAbsenceDeduction = (emp.role === 'manager' && emp.base_salary > 0)
+            ? Math.round(emp.base_salary / 30)
+            : absenceDeduction;
+
           // Insert absent record
           db.prepare(`
             INSERT INTO attendance_records (
               employee_id, date, status, scheduled_start, scheduled_end,
               worked_hours, estimated_deduction, verification_status, notes
             ) VALUES (?, ?, 'Absent', ?, ?, 0, ?, 'system_auto', 'تسجيل غياب آلي لتجاوز وقت الحضور المسموح به')
-          `).run(emp.id, today, emp.start_time, emp.end_time, absenceDeduction);
+          `).run(emp.id, today, emp.start_time, emp.end_time, finalAbsenceDeduction);
 
           createNotification(emp.id, 'تسجيل غياب آلي', `تم تسجيل حالة غياب لك اليوم (${today}) لتجاوز موعد الحضور المحدد.`, 'danger');
-          createNotification(null, 'تسجيل غياب موظف', `تم تسجيل الموظف ${emp.full_name} كغائب اليوم آلياً.`, 'warning');
+          if (emp.role !== 'manager') {
+            createNotification(null, 'تسجيل غياب موظف', `تم تسجيل الموظف ${emp.full_name} كغائب اليوم آلياً.`, 'warning');
+          }
         }
       }
     }
@@ -284,18 +302,31 @@ router.post('/check-in', authenticateToken, async (req, res) => {
 
     // Lookup employee's manager, assigned shift, and biometric face descriptor
     const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id, face_descriptor FROM users WHERE id = ?').get(employeeId);
-    const managerId = empUser ? (empUser.manager_id || 1) : 1;
+    const isManagerSelf = req.user.role === 'manager';
+    const managerId = isManagerSelf ? req.user.id : (empUser ? (empUser.manager_id || 1) : 1);
 
     // Get active workplace location & allowed radius for this manager
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
-    if (!workplace && managerId === 1) {
+    if (!workplace && (managerId === 1 || isManagerSelf)) {
       workplace = db.prepare(`SELECT * FROM workplaces WHERE id = 1 AND is_configured = 1 LIMIT 1`).get();
+    }
+    if (!workplace) {
+      workplace = db.prepare(`SELECT * FROM workplaces WHERE id = 1 LIMIT 1`).get();
     }
 
     // Get employee schedule rules for this manager
-    let userSchedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
-    if (!userSchedule && managerId === 1) {
+    let userSchedule = null;
+    if (empUser && empUser.schedule_id) {
+      userSchedule = db.prepare(`SELECT * FROM schedules WHERE id = ?`).get(empUser.schedule_id);
+    }
+    if (!userSchedule) {
+      userSchedule = db.prepare(`SELECT * FROM schedules WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
+    }
+    if (!userSchedule && (managerId === 1 || isManagerSelf)) {
       userSchedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 AND is_configured = 1 LIMIT 1`).get();
+    }
+    if (!userSchedule) {
+      userSchedule = db.prepare(`SELECT * FROM schedules WHERE id = 1 LIMIT 1`).get();
     }
 
     // Prevent attendance before configuration
@@ -719,10 +750,14 @@ router.post('/check-out', authenticateToken, (req, res) => {
     }
 
     const empUser = db.prepare('SELECT manager_id, shift_id, face_descriptor FROM users WHERE id = ?').get(employeeId);
-    const managerId = empUser ? (empUser.manager_id || 1) : 1;
+    const isManagerSelf = req.user.role === 'manager';
+    const managerId = isManagerSelf ? req.user.id : (empUser ? (empUser.manager_id || 1) : 1);
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
-    if (!workplace && managerId === 1) {
+    if (!workplace && (managerId === 1 || isManagerSelf)) {
       workplace = db.prepare(`SELECT * FROM workplaces WHERE id = 1 AND is_configured = 1 LIMIT 1`).get();
+    }
+    if (!workplace) {
+      workplace = db.prepare(`SELECT * FROM workplaces WHERE id = 1 LIMIT 1`).get();
     }
 
     let distanceMeters = null;
@@ -937,7 +972,7 @@ router.get('/my-today', authenticateToken, (req, res) => {
 
     // Get employee's manager and assigned shift
     const empUser = db.prepare('SELECT manager_id, schedule_id, shift_id FROM users WHERE id = ?').get(req.user.id);
-    const managerId = empUser ? (empUser.manager_id || 1) : 1;
+    const managerId = req.user.role === 'manager' ? req.user.id : (empUser ? (empUser.manager_id || 1) : 1);
 
     let workplace = db.prepare(`SELECT * FROM workplaces WHERE manager_id = ? AND is_configured = 1 LIMIT 1`).get(managerId);
     if (!workplace && managerId === 1) {
@@ -1161,6 +1196,22 @@ router.get('/live-today', authenticateToken, requireManager, (req, res) => {
       isFullyConfigured: totalEmployees > 0 && hasWorkplace && hasSchedule
     };
 
+    // Manager Attendance Tracking Status & Today Record
+    let managerAttendance = null;
+    const trackSetting = db.prepare('SELECT value FROM company_settings WHERE key = ?').get('manager_track_attendance');
+    if (trackSetting && trackSetting.value === '1') {
+      const mgrUser = db.prepare('SELECT id, full_name, profile_photo, face_descriptor, face_enrolled_at, base_salary FROM users WHERE id = ?').get(req.user.id);
+      const todayMgrRecord = db.prepare('SELECT * FROM attendance_records WHERE employee_id = ? AND date = ?').get(req.user.id, today);
+      managerAttendance = {
+        enabled: true,
+        manager_id: req.user.id,
+        manager_name: mgrUser ? mgrUser.full_name : '',
+        has_face_enrolled: !!(mgrUser && mgrUser.face_descriptor),
+        face_enrolled_at: mgrUser ? mgrUser.face_enrolled_at : null,
+        record: todayMgrRecord || null
+      };
+    }
+
     res.json({
       success: true,
       today,
@@ -1176,7 +1227,8 @@ router.get('/live-today', authenticateToken, requireManager, (req, res) => {
         attendanceRate
       },
       checklist,
-      records
+      records,
+      manager_attendance: managerAttendance
     });
   } catch (error) {
     console.error('Live today error:', error);
@@ -1213,8 +1265,8 @@ router.get('/history', authenticateToken, (req, res) => {
       query += ` AND ar.employee_id = ? `;
       params.push(req.user.id);
     } else {
-      query += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
-      params.push(managerId, managerId);
+      query += ` AND (u.manager_id = ? OR u.id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+      params.push(managerId, managerId, managerId);
       if (employee_id) {
         query += ` AND ar.employee_id = ? `;
         params.push(employee_id);

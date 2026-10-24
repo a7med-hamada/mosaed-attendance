@@ -24,24 +24,34 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       }
     }
 
+    const trackSetting = db.prepare('SELECT value FROM company_settings WHERE key = ?').get('manager_track_attendance');
+    const isManagerTracking = trackSetting && trackSetting.value === '1';
+
     let empQuery = `
-      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.base_salary,
-             d.name as department_name
+      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.base_salary, u.role,
+             COALESCE(d.name, CASE WHEN u.role = 'manager' THEN 'الإدارة العامة' ELSE 'عام' END) as department_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.role = 'employee' AND u.is_active = 1
+      WHERE u.is_active = 1
       AND u.full_name NOT LIKE '%طارق النجار%'
     `;
     const empParams = [];
     if (isManager) {
-      empQuery += ` AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
-      empParams.push(managerId, managerId);
+      if (isManagerTracking) {
+        empQuery += ` AND ((u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1))) OR (u.role = 'manager' AND u.id = ?)) `;
+        empParams.push(managerId, managerId, managerId);
+      } else {
+        empQuery += ` AND u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)) `;
+        empParams.push(managerId, managerId);
+      }
+    } else {
+      empQuery += ` AND u.role = 'employee' `;
     }
     if (targetEmployeeId) {
       empQuery += ` AND u.id = ? `;
       empParams.push(targetEmployeeId);
     }
-    empQuery += ` ORDER BY u.full_name ASC `;
+    empQuery += ` ORDER BY (CASE WHEN u.role = 'manager' THEN 0 ELSE 1 END), u.full_name ASC `;
 
     const employees = db.prepare(empQuery).all(...empParams);
 
@@ -155,11 +165,11 @@ router.get('/available-months', authenticateToken, (req, res) => {
       JOIN users u ON u.id = ar.employee_id
       WHERE ar.date IS NOT NULL AND length(ar.date) >= 7
         AND (
-          (u.role = 'employee' AND (u.manager_id = ? OR (u.manager_id IS NULL AND ? = 1)))
+          ((u.role = 'employee' OR u.role = 'manager') AND (u.manager_id = ? OR u.id = ? OR (u.manager_id IS NULL AND ? = 1)))
           OR (? = 0 AND u.id = ?)
         )
       ORDER BY month DESC
-    `).all(managerId, managerId, isManager ? 1 : 0, req.user.id).map(r => r.month);
+    `).all(managerId, managerId, managerId, isManager ? 1 : 0, req.user.id).map(r => r.month);
 
     const currentMonth = getCurrentMonthString();
     if (!rawMonths.includes(currentMonth)) {

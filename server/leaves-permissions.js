@@ -124,8 +124,8 @@ leavesRouter.get('/', authenticateToken, (req, res) => {
       query += ` AND lr.employee_id = ? `;
       params.push(req.user.id);
     } else {
-      query += ` AND u.manager_id = ? `;
-      params.push(req.user.id);
+      query += ` AND (u.manager_id = ? OR lr.employee_id = ?) `;
+      params.push(req.user.id, req.user.id);
 
       if (employee_id) {
         query += ` AND lr.employee_id = ? `;
@@ -189,11 +189,19 @@ leavesRouter.post('/', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, error: 'لديك طلب إجازة آخر مسجل بالفعل يتداخل مع هذه التواريخ' });
     }
 
+    const isManager = req.user.role === 'manager';
+    const status = isManager ? 'approved' : 'pending';
+    const reviewedBy = isManager ? employeeId : null;
+    const reviewedAt = isManager ? (getTodayString() + ' ' + getCurrentTimeString()) : null;
+    const reviewNotes = isManager
+      ? ((leave_type === 'mission' || leave_type === 'business_mission') ? 'مأمورية عمل رسمية ذاتية معتمدة' : 'إجازة ذاتية معتمدة من الإدارة')
+      : null;
+
     const stmt = db.prepare(`
       INSERT INTO leave_requests (
         employee_id, leave_type, start_date, end_date, days_count,
-        reason, attachment_photo, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+        reason, attachment_photo, status, reviewed_by, reviewed_at, review_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -203,27 +211,66 @@ leavesRouter.post('/', authenticateToken, (req, res) => {
       end_date,
       daysCount,
       reason ? reason.trim() : null,
-      attachment_photo || null
+      attachment_photo || null,
+      status,
+      reviewedBy,
+      reviewedAt,
+      reviewNotes
     );
 
-    const empUser = db.prepare('SELECT manager_id, full_name FROM users WHERE id = ?').get(employeeId);
-    const managerId = empUser ? empUser.manager_id : 1;
+    if (isManager) {
+      const leaveLabel = (leave_type === 'mission' || leave_type === 'business_mission')
+        ? 'مأمورية عمل رسمية'
+        : (leave_type === 'sick' ? 'إجازة مرضية معتمدة' : leave_type === 'annual' ? 'إجازة سنوية معتمدة' : leave_type === 'casual' ? 'إجازة عارضة معتمدة' : 'إجازة معتمدة');
 
-    createNotification(
-      managerId,
-      'طلب إجازة جديد 🌴',
-      `قدم الموظف ${empUser.full_name} طلب إجازة ${daysCount} يوم من ${start_date} إلى ${end_date}.`,
-      'info'
-    );
+      // Update any existing records in this date range to On Leave with 0 deduction
+      db.prepare(`
+        UPDATE attendance_records
+        SET status = 'On Leave', estimated_deduction = 0, notes = ?
+        WHERE employee_id = ? AND date BETWEEN ? AND ?
+      `).run(leaveLabel, employeeId, start_date, end_date);
+
+      // If today falls in range and no record existed, insert On Leave record for today
+      const today = getTodayString();
+      if (today >= start_date && today <= end_date) {
+        const recToday = db.prepare('SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?').get(employeeId, today);
+        if (!recToday) {
+          db.prepare(`
+            INSERT INTO attendance_records (
+              employee_id, date, status, scheduled_start, scheduled_end,
+              worked_hours, estimated_deduction, verification_status, notes
+            ) VALUES (?, ?, 'On Leave', '09:00', '17:00', 0, 0, 'approved_leave', ?)
+          `).run(employeeId, today, leaveLabel);
+        }
+      }
+
+      createNotification(
+        employeeId,
+        'تسجيل إجازة / مأمورية ذاتية',
+        `تم تسجيل واعتماد إجازتك / مأموريتك الذاتية بنجاح (${daysCount} يوم) من ${start_date} إلى ${end_date}.`,
+        'success'
+      );
+    } else {
+      const empUser = db.prepare('SELECT manager_id, full_name FROM users WHERE id = ?').get(employeeId);
+      const managerId = empUser ? empUser.manager_id : 1;
+
+      createNotification(
+        managerId,
+        'طلب إجازة جديد 🌴',
+        `قدم الموظف ${empUser.full_name} طلب إجازة ${daysCount} يوم من ${start_date} إلى ${end_date}.`,
+        'info'
+      );
+    }
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logAudit(employeeId, req.user.full_name, 'SUBMIT_LEAVE_REQUEST', 'leave_requests', result.lastInsertRowid, null, { leave_type, start_date, end_date, daysCount }, 'تقديم طلب إجازة', clientIp);
+    logAudit(employeeId, req.user.full_name, isManager ? 'SELF_LEAVE_REGISTERED' : 'SUBMIT_LEAVE_REQUEST', 'leave_requests', result.lastInsertRowid, null, { leave_type, start_date, end_date, daysCount, status }, isManager ? 'تسجيل إجازة / مأمورية ذاتية معتمدة' : 'تقديم طلب إجازة', clientIp);
 
     res.json({
       success: true,
-      message: 'تم تقديم طلب الإجازة بنجاح وهو بانتظار موافقة الإدارة',
+      message: isManager ? 'تم تسجيل واعتماد الإجازة / المأمورية الذاتية بنجاح' : 'تم تقديم طلب الإجازة بنجاح وهو بانتظار موافقة الإدارة',
       id: result.lastInsertRowid,
-      days_count: daysCount
+      days_count: daysCount,
+      status
     });
   } catch (error) {
     console.error('Submit leave error:', error);
@@ -395,8 +442,8 @@ permissionsRouter.get('/', authenticateToken, (req, res) => {
       query += ` AND pr.employee_id = ? `;
       params.push(req.user.id);
     } else {
-      query += ` AND u.manager_id = ? `;
-      params.push(req.user.id);
+      query += ` AND (u.manager_id = ? OR pr.employee_id = ?) `;
+      params.push(req.user.id, req.user.id);
 
       if (employee_id) {
         query += ` AND pr.employee_id = ? `;

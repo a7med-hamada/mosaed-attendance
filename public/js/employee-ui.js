@@ -1008,7 +1008,7 @@ const EmployeeUI = {
   // Camera Verification Modal Flow
   openCameraModal(action = 'check-in') {
     const user = API.getCurrentUser() || {};
-    if (user.role === 'employee' && (!user.has_face_enrolled || !user.face_descriptor)) {
+    if (!user.has_face_enrolled || !user.face_descriptor) {
       showToast('يرجى تسجيل وتوثيق بصمة وجهك البيومترية أولاً لتتمكن من إثبات الحضور والانصراف', 'warning');
       this.openFaceEnrollModal();
       return;
@@ -1328,7 +1328,14 @@ const EmployeeUI = {
       }
 
       this.closeCameraModal();
-      await this.loadTodayData();
+      const currentUser = API.getCurrentUser() || {};
+      if (currentUser.role === 'manager') {
+        if (typeof ManagerUI !== 'undefined' && ManagerUI.loadLiveFeed) {
+          await ManagerUI.loadLiveFeed();
+        }
+      } else {
+        await this.loadTodayData();
+      }
     } catch (err) {
       showToast(err.message, 'danger');
       if (confirmBtn) {
@@ -1683,9 +1690,19 @@ const EmployeeUI = {
 
       setTimeout(() => {
         this.closeFaceEnrollModal();
-        this.renderAttendanceTab();
-        if (this.activeTab === 'profile') {
-          this.renderProfileTab();
+        if (user.role === 'manager') {
+          if (typeof ManagerUI !== 'undefined') {
+            if (ManagerUI.renderSettingsSection && ManagerUI.activeNav === 'settings') {
+              ManagerUI.renderSettingsSection();
+            } else if (ManagerUI.loadLiveFeed) {
+              ManagerUI.loadLiveFeed();
+            }
+          }
+        } else {
+          this.renderAttendanceTab();
+          if (this.activeTab === 'profile') {
+            this.renderProfileTab();
+          }
         }
       }, 900);
     } catch (err) {

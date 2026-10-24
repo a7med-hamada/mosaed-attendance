@@ -340,6 +340,14 @@ const API = {
     return this.request('/settings/company', { method: 'PUT', body: data });
   },
 
+  updateManagerAttendance(data) {
+    return this.request('/settings/manager-attendance', { method: 'PUT', body: data });
+  },
+
+  resetManagerFace() {
+    return this.request('/settings/manager-face-reset', { method: 'POST' });
+  },
+
   resetAttendanceSystem() {
     return this.request('/settings/reset-attendance-system', { method: 'POST' });
   },

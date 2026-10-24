@@ -187,6 +187,9 @@ const ManagerUI = {
           <div class="p-6 text-center text-slate-400 col-span-4">جاري تحميل المؤشرات...</div>
         </div>
 
+        <!-- Manager Self-Attendance Widget -->
+        <div id="mgr-self-attendance-banner"></div>
+
         <!-- Today's Attendance Table -->
         <div class="bg-white dark:bg-slate-900 glass-card glow-hover rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
@@ -364,6 +367,9 @@ const ManagerUI = {
           </div>
         `;
       }
+
+      // Render Manager Self-Attendance Widget
+      this.renderManagerSelfAttendanceWidget(res.manager_attendance, res.today);
 
       this.renderLiveTable(records);
     } catch (err) {
@@ -3680,6 +3686,90 @@ const ManagerUI = {
           </div>
         </form>
 
+        <!-- Manager Self-Attendance Tracking Settings Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5 text-indigo-500"></i> نظام حضور وانصراف المدير العام الذاتي
+              </h3>
+              <p class="text-[11px] text-slate-500 mt-0.5">تسجيل حضور وانصراف المدير بكاميرا السيلفي وموقع GPS، واحتساب الخصومات آلياً في حال التأخير أو الغياب</p>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer font-normal text-xs text-indigo-600">
+              <input type="checkbox" id="rule-manager-track-attendance" onchange="ManagerUI.toggleManagerAttendanceFields(this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+              <span class="font-bold">تفعيل تتبع حضور المدير</span>
+            </label>
+          </div>
+
+          <div id="manager-track-settings-fields" class="space-y-4">
+            <!-- Activation Date Notice -->
+            <div id="manager-start-date-notice" class="hidden p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
+                <span>تاريخ بدء احتساب الحضور الذاتي: <strong id="manager-start-date-label" class="font-mono"></strong></span>
+              </div>
+              <span class="text-[10px] text-slate-400">تطبيق الخصومات يسري بدءاً من هذا التاريخ فقط دون المساس بالأيام السابقة</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">الراتب الشهري التقديري للمدير (جنيه مصري):</label>
+                <div class="relative">
+                  <input type="number" step="1" id="rule-manager-salary" placeholder="5000" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">يُعتمد لاحتساب قيمة خصم يوم الغياب أو التأخير تلقائياً (الراتب ÷ 30)</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">الوردية / الدوام المخصص للمدير:</label>
+                <select id="rule-manager-schedule" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                  <!-- Loaded dynamically -->
+                </select>
+                <span class="text-[10px] text-slate-400 mt-1 block">مواعيد الحضور والانصراف المعتمدة وفترة السماح</span>
+              </div>
+            </div>
+
+            <!-- Biometric Face ID Section for Manager -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                    <i data-lucide="scan-face" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-xs text-slate-800 dark:text-slate-200">بصمة الوجه البيومترية للمدير</h4>
+                    <p id="manager-face-status-text" class="text-[11px] text-slate-500 mt-0.5">جاري التحقق من حالة البصمة...</p>
+                  </div>
+                </div>
+                <div id="manager-face-actions" class="flex items-center gap-2 flex-wrap">
+                  <!-- Dynamic Buttons: Enroll / Update / Reset -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Self-Leave / Business Mission Action -->
+            <div class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h4 class="font-bold text-xs text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                  <i data-lucide="briefcase" class="w-4 h-4 text-blue-500"></i> إجازة أو مأمورية عمل ذاتية للمدير
+                </h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">تسجيل مأمورية خارجية رسمية أو إجازة للمدير لإعفائه من تسجيل البصمة والخصم في هذا اليوم</p>
+              </div>
+              <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-colors">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> تسجيل إجازة / مأمورية ذاتية
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+            <button type="button" onclick="ManagerUI.saveManagerAttendanceSettings()" class="py-2.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>حفظ إعدادات حضور المدير</span>
+            </button>
+          </div>
+        </div>
+
         <!-- WhatsApp Notifications Settings Card -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 text-xs w-full">
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -3779,6 +3869,57 @@ const ManagerUI = {
       document.getElementById('rule-enable-deductions').checked = s.enable_salary_deductions === '1';
       document.getElementById('rule-absence-rate').value = s.deduction_absence_rate || '100';
       document.getElementById('rule-half-day-rate').value = s.deduction_half_day_rate || '50';
+
+      // Load Manager Attendance Config
+      const mc = res.manager_config || {};
+      const trackMgrEl = document.getElementById('rule-manager-track-attendance');
+      if (trackMgrEl) trackMgrEl.checked = !!mc.enabled;
+
+      const schedSelect = document.getElementById('rule-manager-schedule');
+      if (schedSelect && Array.isArray(mc.schedules)) {
+        schedSelect.innerHTML = mc.schedules.map(sched => `
+          <option value="${sched.id}" ${sched.id === mc.schedule_id ? 'selected' : ''}>${sched.name} (${sched.start_time} - ${sched.end_time})</option>
+        `).join('');
+      }
+
+      const mgrSalaryEl = document.getElementById('rule-manager-salary');
+      if (mgrSalaryEl) mgrSalaryEl.value = mc.salary || 5000;
+
+      const startDateNotice = document.getElementById('manager-start-date-notice');
+      const startDateLabel = document.getElementById('manager-start-date-label');
+      if (startDateNotice && startDateLabel) {
+        if (mc.start_date) {
+          startDateNotice.classList.remove('hidden');
+          startDateLabel.textContent = mc.start_date;
+        } else {
+          startDateNotice.classList.add('hidden');
+        }
+      }
+
+      const faceStatusText = document.getElementById('manager-face-status-text');
+      const faceActions = document.getElementById('manager-face-actions');
+      if (faceStatusText && faceActions) {
+        if (mc.has_face_enrolled) {
+          faceStatusText.textContent = `بصمة الوجه مسجلة وموثقة بنجاح ${mc.face_enrolled_at ? '(' + mc.face_enrolled_at.substring(0, 10) + ')' : ''}`;
+          faceActions.innerHTML = `
+            <button type="button" onclick="EmployeeUI.openFaceEnrollModal()" class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1 transition-colors">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> تحديث البصمة
+            </button>
+            <button type="button" onclick="ManagerUI.resetManagerFaceBiometric()" class="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1 transition-colors">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> إعادة تعيين
+            </button>
+          `;
+        } else {
+          faceStatusText.textContent = 'لم تقم بتسجيل وتوثيق بصمة وجهك البيومترية بعد';
+          faceActions.innerHTML = `
+            <button type="button" onclick="EmployeeUI.openFaceEnrollModal()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-colors">
+              <i data-lucide="scan-face" class="w-3.5 h-3.5"></i> تسجيل البصمة الآن
+            </button>
+          `;
+        }
+      }
+
+      this.toggleManagerAttendanceFields(!!mc.enabled);
 
       // Load WhatsApp Settings
       const waRes = await API.getWhatsAppSettings().catch(() => ({ settings: {} }));
@@ -6390,6 +6531,298 @@ const ManagerUI = {
       showToast(res.message || 'تم حفظ إعدادات الواتساب بنجاح', 'success');
     } catch (err) {
       showToast(err.message, 'danger');
+    }
+  },
+
+  renderManagerSelfAttendanceWidget(data, today) {
+    const banner = document.getElementById('mgr-self-attendance-banner');
+    if (!banner) return;
+    if (!data || !data.enabled) {
+      banner.innerHTML = '';
+      return;
+    }
+
+    const rec = data.record;
+    const hasFace = data.has_face_enrolled;
+    const isCheckedIn = rec && rec.check_in_time;
+    const isCheckedOut = rec && rec.check_out_time;
+    const isLeave = rec && rec.status === 'On Leave';
+    const isAbsent = rec && rec.status === 'Absent';
+    const isLate = rec && (rec.status === 'Late' || rec.late_minutes > 0);
+
+    let statusBadgeHtml = '';
+    let actionButtonsHtml = '';
+
+    if (!hasFace) {
+      statusBadgeHtml = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i> بصمة وجهك البيومترية غير مسجلة
+        </span>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="EmployeeUI.openFaceEnrollModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all">
+          <i data-lucide="scan-face" class="w-4 h-4"></i> تسجيل وتوثيق بصمة وجهك الآن
+        </button>
+      `;
+    } else if (isLeave) {
+      statusBadgeHtml = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+          <i data-lucide="briefcase" class="w-3.5 h-3.5 text-blue-500"></i> إجازة / مأمورية رسمية (${rec.notes || 'معتمدة'})
+        </span>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> مأمورية أخرى
+        </button>
+      `;
+    } else if (isCheckedOut) {
+      statusBadgeHtml = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-purple-500"></i> تم الانصراف اليوم بنجاح (${rec.check_out_time}) • ${rec.worked_hours || 0} ساعة عمل
+        </span>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[11px] flex items-center gap-1 transition-all">
+          <i data-lucide="briefcase" class="w-3.5 h-3.5"></i> مأمورية عمل
+        </button>
+      `;
+    } else if (isCheckedIn) {
+      statusBadgeHtml = `
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            حاضر على رأس العمل منذ ${rec.check_in_time}
+          </span>
+          ${isLate ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">تأخير ${rec.late_minutes} دقيقة (${rec.estimated_deduction} ج.م)</span>` : ''}
+        </div>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="EmployeeUI.openCameraModal('check-out')" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-500/20 flex items-center gap-1.5 transition-all">
+          <i data-lucide="log-out" class="w-4 h-4"></i> تسجيل الانصراف الآن
+        </button>
+        <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all">
+          <i data-lucide="briefcase" class="w-4 h-4"></i> مأمورية عمل
+        </button>
+      `;
+    } else if (isAbsent) {
+      statusBadgeHtml = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+          <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-500"></i> مسجل غياب لعدم الحضور في الموعد (خصم ${rec.estimated_deduction || 0} ج.م)
+        </span>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="EmployeeUI.openCameraModal('check-in')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+          <i data-lucide="camera" class="w-4 h-4"></i> تسجيل الحضور الآن
+        </button>
+        <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition-all">
+          <i data-lucide="briefcase" class="w-4 h-4"></i> إثبات مأمورية عمل ذاتية
+        </button>
+      `;
+    } else {
+      statusBadgeHtml = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> لم تقم بتسجيل حضورك اليوم حتى الآن
+        </span>
+      `;
+      actionButtonsHtml = `
+        <button type="button" onclick="EmployeeUI.openCameraModal('check-in')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all">
+          <i data-lucide="camera" class="w-4 h-4"></i> تسجيل حضورك كمدير الآن
+        </button>
+        <button type="button" onclick="ManagerUI.openSelfLeaveModal()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all">
+          <i data-lucide="briefcase" class="w-4 h-4"></i> مأمورية عمل خارجية
+        </button>
+      `;
+    }
+
+    banner.innerHTML = `
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-50/80 via-white to-blue-50/80 dark:from-indigo-950/20 dark:via-slate-900 dark:to-blue-950/20 border border-indigo-200/80 dark:border-indigo-800/40 p-4 sm:p-5 shadow-sm transition-all mb-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/25">
+              <i data-lucide="user-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">إثبات حضور وانصراف المدير العام</h3>
+                ${statusBadgeHtml}
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">يخضع لتوثيق بصمة الوجه ومطابقة النطاق الجغرافي للمقر الرئيسي (GPS) مثل بقية الموظفين</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            ${actionButtonsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  },
+
+  toggleManagerAttendanceFields(enabled) {
+    const fields = document.getElementById('manager-track-settings-fields');
+    if (!fields) return;
+    if (enabled) {
+      fields.classList.remove('opacity-40', 'pointer-events-none');
+    } else {
+      fields.classList.add('opacity-40', 'pointer-events-none');
+    }
+  },
+
+  async saveManagerAttendanceSettings() {
+    const enabled = document.getElementById('rule-manager-track-attendance')?.checked ? '1' : '0';
+    const salary = parseFloat(document.getElementById('rule-manager-salary')?.value) || 5000;
+    const scheduleId = parseInt(document.getElementById('rule-manager-schedule')?.value, 10) || null;
+
+    try {
+      const res = await API.updateManagerAttendance({
+        enabled: enabled === '1',
+        salary,
+        schedule_id: scheduleId
+      });
+
+      // Update cached user object
+      const u = API.getCurrentUser() || {};
+      u.base_salary = salary;
+      u.schedule_id = scheduleId;
+      API.setCurrentUser(u);
+
+      showToast(res.message || 'تم تحديث إعدادات حضور المدير بنجاح', 'success');
+
+      if (enabled === '1' && !res.has_face_enrolled) {
+        showToast('يرجى التقاط وتوثيق بصمة وجهك البيومترية الآن لتتمكن من إثبات الحضور والانصراف', 'warning');
+        setTimeout(() => {
+          EmployeeUI.openFaceEnrollModal();
+        }, 600);
+      } else {
+        await this.renderSettingsSection();
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  async resetManagerFaceBiometric() {
+    if (!confirm('هل أنت متأكد من رغبتك في إعادة تعيين وحذف بصمة الوجه الحالية الخاصة بك كمدير؟ سيتطلب ذلك تسجيل بصمة وجه جديدة.')) {
+      return;
+    }
+
+    try {
+      const res = await API.resetManagerFace();
+      const u = API.getCurrentUser() || {};
+      u.has_face_enrolled = 0;
+      u.face_descriptor = null;
+      u.face_enrolled_at = null;
+      API.setCurrentUser(u);
+
+      showToast(res.message || 'تمت إعادة تعيين بصمة وجه المدير بنجاح', 'success');
+      await this.renderSettingsSection();
+    } catch (err) {
+      showToast(err.message, 'danger');
+    }
+  },
+
+  openSelfLeaveModal() {
+    const modal = document.getElementById('employee-crud-modal');
+    if (!modal) return;
+    const today = (new Date()).toISOString().substring(0, 10);
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                <i data-lucide="briefcase" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">تسجيل إجازة / مأمورية عمل ذاتية</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">اعتماد فوري بدون تطبيق أي خصومات غياب على المدير</p>
+              </div>
+            </div>
+            <button onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <form onsubmit="ManagerUI.submitSelfLeave(event)" class="space-y-4">
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1.5">نوع المهمة / الإجازة:</label>
+              <select id="self-leave-type" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                <option value="mission">مأمورية عمل خارجية رسمية (Business Mission)</option>
+                <option value="annual">إجازة اعتيادية / سنوية</option>
+                <option value="casual">إجازة عارضة طارئة</option>
+                <option value="sick">إجازة مرضية</option>
+                <option value="unpaid">إجازة بدون راتب</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">من تاريخ:</label>
+                <input type="date" id="self-leave-start" value="${today}" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs font-bold" />
+              </div>
+              <div>
+                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">إلى تاريخ:</label>
+                <input type="date" id="self-leave-end" value="${today}" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs font-bold" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">بيان السبب / تفاصيل المأمورية:</label>
+              <textarea id="self-leave-reason" rows="2.5" placeholder="مثال: مأمورية خارجية لزيارة مقر العميل، أو متابعة أعمال فرع آخر..." class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onclick="document.getElementById('employee-crud-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors">
+                إلغاء
+              </button>
+              <button type="submit" id="self-leave-submit-btn" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
+                <i data-lucide="check" class="w-4 h-4"></i> اعتماد وحفظ فوري
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async submitSelfLeave(e) {
+    e.preventDefault();
+    const leaveType = document.getElementById('self-leave-type')?.value;
+    const startDate = document.getElementById('self-leave-start')?.value;
+    const endDate = document.getElementById('self-leave-end')?.value;
+    const reason = document.getElementById('self-leave-reason')?.value || '';
+
+    const btn = document.getElementById('self-leave-submit-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> جاري الحفظ...`;
+    }
+
+    try {
+      const res = await API.createLeaveRequest({
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: endDate,
+        reason
+      });
+
+      const modal = document.getElementById('employee-crud-modal');
+      if (modal) modal.innerHTML = '';
+
+      showToast(res.message || 'تم تسجيل واعتماد الإجازة / المأمورية بنجاح', 'success');
+
+      if (this.loadLiveFeed) {
+        await this.loadLiveFeed();
+      }
+    } catch (err) {
+      showToast(err.message, 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> اعتماد وحفظ فوري`;
+      }
     }
   },
 

@@ -120,7 +120,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       `).get(emp.id, month);
       const totalManualDeductions = parseFloat(((deductionsSum && deductionsSum.total) || 0).toFixed(2));
 
-      const baseSalary = parseFloat(emp.base_salary || 3000);
+      const baseSalary = parseFloat(emp.base_salary !== undefined && emp.base_salary !== null && emp.base_salary > 0 ? emp.base_salary : (emp.role === 'manager' ? 5000 : 3000));
       const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
       return {
@@ -351,7 +351,7 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     });
     totalManualDeductions = parseFloat(totalManualDeductions.toFixed(2));
 
-    const baseSalary = parseFloat(employee.base_salary || 3000);
+    const baseSalary = parseFloat(employee.base_salary !== undefined && employee.base_salary !== null && employee.base_salary > 0 ? employee.base_salary : (employee.role === 'manager' ? 5000 : 3000));
     const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     res.json({

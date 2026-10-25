@@ -6677,6 +6677,7 @@ const ManagerUI = {
     try {
       const res = await API.updateManagerAttendance({
         enabled: enabled === '1',
+        base_salary: salary,
         salary,
         schedule_id: scheduleId
       });

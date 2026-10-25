@@ -627,10 +627,10 @@ router.post('/reset-attendance-system', authenticateToken, requireManager, (req,
 router.put('/manager-attendance', authenticateToken, requireManager, (req, res) => {
   try {
     const managerId = req.user.id;
-    const { enabled, base_salary, schedule_id } = req.body;
+    const { enabled, base_salary, salary, schedule_id } = req.body;
 
     const isEnabled = (enabled === true || enabled === '1' || enabled === 1) ? '1' : '0';
-    const salaryVal = parseFloat(base_salary) || 0;
+    const salaryVal = parseFloat(base_salary !== undefined && base_salary !== null ? base_salary : salary) || 5000;
     const schedId = schedule_id ? parseInt(schedule_id, 10) : null;
 
     // 1. Update company settings

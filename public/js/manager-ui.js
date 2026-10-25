@@ -464,8 +464,8 @@ const ManagerUI = {
     }
 
     container.innerHTML = `
-      <div class="overflow-x-auto lg:overflow-x-visible">
-        <table class="w-full text-right text-xs min-w-[600px] lg:min-w-0">
+      <div class="overflow-x-auto w-full custom-table-scroll">
+        <table class="w-full text-right text-xs min-w-[650px]">
           <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th class="py-3 px-4">الموظف</th>
@@ -707,8 +707,8 @@ const ManagerUI = {
     }
 
     container.innerHTML = `
-      <div class="overflow-x-auto lg:overflow-x-visible">
-        <table class="w-full text-right text-xs min-w-[700px] lg:min-w-0">
+      <div class="overflow-x-auto w-full custom-table-scroll">
+        <table class="w-full text-right text-xs min-w-[1100px]">
           <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th class="py-3.5 px-4">الاسم والدور</th>
@@ -720,7 +720,7 @@ const ManagerUI = {
               <th class="py-3.5 px-4 text-center">بصمة الوجه (Face ID)</th>
               <th class="py-3.5 px-4 text-center">حالة الحساب</th>
               <th class="py-3.5 px-4 text-center">حضور اليوم</th>
-              <th class="py-3.5 px-4 text-center">الإجراءات</th>
+              <th class="py-3.5 px-4 text-center min-w-[170px] whitespace-nowrap">الإجراءات</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -791,9 +791,9 @@ const ManagerUI = {
                     </span>
                   ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>'))}
                 </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-1.5">
-                    <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات (تأخير، خروج مبكر، غياب)">
+                <td class="py-3.5 px-4 text-center whitespace-nowrap min-w-[170px]">
+                  <div class="flex items-center justify-center gap-1.5 min-w-[150px]">
+                    <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات (تأخير، خروج مبكر، غياب)">
                       <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
                     </button>
                     <button onclick="ManagerUI.openEditEmployeeModal(${e.id})" class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="تعديل البيانات">
@@ -803,11 +803,11 @@ const ManagerUI = {
                       <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-4 h-4"></i>
                     </button>
                     ${e.has_face_enrolled ? `
-                      <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
+                      <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
                         <i data-lucide="scan-face" class="w-4 h-4"></i>
                       </button>
                     ` : ''}
-                    <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
+                    <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}', '${e.role}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
                       <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                   </div>
@@ -1002,7 +1002,12 @@ const ManagerUI = {
     }
   },
 
-  async deleteEmployee(id, name) {
+  async deleteEmployee(id, name, role = 'employee') {
+    if (role === 'manager') {
+      this.openDeleteBranchModal(id, name, 'manager');
+      return;
+    }
+
     const warningMsg = `[تحذير إداري هام جداً]\n\nهل أنت متأكد من رغبتك في حذف الموظف "${name}" نهائياً من المنظومة؟\n\nتنبيه: هذا الإجراء سيؤدي فوراً إلى:\n1. مسح وحذف كافة تقارير الموظف الشهرية وكشوف الحساب بالكامل.\n2. حذف جميع سجلات الحضور والانصراف السابقة الخاصة به نهائياً.\n3. مسح كافة طلبات الإجازات والأذونات والسلفيات والمكافآت والخصومات المرتبطة به.\n\nهذا الإجراء نهائي ولا يمكن التراجع عنه أو استرجاع بياناته بعد الحذف. هل تريد المتابعة وتأكيد الحذف؟`;
     if (!confirm(warningMsg)) return;
 
@@ -1463,8 +1468,8 @@ const ManagerUI = {
 
     container.innerHTML = `
       <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div class="overflow-x-auto lg:overflow-x-visible w-full">
-          <table class="w-full text-right text-xs min-w-[720px] lg:min-w-0">
+        <div class="overflow-x-auto w-full custom-table-scroll">
+          <table class="w-full text-right text-xs min-w-[760px]">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
                 <th class="py-3 px-4">الموظف</th>
@@ -1565,8 +1570,8 @@ const ManagerUI = {
 
     container.innerHTML = `
       <div class="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div class="overflow-x-auto lg:overflow-x-visible w-full">
-          <table class="w-full text-right text-xs min-w-[720px] lg:min-w-0">
+        <div class="overflow-x-auto w-full custom-table-scroll">
+          <table class="w-full text-right text-xs min-w-[760px]">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
               <tr>
                 <th class="py-3 px-4">الموظف</th>
@@ -4713,8 +4718,8 @@ const ManagerUI = {
           ${summaries.length === 0 ? `
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
-            <div class="overflow-x-auto lg:overflow-x-visible">
-              <table class="w-full text-right text-xs min-w-[760px] lg:min-w-0">
+            <div class="overflow-x-auto w-full custom-table-scroll">
+              <table class="w-full text-right text-xs min-w-[850px]">
                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th class="py-3 px-3">الموظف</th>
@@ -7412,8 +7417,17 @@ const ManagerUI = {
                           ${idx === 0 ? 'المقر الرئيسي (الفرع الأساسي)' : 'فرع مستقل'}
                         </span>
                       </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">نشط</span>
+                      ${idx !== 0 ? `
+                        <button onclick="ManagerUI.openDeleteBranchModal(${wp.id}, '${(wp.company_name || wp.name || '').replace(/'/g, "\\'")}', 'workplace')"
+                          class="px-2 py-0.5 rounded-lg text-rose-500 hover:text-white hover:bg-rose-600 border border-rose-500/30 transition-all flex items-center gap-1 text-[10px] font-bold"
+                          title="حذف الفرع نهائياً">
+                          <i data-lucide="trash-2" class="w-3 h-3"></i>
+                          <span>حذف</span>
+                        </button>
+                      ` : ''}
                     </div>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">نشط</span>
                   </div>
 
                   <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
@@ -7678,6 +7692,157 @@ const ManagerUI = {
       }
     } catch (err) {
       showToast(err.message || 'حدث خطأ في الاتصال بالخادم', 'danger');
+    }
+  },
+
+  openDeleteBranchModal(id, name, type = 'workplace') {
+    const modal = document.getElementById('delete-branch-modal');
+    if (!modal) return;
+
+    const isManager = type === 'manager';
+    const targetLabel = isManager ? 'حساب مدير الفرع والفرع المرتبط' : 'الفرع';
+
+    modal.innerHTML = `
+      <div class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-rose-500/30 modal-enter space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span>تحذير: تأكيد حذف ${targetLabel}</span>
+              </h3>
+              <p class="text-xs text-rose-600 dark:text-rose-400 font-semibold mt-0.5">${name}</p>
+            </div>
+            <button onclick="document.getElementById('delete-branch-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600 p-1">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-900 dark:text-rose-200 space-y-2">
+            <div class="font-bold flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
+              <i data-lucide="shield-alert" class="w-4 h-4"></i>
+              <span>هذا الإجراء خطر ونهائي ولا يمكن التراجع عنه:</span>
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-[11px] leading-relaxed opacity-95">
+              ${isManager ? `
+                <li>سيتم حذف حساب مدير الفرع (${name}) نهائياً من النظام.</li>
+                <li>سيتم مسح مقر الفرع المخصص له وإلغاء ارتباطه.</li>
+                <li>سيتم حذف كافة التقارير وسجلات الحضور والطلبات المتعلقة به.</li>
+              ` : `
+                <li>سيتم مسح بيانات مقر الفرع الجغرافية ونطاق البصمة نهائياً.</li>
+                <li>سيتم حذف حساب مدير الفرع المسند إليه إن وجد.</li>
+                <li>سيتم حذف كافة سجلات حضور وتقارير موظفي الفرع نهائياً.</li>
+              `}
+            </ul>
+          </div>
+
+          <div class="space-y-2 pt-1">
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              لتأكيد الحذف، يرجى كتابة كلمة المرور الخاصة بحسابك الإداري:
+            </label>
+            <div class="relative">
+              <input type="password" id="delete-branch-password" placeholder="كلمة المرور الخاصة بك..."
+                class="w-full px-3.5 py-2.5 pl-10 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-xs focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                onkeydown="if(event.key === 'Enter') ManagerUI.submitDeleteBranch(${id}, '${type}')" />
+              <button type="button" onclick="ManagerUI.togglePasswordVisibility('delete-branch-password', this)"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div id="delete-branch-error" class="hidden text-xs text-rose-600 font-bold"></div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button type="button" onclick="document.getElementById('delete-branch-modal').innerHTML=''"
+              class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs">
+              إلغاء
+            </button>
+            <button id="btn-confirm-delete-branch" onclick="ManagerUI.submitDeleteBranch(${id}, '${type}')"
+              class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg shadow-rose-600/30 flex items-center gap-1.5 transition-all">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <span>تأكيد الحذف النهائي</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+      const input = document.getElementById('delete-branch-password');
+      if (input) input.focus();
+    }, 100);
+  },
+
+  togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPwd = input.type === 'password';
+    input.type = isPwd ? 'text' : 'password';
+    if (btn) {
+      btn.innerHTML = `<i data-lucide="${isPwd ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  },
+
+  async submitDeleteBranch(id, type = 'workplace') {
+    const pwdInput = document.getElementById('delete-branch-password');
+    const errDiv = document.getElementById('delete-branch-error');
+    const btn = document.getElementById('btn-confirm-delete-branch');
+    const password = pwdInput ? pwdInput.value.trim() : '';
+
+    if (!password) {
+      if (errDiv) {
+        errDiv.textContent = 'يرجى إدخال كلمة المرور للمتابعة';
+        errDiv.classList.remove('hidden');
+      }
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>جاري التحقق والحذف...</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+    if (errDiv) errDiv.classList.add('hidden');
+
+    try {
+      let res;
+      if (type === 'manager') {
+        res = await API.deleteEmployee(id, password);
+      } else {
+        res = await API.deleteBranch(id, password);
+      }
+
+      document.getElementById('delete-branch-modal').innerHTML = '';
+      showToast(res.message || 'تمت عملية الحذف بنجاح', 'success');
+
+      if (typeof this.loadBranchesData === 'function') {
+        this.loadBranchesData();
+      }
+      if (typeof this.loadEmployeesTable === 'function') {
+        this.loadEmployeesTable();
+      }
+      if (typeof this.loadDashboardData === 'function') {
+        this.loadDashboardData();
+      }
+      if (typeof this.loadReportsData === 'function') {
+        this.loadReportsData();
+      }
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i><span>تأكيد الحذف النهائي</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+      if (errDiv) {
+        errDiv.textContent = err.message || 'فشلت عملية الحذف، يرجى التأكد من كلمة المرور';
+        errDiv.classList.remove('hidden');
+      } else {
+        showToast(err.message, 'danger');
+      }
     }
   }
 };

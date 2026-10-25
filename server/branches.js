@@ -213,4 +213,127 @@ router.delete('/request/:id', authenticateToken, requireManager, async (req, res
   }
 });
 
+// DELETE /api/branches/:id - Delete an active branch (Requires company manager password)
+router.delete('/:id', authenticateToken, requireManager, async (req, res) => {
+  try {
+    const managerId = req.user.manager_id || req.user.id;
+    const targetId = parseInt(req.params.id, 10);
+    const { password } = req.body || {};
+
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة مرور حساب المدير لتأكيد حذف الفرع' });
+    }
+
+    const caller = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+    if (!caller || !bcrypt.compareSync(String(password).trim(), caller.password_hash)) {
+      return res.status(401).json({ success: false, error: 'كلمة المرور غير صحيحة، يرجى المحاولة مجدداً' });
+    }
+
+    // Find target workplace by workplace id or by branch manager user id
+    let targetWp = db.prepare('SELECT * FROM workplaces WHERE id = ?').get(targetId);
+    let branchManagerId = null;
+
+    if (targetWp) {
+      branchManagerId = targetWp.manager_id;
+    } else {
+      targetWp = db.prepare('SELECT * FROM workplaces WHERE manager_id = ?').get(targetId);
+      if (targetWp) {
+        branchManagerId = targetId;
+      }
+    }
+
+    // Try finding by branch_requests id
+    if (!targetWp) {
+      const bReq = db.prepare('SELECT * FROM branch_requests WHERE id = ? AND company_manager_id = ?').get(targetId, managerId);
+      if (bReq) {
+        if (bReq.created_workplace_id) {
+          targetWp = db.prepare('SELECT * FROM workplaces WHERE id = ?').get(bReq.created_workplace_id);
+          branchManagerId = bReq.created_branch_manager_id;
+        } else {
+          db.prepare('DELETE FROM branch_requests WHERE id = ?').run(targetId);
+          try { await saveToCloud(); } catch (_) {}
+          return res.json({ success: true, message: 'تم حذف طلب الفرع بنجاح' });
+        }
+      }
+    }
+
+    if (!targetWp) {
+      return res.status(404).json({ success: false, error: 'الفرع غير موجود' });
+    }
+
+    // Protect primary company headquarters (id 1 or primary manager's main workplace)
+    if (targetWp.id === 1 || (targetWp.manager_id === managerId && targetWp.id === 1)) {
+      return res.status(400).json({ success: false, error: 'لا يمكن حذف المقر الرئيسي الأساسي للشركة' });
+    }
+
+    // Verify ownership
+    if (branchManagerId && branchManagerId !== managerId) {
+      const bm = db.prepare('SELECT parent_manager_id FROM users WHERE id = ?').get(branchManagerId);
+      if (bm && bm.parent_manager_id && bm.parent_manager_id !== managerId) {
+        return res.status(403).json({ success: false, error: 'غير مصرح بحذف هذا الفرع' });
+      }
+    }
+
+    const branchName = targetWp.company_name || targetWp.name || 'فرع';
+
+    // 1. Delete all employees assigned to this branch manager (and their attendance/reports)
+    if (branchManagerId && branchManagerId !== managerId) {
+      const subEmployees = db.prepare('SELECT id FROM users WHERE manager_id = ? AND role = "employee"').all(branchManagerId);
+      for (const se of subEmployees) {
+        db.prepare('DELETE FROM attendance_records WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM attendance_corrections WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM salary_advances WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM employee_bonuses WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM employee_deductions WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM leave_requests WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM permission_requests WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM notifications WHERE user_id = ?').run(se.id);
+        db.prepare('DELETE FROM face_reset_requests WHERE employee_id = ?').run(se.id);
+        db.prepare('DELETE FROM users WHERE id = ?').run(se.id);
+      }
+
+      // Delete schedules, shifts, notifications for branch manager
+      db.prepare('DELETE FROM schedules WHERE manager_id = ?').run(branchManagerId);
+      db.prepare('DELETE FROM company_shifts WHERE manager_id = ?').run(branchManagerId);
+      db.prepare('DELETE FROM notifications WHERE user_id = ?').run(branchManagerId);
+
+      // Delete branch manager user
+      db.prepare('DELETE FROM users WHERE id = ?').run(branchManagerId);
+    }
+
+    // 2. Delete the workplace
+    db.prepare('DELETE FROM workplaces WHERE id = ?').run(targetWp.id);
+
+    // 3. Delete linked branch_requests
+    db.prepare(`
+      DELETE FROM branch_requests 
+      WHERE created_workplace_id = ? 
+         OR (created_branch_manager_id IS NOT NULL AND created_branch_manager_id = ?)
+         OR (company_manager_id = ? AND branch_name = ?)
+    `).run(targetWp.id, branchManagerId || 0, managerId, branchName);
+
+    // 4. Audit Log
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'DELETE_BRANCH',
+      'workplaces',
+      targetWp.id,
+      targetWp,
+      null,
+      `حذف الفرع (${branchName}) وحساب مديره وكافة بياناته نهائياً بعد التحقق من كلمة المرور`,
+      clientIp
+    );
+
+    // 5. Cloud Sync
+    try { await saveToCloud(); } catch (_) {}
+
+    res.json({ success: true, message: `تم مسح الفرع (${branchName}) وكافة بياناته نهائياً بنجاح` });
+  } catch (error) {
+    console.error('Delete branch error:', error);
+    res.status(500).json({ success: false, error: 'فشل في حذف الفرع: ' + (error.message || '') });
+  }
+});
+
 module.exports = router;

@@ -258,9 +258,10 @@ const API = {
     });
   },
 
-  deleteEmployee(id) {
+  deleteEmployee(id, password = null) {
     return this.request(`/employees/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      body: password ? { password } : undefined
     });
   },
 
@@ -367,6 +368,13 @@ const API = {
   cancelBranchRequest(id) {
     return this.request(`/branches/request/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  deleteBranch(id, password) {
+    return this.request(`/branches/${id}`, {
+      method: 'DELETE',
+      body: { password }
     });
   },
 

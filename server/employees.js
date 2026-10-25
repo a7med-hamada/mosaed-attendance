@@ -665,6 +665,21 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
       return res.status(403).json({ success: false, error: 'غير مصرح بحذف حساب تابع لجهة أخرى' });
     }
 
+    // If deleting an assistant/branch manager, require manager password confirmation
+    if (oldEmp.role === 'manager') {
+      const { password } = req.body || {};
+      if (!password) {
+        return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة مرور حساب المدير العام لتأكيد حذف هذا الفرع / المدير المساعد' });
+      }
+      const caller = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+      if (!caller || !bcrypt.compareSync(String(password).trim(), caller.password_hash)) {
+        return res.status(401).json({ success: false, error: 'كلمة المرور غير صحيحة، تم إلغاء عملية الحذف' });
+      }
+      // Delete any workplace and branch requests associated with this branch manager
+      db.prepare('DELETE FROM workplaces WHERE manager_id = ?').run(targetId);
+      db.prepare(`DELETE FROM branch_requests WHERE created_branch_manager_id = ? OR (company_manager_id = ? AND branch_name = ?)`).run(targetId, managerId, oldEmp.full_name);
+    }
+
     // Delete employee and all related reports and records completely
     db.prepare(`DELETE FROM attendance_records WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM attendance_corrections WHERE employee_id = ?`).run(targetId);

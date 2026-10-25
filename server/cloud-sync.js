@@ -135,9 +135,11 @@ function applySnapshotToDatabase(snapshot) {
         continue;
       }
 
+      // If cloud has no rows for this table, DO NOT wipe existing local data
+      if (rows.length === 0) continue;
+
       // Replace table rows with cloud state while respecting current schema columns
       db.exec(`DELETE FROM ${table};`);
-      if (rows.length === 0) continue;
 
       const sampleCols = Object.keys(rows[0]).filter(k => validCols.includes(k));
       if (sampleCols.length === 0) continue;
@@ -350,7 +352,7 @@ async function saveToCloud() {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(GIST_ID)}`, {
       method: 'PATCH',

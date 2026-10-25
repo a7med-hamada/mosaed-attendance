@@ -1003,11 +1003,19 @@ const ManagerUI = {
   },
 
   async deleteEmployee(id, name) {
-    if (!confirm(`هل أنت متأكد من حذف الموظف "${name}" نهائياً؟`)) return;
+    const warningMsg = `[تحذير إداري هام جداً]\n\nهل أنت متأكد من رغبتك في حذف الموظف "${name}" نهائياً من المنظومة؟\n\nتنبيه: هذا الإجراء سيؤدي فوراً إلى:\n1. مسح وحذف كافة تقارير الموظف الشهرية وكشوف الحساب بالكامل.\n2. حذف جميع سجلات الحضور والانصراف السابقة الخاصة به نهائياً.\n3. مسح كافة طلبات الإجازات والأذونات والسلفيات والمكافآت والخصومات المرتبطة به.\n\nهذا الإجراء نهائي ولا يمكن التراجع عنه أو استرجاع بياناته بعد الحذف. هل تريد المتابعة وتأكيد الحذف؟`;
+    if (!confirm(warningMsg)) return;
+
     try {
       const res = await API.deleteEmployee(id);
-      showToast(res.message, 'success');
+      showToast(res.message || 'تم حذف الموظف وكافة تقاريره وسجلاته بنجاح', 'success');
       this.loadEmployeesTable();
+      if (typeof this.loadReportsData === 'function') {
+        this.loadReportsData();
+      }
+      if (typeof this.loadDashboardData === 'function') {
+        this.loadDashboardData();
+      }
     } catch (err) {
       showToast(err.message, 'danger');
     }

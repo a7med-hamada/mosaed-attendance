@@ -4,6 +4,7 @@ const { db, logAudit, uploadsDir, getTodayString, getCurrentMonthString, getCair
 const { authenticateToken, requireManager, isManagedUser, isManagedEmployee, isManagedResource } = require('./auth');
 const fs = require('fs');
 const path = require('path');
+const { saveToCloud } = require('./cloud-sync');
 
 const router = express.Router();
 
@@ -664,13 +665,38 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
       return res.status(403).json({ success: false, error: 'غير مصرح بحذف حساب تابع لجهة أخرى' });
     }
 
-    // Delete employee and related records
+    // Delete employee and all related reports and records completely
     db.prepare(`DELETE FROM attendance_records WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM attendance_corrections WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM salary_advances WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM employee_bonuses WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM employee_deductions WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM leave_requests WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM permission_requests WHERE employee_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM notifications WHERE user_id = ?`).run(targetId);
+    db.prepare(`DELETE FROM face_reset_requests WHERE employee_id = ?`).run(targetId);
     db.prepare(`DELETE FROM users WHERE id = ?`).run(targetId);
+
+    // Remove from assigned shifts if exists
+    try {
+      const shifts = db.prepare(`SELECT id, assigned_employee_ids FROM company_shifts WHERE assigned_employee_ids IS NOT NULL`).all();
+      for (const s of shifts) {
+        if (!s.assigned_employee_ids) continue;
+        let ids = [];
+        try {
+          ids = typeof s.assigned_employee_ids === 'string'
+            ? (s.assigned_employee_ids.startsWith('[') ? JSON.parse(s.assigned_employee_ids) : s.assigned_employee_ids.split(',').map(Number))
+            : s.assigned_employee_ids;
+        } catch (_) {}
+        if (Array.isArray(ids) && ids.includes(targetId)) {
+          const updated = ids.filter(x => x !== targetId);
+          db.prepare(`UPDATE company_shifts SET assigned_employee_ids = ? WHERE id = ?`).run(
+            updated.length > 0 ? JSON.stringify(updated) : null,
+            s.id
+          );
+        }
+      }
+    } catch (_) {}
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(
@@ -681,11 +707,16 @@ router.delete('/:id', authenticateToken, requireManager, (req, res) => {
       targetId,
       oldEmp,
       null,
-      `حذف الموظف ${oldEmp.full_name}`,
+      `حذف الموظف ${oldEmp.full_name} ومسح كافة تقاريره وسجلاته نهائياً`,
       clientIp
     );
 
-    res.json({ success: true, message: 'تم حذف الموظف بنجاح' });
+    // Sync deletion to cloud
+    try {
+      saveToCloud().catch(() => {});
+    } catch (_) {}
+
+    res.json({ success: true, message: 'تم حذف الموظف وكافة تقاريره وسجلاته بنجاح' });
   } catch (error) {
     console.error('Delete employee error:', error);
     res.status(500).json({ success: false, error: 'فشل في حذف الموظف' });

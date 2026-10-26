@@ -1,0 +1,6 @@
+Dockerfile*
+.dockerignore
+attendance.db*
+cloudflared.exe
+render.yaml
+start-online.bat

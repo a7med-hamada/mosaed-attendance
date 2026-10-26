@@ -150,12 +150,14 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`=======================================================`);
-  console.log(`🚀 Workforce Attendance & HR System is running!`);
-  console.log(`📡 URL: http://0.0.0.0:${PORT}`);
-  console.log('🔐 Use manager registration to create an account.');
-  console.log(`=======================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`=======================================================`);
+    console.log(`🚀 Workforce Attendance & HR System is running!`);
+    console.log(`📡 URL: http://0.0.0.0:${PORT}`);
+    console.log('🔐 Use manager registration to create an account.');
+    console.log(`=======================================================`);
+  });
+}
 
 module.exports = app;

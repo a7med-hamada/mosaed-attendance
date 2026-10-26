@@ -3,7 +3,8 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "functions": {
-    "api/index.js": {
+    "api/*.js": {
+      "runtime": "nodejs22.x",
       "includeFiles": "attendance.db"
     }
   },

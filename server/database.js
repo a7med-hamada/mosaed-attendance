@@ -11,6 +11,7 @@ let uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'public',
 if (process.env.VERCEL) {
   const tmpDbFile = process.env.DATABASE_PATH || path.join('/tmp', 'attendance.db');
   try {
+    fs.mkdirSync(path.dirname(tmpDbFile), { recursive: true });
     if (!fs.existsSync(tmpDbFile) && fs.existsSync(SOURCE_DB_FILE)) {
       fs.copyFileSync(SOURCE_DB_FILE, tmpDbFile);
     }
@@ -18,6 +19,7 @@ if (process.env.VERCEL) {
     uploadsDir = process.env.UPLOADS_DIR || path.join('/tmp', 'uploads');
   } catch (err) {
     console.error('Vercel /tmp setup fallback error:', err);
+    DB_FILE = tmpDbFile;
   }
 } else if (process.env.DATABASE_PATH) {
   DB_FILE = path.resolve(process.env.DATABASE_PATH);

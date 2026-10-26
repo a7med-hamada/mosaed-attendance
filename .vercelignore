@@ -1,6 +1,7 @@
 Dockerfile*
 .dockerignore
-attendance.db*
 cloudflared.exe
 render.yaml
 start-online.bat
+attendance.db-shm
+attendance.db-wal

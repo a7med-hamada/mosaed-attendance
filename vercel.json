@@ -6,6 +6,8 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/api", "destination": "/api/index.js" },
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/super-admin", "destination": "/super-admin/index.html" },
     { "source": "/super-admin/(.*)", "destination": "/super-admin/index.html" },
     { "source": "/owner", "destination": "/super-admin/index.html" },

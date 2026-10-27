@@ -723,4 +723,83 @@ router.post('/manager-face-reset', authenticateToken, requireManager, (req, res)
   }
 });
 
+// ========================================================
+// MANAGER COMPANY BACKUPS & POINT-IN-TIME RECOVERY
+// ========================================================
+
+// GET /api/settings/backups - List company backups
+router.get('/backups', authenticateToken, requireManager, (req, res) => {
+  try {
+    const { listCompanyBackups } = require('./company-backup');
+    const managerId = req.user.manager_id || req.user.id;
+    const backups = listCompanyBackups(managerId);
+    res.json({ success: true, backups });
+  } catch (error) {
+    console.error('List manager backups error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استرجاع النسخ الاحتياطية' });
+  }
+});
+
+// POST /api/settings/backup - Create manual encrypted backup
+router.post('/backup', authenticateToken, requireManager, (req, res) => {
+  try {
+    const { createCompanySnapshot } = require('./company-backup');
+    const managerId = req.user.manager_id || req.user.id;
+    const note = req.body.note || 'نسخة احتياطية يدوية بطلب من المدير';
+    const snapshot = createCompanySnapshot(managerId, 'manager_manual', note);
+
+    if (!snapshot) {
+      return res.status(500).json({ success: false, error: 'تعذر إنشاء النسخة الاحتياطية' });
+    }
+
+    res.json({
+      success: true,
+      message: 'تم حفظ نسخة احتياطية مشفرة وشاملة لمنشأتك بنجاح',
+      snapshot
+    });
+  } catch (error) {
+    console.error('Create manager backup error:', error);
+    res.status(500).json({ success: false, error: 'فشل إنشاء النسخة الاحتياطية' });
+  }
+});
+
+// POST /api/settings/restore - Restore company to previous backup
+router.post('/restore', authenticateToken, requireManager, async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { restoreCompanyData } = require('./company-backup');
+    const managerId = req.user.manager_id || req.user.id;
+    const { password, backup_id } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'يرجى إدخال كلمة المرور لتأكيد استعادة النسخة الاحتياطية' });
+    }
+
+    const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+    if (!user || !bcrypt.compareSync(String(password), user.password_hash)) {
+      return res.status(403).json({ success: false, error: 'كلمة المرور غير صحيحة. تم إلغاء الاستعادة لحماية البيانات.' });
+    }
+
+    const result = await restoreCompanyData(managerId, backup_id ? parseInt(backup_id, 10) : null);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      req.user.id,
+      req.user.full_name,
+      'RESTORE_COMPANY_BACKUP',
+      'company_backups',
+      backup_id || 0,
+      null,
+      result.restored,
+      `استعادة المنشأة إلى نقطة احتياطية سابقة بواسطة المدير`,
+      clientIp
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Manager restore backup error:', error);
+    res.status(500).json({ success: false, error: error.message || 'فشل استعادة بيانات المنشأة' });
+  }
+});
+
 module.exports = router;

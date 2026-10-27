@@ -9,6 +9,7 @@ tests/
 !tests/
 tests/*
 !tests/security-hardening.test.js
+!tests/company-backup.test.js
 test-*.js
 .DS_Store
 public/uploads/*

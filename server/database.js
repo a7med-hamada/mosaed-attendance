@@ -573,10 +573,32 @@ try {
     db.exec(`ALTER TABLE notifications ADD COLUMN related_id INTEGER DEFAULT NULL;`);
   }
 
-  // Clear legacy/test face descriptors so all employees enroll fresh with strict multi-angle liveness
-  db.exec(`UPDATE users SET face_descriptor = NULL, face_photo = NULL, face_enrolled_at = NULL WHERE role = 'employee' AND face_descriptor IS NOT NULL;`);
+  // Legacy face descriptor clear disabled to preserve all employee biometric face descriptors
+  // db.exec(`UPDATE users SET face_descriptor = NULL, face_photo = NULL, face_enrolled_at = NULL WHERE role = 'employee' AND face_descriptor IS NOT NULL;`);
 } catch (faceTableErr) {
   console.error('Face reset table init error:', faceTableErr);
+}
+
+// Company Backups Table (Per-Company Point-in-time Snapshots & Encrypted Backups)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS company_backups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      manager_id INTEGER NOT NULL,
+      company_name TEXT NOT NULL,
+      trigger_action TEXT NOT NULL,
+      summary TEXT,
+      employee_count INTEGER DEFAULT 0,
+      records_count INTEGER DEFAULT 0,
+      encrypted_data TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_company_backups_mgr ON company_backups(manager_id);
+    CREATE INDEX IF NOT EXISTS idx_company_backups_name ON company_backups(company_name);
+    CREATE INDEX IF NOT EXISTS idx_company_backups_created ON company_backups(created_at);
+  `);
+} catch (backupTableErr) {
+  console.error('Company backups table init error:', backupTableErr);
 }
 
 // Helper to log audit events

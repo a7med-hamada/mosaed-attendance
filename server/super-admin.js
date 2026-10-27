@@ -420,6 +420,14 @@ router.delete('/companies/:id', authenticateSuperAdmin, (req, res) => {
     `).all(managerId, managerId);
     const empIds = emps.map(e => e.id);
 
+    // Automatically create an encrypted pre-deletion checkpoint of this company before wiping
+    try {
+      const { createCompanySnapshot } = require('./company-backup');
+      createCompanySnapshot(managerId, 'pre_deletion_archive', `أرشفة مشفرة للشركة ${manager.full_name} قبل الحذف بواسطة الإدارة`);
+    } catch (snapErr) {
+      console.warn('Pre-deletion snapshot warning:', snapErr.message);
+    }
+
     // Delete in cascading order
     if (empIds.length > 0) {
       const placeholders = empIds.map(() => '?').join(',');
@@ -456,7 +464,7 @@ router.delete('/companies/:id', authenticateSuperAdmin, (req, res) => {
 
     res.json({
       success: true,
-      message: `تم حذف شركة (${manager.full_name}) وجميع موظفيها (${empIds.length} موظف) وسجلاتها بالكامل بنجاح 🗑️`
+      message: `تم حذف شركة (${manager.full_name}) وجميع موظفيها (${empIds.length} موظف) وسجلاتها بالكامل بنجاح`
     });
   } catch (error) {
     console.error('Super admin delete company error:', error);
@@ -1031,6 +1039,78 @@ router.delete('/branch-requests/:id', authenticateSuperAdmin, async (req, res) =
   } catch (error) {
     console.error('Super admin delete branch request error:', error);
     res.status(500).json({ success: false, error: 'فشل في حذف طلب الفرع' });
+  }
+});
+
+// ========================================================
+// COMPANY ENCRYPTED BACKUPS & RESTORATION (MULTI-TENANT)
+// ========================================================
+
+// GET /api/super-admin/backups - List all company backups
+router.get('/backups', authenticateSuperAdmin, (req, res) => {
+  try {
+    const { listCompanyBackups } = require('./company-backup');
+    const backups = listCompanyBackups(req.query.company || null);
+    res.json({ success: true, backups });
+  } catch (error) {
+    console.error('Super admin list backups error:', error);
+    res.status(500).json({ success: false, error: 'فشل في استرجاع النسخ الاحتياطية' });
+  }
+});
+
+// POST /api/super-admin/backups/snapshot - Create instant snapshot for a company
+router.post('/backups/snapshot', authenticateSuperAdmin, (req, res) => {
+  try {
+    const { createCompanySnapshot } = require('./company-backup');
+    const target = req.body.manager_id || req.body.company_id || 1;
+    const summary = req.body.summary || 'نسخة احتياطية مشفرة يدوية من لوحة المشرف العام';
+    const snapshot = createCompanySnapshot(target, 'super_admin_manual', summary);
+
+    if (!snapshot) {
+      return res.status(400).json({ success: false, error: 'فشل إنشاء النسخة الاحتياطية للشركة المحددة' });
+    }
+
+    res.json({
+      success: true,
+      message: `تم حفظ نسخة احتياطية مشفرة لشركة (${snapshot.companyName}) بنجاح`,
+      snapshot
+    });
+  } catch (error) {
+    console.error('Super admin create snapshot error:', error);
+    res.status(500).json({ success: false, error: 'فشل إنشاء النسخة الاحتياطية' });
+  }
+});
+
+// POST /api/super-admin/backups/restore - Restore company data from encrypted backup
+router.post('/backups/restore', authenticateSuperAdmin, async (req, res) => {
+  try {
+    const { restoreCompanyData } = require('./company-backup');
+    const target = req.body.company_identifier || req.body.manager_id || req.body.company_name;
+    const backupId = req.body.backup_id ? parseInt(req.body.backup_id, 10) : null;
+
+    if (!target) {
+      return res.status(400).json({ success: false, error: 'يرجى تحديد الشركة أو معرف المدير المراد استعادة بياناته' });
+    }
+
+    const result = await restoreCompanyData(target, backupId);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logAudit(
+      0,
+      'SuperAdmin',
+      'RESTORE_COMPANY_BACKUP',
+      'company_backups',
+      backupId || 0,
+      null,
+      result.restored,
+      `استعادة كامل بيانات شركة (${result.companyName}) من النسخة الاحتياطية المشفرة بنجاح`,
+      clientIp
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Super admin restore backup error:', error);
+    res.status(500).json({ success: false, error: error.message || 'فشل استعادة بيانات الشركة من النسخة الاحتياطية' });
   }
 });
 

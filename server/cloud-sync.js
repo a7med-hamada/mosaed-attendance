@@ -5,8 +5,15 @@ const CLOUD_SYNC_ENABLED = process.env.CLOUD_SYNC_ENABLED !== 'false';
 const GIST_ID = process.env.CLOUD_SYNC_GIST_ID || '849037ac1e7076ebd3523279e961719f';
 const XOR_HEX = '0a071c3e5400161b143642283b271b0304681e100f34585e5b543f213b0e3420085b5c244c16171d';
 const XOR_KEY = 'mosaed_cloud_sync_key_2026';
-const encryptionKeyText = process.env.CLOUD_SYNC_ENCRYPTION_KEY || '';
-const ENCRYPTION_KEY = Buffer.from(encryptionKeyText, 'base64');
+function getMasterEncryptionKey() {
+  if (process.env.CLOUD_SYNC_ENCRYPTION_KEY) {
+    const raw = Buffer.from(process.env.CLOUD_SYNC_ENCRYPTION_KEY, 'base64');
+    if (raw.length === 32) return raw;
+  }
+  return crypto.createHash('sha256')
+    .update('mosaed_cloud_sync_master_encryption_secure_key_2026_salt_98412')
+    .digest();
+}
 
 function getSyncToken() {
   if (process.env.CLOUD_SYNC_TOKEN) return process.env.CLOUD_SYNC_TOKEN;
@@ -15,11 +22,9 @@ function getSyncToken() {
 }
 
 function encryptSnapshot(snapshot) {
-  if (ENCRYPTION_KEY.length !== 32) {
-    return JSON.stringify(snapshot);
-  }
+  const key = getMasterEncryptionKey();
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([
     cipher.update(JSON.stringify(snapshot), 'utf8'),
     cipher.final()
@@ -50,13 +55,10 @@ function decryptSnapshot(content) {
 
   // Handle encrypted envelope version 2
   if (parsed && parsed.version === 2 && parsed.algorithm === 'aes-256-gcm') {
-    if (ENCRYPTION_KEY.length !== 32) {
-      console.warn('[CloudSync] Encrypted snapshot detected but CLOUD_SYNC_ENCRYPTION_KEY is not a valid 32-byte key.');
-      return null;
-    }
+    const key = getMasterEncryptionKey();
     const decipher = crypto.createDecipheriv(
       'aes-256-gcm',
-      ENCRYPTION_KEY,
+      key,
       Buffer.from(parsed.iv, 'base64')
     );
     decipher.setAuthTag(Buffer.from(parsed.authTag, 'base64'));
@@ -88,7 +90,9 @@ const SYNC_TABLES = [
   'notifications',
   'company_shifts',
   'support_tickets',
-  'branch_requests'
+  'branch_requests',
+  'face_reset_requests',
+  'company_backups'
 ];
 
 let initialLoadDone = false;
@@ -405,6 +409,11 @@ async function cloudSyncMiddleware(req, res, next) {
     const origJson = res.json.bind(res);
     res.json = async function (body) {
       if (res.statusCode < 400 && (!body || body.success !== false)) {
+        try {
+          const { createCompanySnapshot } = require('./company-backup');
+          const targetManager = (req.user && (req.user.manager_id || req.user.id)) || 1;
+          createCompanySnapshot(targetManager, `${req.method}_${req.path.replace(/\//g, '_')}`);
+        } catch (_) {}
         await saveToCloud();
       }
       return origJson(body);

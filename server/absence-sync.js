@@ -24,6 +24,11 @@ function syncMissingAbsencesForMonth(month, managerId = null) {
     const settings = {};
     settingsRows.forEach(r => settings[r.key] = r.value);
 
+    // Only auto-mark absences if explicitly enabled by the manager in settings
+    if (settings['auto_mark_absences'] !== '1') {
+      return;
+    }
+
     const weekendDaysStr = settings['weekend_days'] || '5';
     const weekendDays = (weekendDaysStr === 'none' || !weekendDaysStr) ? [] : weekendDaysStr.split(',').map(s => s.trim());
     const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');

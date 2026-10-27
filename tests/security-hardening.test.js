@@ -145,6 +145,42 @@ async function run() {
   const queryToken = await request('GET', `/api/employees?token=${encodeURIComponent(managerA.data.token)}`);
   assert.equal(queryToken.response.status, 401);
 
+  // Log in as employeeA to get employee token
+  const employeeLogin = await request('POST', '/api/auth/login', {
+    body: { identifier: 'employee-a@example.test', password: 'EmployeePasswordA123' }
+  });
+  assert.equal(employeeLogin.response.status, 200);
+  const employeeToken = employeeLogin.data.token;
+
+  // Verification: Unauthenticated & Employee attempts to add attendance or deduction
+  const unauthAttendance = await request('POST', '/api/attendance/manual-record', {
+    body: { employee_id: employeeA.data.id, date: '2026-10-27', check_in_time: '09:00' }
+  });
+  assert.equal(unauthAttendance.response.status, 401);
+
+  const employeeAttendanceInjection = await request('POST', '/api/attendance/manual-record', {
+    token: employeeToken,
+    body: { employee_id: employeeA.data.id, date: '2026-10-27', check_in_time: '09:00' }
+  });
+  assert.equal(employeeAttendanceInjection.response.status, 403);
+
+  const unauthDeduction = await request('POST', '/api/deductions', {
+    body: { employee_id: employeeA.data.id, amount: 100, reason: 'Test' }
+  });
+  assert.equal(unauthDeduction.response.status, 401);
+
+  const employeeDeductionInjection = await request('POST', '/api/deductions', {
+    token: employeeToken,
+    body: { employee_id: employeeA.data.id, amount: 100, reason: 'Test' }
+  });
+  assert.equal(employeeDeductionInjection.response.status, 403);
+
+  const crossCompanyDeduction = await request('POST', '/api/deductions', {
+    token: managerA.data.token,
+    body: { employee_id: employeeB.data.id, amount: 50, reason: 'Cross' }
+  });
+  assert.equal(crossCompanyDeduction.response.status, 403);
+
   const blockedOrigin = await request('POST', '/api/auth/login', {
     origin: 'https://untrusted.example',
     body: { identifier: 'unknown@example.test', password: 'wrong' }

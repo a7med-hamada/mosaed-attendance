@@ -1,6 +1,6 @@
 const express = require('express');
 const { db, logAudit, createNotification, getTodayString, getCurrentMonthString } = require('./database');
-const { authenticateToken, requireManager } = require('./auth');
+const { authenticateToken, requireManager, isManagedEmployee } = require('./auth');
 
 const advancesRouter = express.Router();
 const bonusesRouter = express.Router();
@@ -87,6 +87,10 @@ advancesRouter.post('/', authenticateToken, (req, res) => {
     const emp = db.prepare('SELECT id, full_name, manager_id FROM users WHERE id = ?').get(targetEmployeeId);
     if (!emp) {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
+    }
+
+    if (isManager && !isManagedEmployee(req.user.manager_id || req.user.id, targetEmployeeId)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح لك بتسجيل سلفة لموظف في منشأة أخرى' });
     }
 
     const advanceDate = date || getCurrentDateString();
@@ -339,6 +343,10 @@ bonusesRouter.post('/', authenticateToken, requireManager, (req, res) => {
       return res.status(404).json({ success: false, error: 'الموظف غير موجود' });
     }
 
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, emp.id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح لك بإضافة مكافأة لموظف في منشأة أخرى' });
+    }
+
     const bonusDate = date || getCurrentDateString();
     const bonusMonth = month || bonusDate.substring(0, 7);
 
@@ -397,6 +405,10 @@ bonusesRouter.delete('/:id', authenticateToken, requireManager, (req, res) => {
     const bonus = db.prepare('SELECT * FROM employee_bonuses WHERE id = ?').get(id);
     if (!bonus) {
       return res.status(404).json({ success: false, error: 'المكافأة غير موجودة' });
+    }
+
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, bonus.employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بحذف مكافأة لموظف في منشأة أخرى' });
     }
 
     db.prepare('DELETE FROM employee_bonuses WHERE id = ?').run(id);
@@ -495,8 +507,8 @@ deductionsRouter.post('/', authenticateToken, requireManager, (req, res) => {
     }
 
     // Tenant check
-    if (emp.manager_id && emp.manager_id !== req.user.id && req.user.id !== 1) {
-      return res.status(403).json({ success: false, error: 'غير مصرح لك بإضافة خصم لموظف في فرع آخر' });
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, emp.id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح لك بإضافة خصم لموظف في منشأة أخرى' });
     }
 
     const deductionDate = date || getCurrentDateString();
@@ -557,6 +569,10 @@ deductionsRouter.delete('/:id', authenticateToken, requireManager, (req, res) =>
     const deduction = db.prepare('SELECT * FROM employee_deductions WHERE id = ?').get(id);
     if (!deduction) {
       return res.status(404).json({ success: false, error: 'سجل الخصم غير موجود' });
+    }
+
+    if (!isManagedEmployee(req.user.manager_id || req.user.id, deduction.employee_id)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بحذف خصم لموظف في منشأة أخرى' });
     }
 
     db.prepare('DELETE FROM employee_deductions WHERE id = ?').run(id);

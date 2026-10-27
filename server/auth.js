@@ -167,6 +167,20 @@ function isManagedResource(table, managerId, resourceId) {
 // POST /api/auth/register-manager (New Manager Registration)
 router.post('/register-manager', registrationRateLimiter, (req, res) => {
   try {
+    // Security Lockdown: Prevent open unauthorized manager registration from the internet
+    const allowRegistration = process.env.ALLOW_PUBLIC_REGISTRATION === 'true' || process.env.NODE_ENV === 'test';
+    const registrationSecret = process.env.REGISTRATION_SECRET_PIN || '';
+
+    if (!allowRegistration) {
+      const providedPin = req.body.registration_pin || req.headers['x-registration-pin'];
+      if (!registrationSecret || providedPin !== registrationSecret) {
+        return res.status(403).json({
+          success: false,
+          error: 'التسجيل العام لمدراء جدد مغلق لأسباب أمنية. إنشاء الحسابات متاح فقط من قِبل إدارة النظام.'
+        });
+      }
+    }
+
     const { company_name, full_name, email, password, confirm_password, phone } = req.body;
 
     if (!full_name || !email || !password) {

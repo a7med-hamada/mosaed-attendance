@@ -47,6 +47,11 @@ function saveBase64Image(base64Data, prefix = 'att') {
 // Automatic absence check logic
 function checkAndMarkAutoAbsences() {
   try {
+    const autoSetting = db.prepare(`SELECT value FROM company_settings WHERE key = 'auto_mark_absences'`).get();
+    if (!autoSetting || autoSetting.value !== '1') {
+      return;
+    }
+
     syncMissingAbsencesForMonth(getCurrentMonthString());
     const today = getTodayString();
     const currentTime = getCurrentTimeString();

@@ -684,25 +684,38 @@ function showToast(message, type = 'info', duration = 4000) {
   if (!container) return;
 
   const toast = document.createElement('div');
-  const bgColors = {
-    success: 'bg-emerald-600 text-white border-emerald-500',
-    danger: 'bg-rose-600 text-white border-rose-500',
-    warning: 'bg-amber-600 text-white border-amber-500',
-    info: 'bg-blue-600 text-white border-blue-500'
+  const iconThemes = {
+    success: {
+      pill: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/20',
+      icon: 'check-circle-2',
+      borderAccent: 'border-r-4 border-r-teal-500'
+    },
+    danger: {
+      pill: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/20',
+      icon: 'alert-circle',
+      borderAccent: 'border-r-4 border-r-rose-500'
+    },
+    warning: {
+      pill: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      icon: 'alert-triangle',
+      borderAccent: 'border-r-4 border-r-amber-500'
+    },
+    info: {
+      pill: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20',
+      icon: 'info',
+      borderAccent: 'border-r-4 border-r-teal-500'
+    }
   };
 
-  const icons = {
-    success: 'check-circle-2',
-    danger: 'alert-circle',
-    warning: 'alert-triangle',
-    info: 'info'
-  };
+  const theme = iconThemes[type] || iconThemes.info;
 
-  toast.className = `flex items-center gap-3 p-4 rounded-xl shadow-xl border ${bgColors[type] || bgColors.info} text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 max-w-md w-full`;
+  toast.className = `flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold transition-all duration-300 transform translate-y-2 opacity-0 max-w-md w-full pointer-events-auto ${theme.borderAccent}`;
   toast.innerHTML = `
-    <i data-lucide="${icons[type] || 'info'}" class="w-5 h-5 flex-shrink-0"></i>
-    <div class="flex-1">${message}</div>
-    <button class="text-white/80 hover:text-white" onclick="this.parentElement.remove()">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center border flex-shrink-0 ${theme.pill}">
+      <i data-lucide="${theme.icon}" class="w-4 h-4"></i>
+    </div>
+    <div class="flex-1 leading-snug">${message}</div>
+    <button class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" onclick="this.parentElement.remove()">
       <i data-lucide="x" class="w-4 h-4"></i>
     </button>
   `;

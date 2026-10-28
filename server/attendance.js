@@ -114,6 +114,20 @@ function checkAndMarkAutoAbsences() {
 
       const absenceMins = timeToMinutes(emp.absence_threshold);
       if (currentMins >= absenceMins) {
+        // If company has active evening shifts ending later today, do not auto-mark absent until shifts conclude
+        const laterShifts = db.prepare(`
+          SELECT * FROM company_shifts
+          WHERE is_active = 1 AND (manager_id = ? OR manager_id IS NULL)
+          ORDER BY end_time DESC
+        `).all(emp.manager_id || 1);
+
+        if (laterShifts.length > 0) {
+          const maxShiftEndMins = Math.max(...laterShifts.map(s => timeToMinutes(s.end_time || '21:00')));
+          if (currentMins < maxShiftEndMins) {
+            continue;
+          }
+        }
+
         // Check if attendance record exists for today
         const existing = db.prepare(`SELECT id, check_in_time, status FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, today);
         if (!existing) {
@@ -1440,6 +1454,20 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const finalCheckIn = check_in_time !== undefined ? (check_in_time && String(check_in_time).trim() ? String(check_in_time).trim() : null) : oldRecord.check_in_time;
 
+    // If record is for today, and checkout time is set in the future (has not arrived yet):
+    // Automatically know that the employee is still at work ("على رأس العمل")!
+    const today = getTodayString();
+    const currentTime = getCurrentTimeString();
+    const currentMins = timeToMinutes(currentTime);
+
+    if (oldRecord.date === today && finalCheckOut) {
+      const outMins = timeToMinutes(finalCheckOut);
+      if (outMins > currentMins) {
+        schedEnd = finalCheckOut;
+        finalCheckOut = null;
+      }
+    }
+
     // Recompute worked hours if both times exist
     let workedHours = 0;
     if (finalCheckIn && finalCheckOut) {
@@ -1561,13 +1589,29 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
       }
     }
 
+    // Determine effective checkout: If record is for today and checkout is in the future, employee is still at work
+    const today = getTodayString();
+    const currentTime = getCurrentTimeString();
+    const currentMins = timeToMinutes(currentTime);
+
+    let effectiveCheckOut = (check_out_time && String(check_out_time).trim()) ? String(check_out_time).trim() : null;
+    let isFutureCheckoutToday = false;
+    if (date === today && effectiveCheckOut) {
+      const outM = timeToMinutes(effectiveCheckOut);
+      if (outM > currentMins) {
+        isFutureCheckoutToday = true;
+        schedEnd = effectiveCheckOut;
+        effectiveCheckOut = null;
+      }
+    }
+
     // Compute worked hours
     let workedHours = 0;
-    if (check_in_time && check_out_time) {
+    if (check_in_time && effectiveCheckOut) {
       const inM = timeToMinutes(check_in_time);
-      const outM = timeToMinutes(check_out_time);
+      const outM = timeToMinutes(effectiveCheckOut);
       workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
-    } else if (check_in_time && !check_out_time) {
+    } else if (check_in_time && !effectiveCheckOut) {
       workedHours = 0;
     }
 
@@ -1588,8 +1632,8 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
-        check_in_time || null, check_out_time || null, evalResult.status, workedHours,
-        evalResult.lateMinutes, evalResult.deduction, check_out_time ? 'manual_admin' : 'verified',
+        check_in_time || null, effectiveCheckOut, evalResult.status, workedHours,
+        evalResult.lateMinutes, evalResult.deduction, effectiveCheckOut ? 'manual_admin' : 'verified',
         cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, recordId
       );
     } else {
@@ -1600,9 +1644,9 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
           verification_status, notes, shift_id, shift_name
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
       `).run(
-        employee_id, date, check_in_time || null, check_out_time || null, schedStart, schedEnd,
+        employee_id, date, check_in_time || null, effectiveCheckOut, schedStart, schedEnd,
         evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
-        check_out_time ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
+        effectiveCheckOut ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
       );
       recordId = info.lastInsertRowid;
     }
@@ -1780,13 +1824,22 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
 
         const inTime = check_in_time || emp.start_time;
         const outTime = check_out_time || emp.end_time;
+        let effectiveOut = outTime;
+        const todayStr = getTodayString();
+        const currentMinsNow = timeToMinutes(getCurrentTimeString());
+        if (d === todayStr && effectiveOut) {
+          if (timeToMinutes(effectiveOut) > currentMinsNow) {
+            effectiveOut = null;
+          }
+        }
+
         let workedHours = 0;
-        if (inTime && outTime) {
+        if (inTime && effectiveOut) {
           const inM = timeToMinutes(inTime);
-          const outM = timeToMinutes(outTime);
+          const outM = timeToMinutes(effectiveOut);
           workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
         } else if (inTime) {
-          workedHours = 8.0;
+          workedHours = 0;
         }
 
         let finalStatus = status || 'On Time';
@@ -1818,7 +1871,7 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
               late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
               notes = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-          `).run(inTime, outTime, finalStatus, workedHours, lateMinutes, deduction, reason, existing.id);
+          `).run(inTime, effectiveOut, finalStatus, workedHours, lateMinutes, deduction, reason, existing.id);
         } else {
           db.prepare(`
             INSERT INTO attendance_records (
@@ -1827,7 +1880,7 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
               verification_status, notes
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
           `).run(
-            emp.id, d, inTime, outTime, emp.start_time, emp.end_time,
+            emp.id, d, inTime, effectiveOut, emp.start_time, emp.end_time,
             finalStatus, workedHours, lateMinutes, deduction, reason
           );
         }
@@ -1930,13 +1983,24 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
         }
       }
 
+      // Check if checkout is for today and in the future
+      const todayStr = getTodayString();
+      const currentMinsNow = timeToMinutes(getCurrentTimeString());
+      let effectiveOut = outTime && String(outTime).trim() ? String(outTime).trim() : null;
+      if (date === todayStr && effectiveOut) {
+        if (timeToMinutes(effectiveOut) > currentMinsNow) {
+          schedEnd = effectiveOut;
+          effectiveOut = null;
+        }
+      }
+
       // Calculate worked hours
       let workedHours = 0;
-      if (inTime && outTime) {
+      if (inTime && effectiveOut) {
         const inM = timeToMinutes(inTime);
-        const outM = timeToMinutes(outTime);
+        const outM = timeToMinutes(effectiveOut);
         workedHours = parseFloat((Math.max(0, outM - inM) / 60).toFixed(2));
-      } else if (inTime && !outTime) {
+      } else if (inTime && !effectiveOut) {
         workedHours = 0;
       }
 
@@ -1955,8 +2019,8 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(
-          inTime, outTime, evalResult.status, workedHours,
-          evalResult.lateMinutes, evalResult.deduction, outTime ? 'manual_admin' : 'verified',
+          inTime, effectiveOut, evalResult.status, workedHours,
+          evalResult.lateMinutes, evalResult.deduction, effectiveOut ? 'manual_admin' : 'verified',
           cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, existing.id
         );
       } else {
@@ -1967,9 +2031,9 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
             verification_status, notes, shift_id, shift_name
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
         `).run(
-          empId, date, inTime, outTime, schedStart, schedEnd,
+          empId, date, inTime, effectiveOut, schedStart, schedEnd,
           evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
-          outTime ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
+          effectiveOut ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
         );
       }
 

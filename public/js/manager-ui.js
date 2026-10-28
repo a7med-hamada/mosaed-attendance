@@ -3350,7 +3350,11 @@ const ManagerUI = {
                     <span>على رأس العمل الآن</span>
                   </label>
                 </div>
-                <input type="time" id="edit-rec-checkout" value="${record.check_out_time || ''}" ${!record.check_out_time ? 'disabled' : ''} class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white disabled:opacity-50" />
+                <input type="time" id="edit-rec-checkout" value="${record.check_out_time || ''}" ${!record.check_out_time ? 'disabled' : ''} onchange="ManagerUI.handleEditCheckoutChange('${record.date}')" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white disabled:opacity-50" />
+                <div id="edit-rec-checkout-hint" class="hidden mt-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                  <span>موعد الانصراف لم يحن بعد، سيتم إدراج الموظف "على رأس العمل الآن" تلقائياً حتى حلول الموعد.</span>
+                </div>
               </div>
             </div>
 
@@ -3409,8 +3413,31 @@ const ManagerUI = {
     }
   },
 
+  handleEditCheckoutChange(recDate) {
+    const today = (window.App && App.getTodayDateString) ? App.getTodayDateString() : new Date().toISOString().split('T')[0];
+    const outVal = document.getElementById('edit-rec-checkout')?.value;
+    const hintEl = document.getElementById('edit-rec-checkout-hint');
+    if (!hintEl) return;
+    if (recDate === today && outVal) {
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      const [h, m] = outVal.split(':').map(Number);
+      const outMins = h * 60 + (m || 0);
+      if (outMins > currentMins) {
+        hintEl.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      } else {
+        hintEl.classList.add('hidden');
+      }
+    } else {
+      hintEl.classList.add('hidden');
+    }
+  },
+
   toggleEditOnDuty(isOnDuty) {
     const outEl = document.getElementById('edit-rec-checkout');
+    const hintEl = document.getElementById('edit-rec-checkout-hint');
+    if (hintEl) hintEl.classList.add('hidden');
     if (!outEl) return;
     if (isOnDuty) {
       outEl.value = '';
@@ -3424,13 +3451,25 @@ const ManagerUI = {
   },
 
   async saveEditedAttendance(recordId) {
+    const record = (this.currentEditableRecords || []).find(r => r.id === recordId);
     const shiftId = document.getElementById('edit-rec-shift')?.value;
     const checkin = document.getElementById('edit-rec-checkin')?.value;
     const isOnDuty = document.getElementById('edit-rec-on-duty')?.checked;
-    const checkout = isOnDuty ? '' : (document.getElementById('edit-rec-checkout')?.value || '');
+    let checkout = isOnDuty ? '' : (document.getElementById('edit-rec-checkout')?.value || '');
     const waive = document.getElementById('edit-rec-waive')?.checked;
     const rawReason = document.getElementById('edit-rec-reason')?.value;
     const reason = (rawReason && rawReason.trim()) || 'تصحيح موعد الحضور بواسطة المدير';
+
+    const today = (window.App && App.getTodayDateString) ? App.getTodayDateString() : new Date().toISOString().split('T')[0];
+    if (record && record.date === today && checkout) {
+      const now = new Date();
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+      const [h, m] = checkout.split(':').map(Number);
+      const outMins = h * 60 + (m || 0);
+      if (outMins > currentMins) {
+        checkout = '';
+      }
+    }
 
     const btn = document.getElementById('edit-rec-save-btn');
     if (btn) btn.disabled = true;

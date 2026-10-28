@@ -68,8 +68,8 @@ function syncMissingAbsencesForMonth(month, managerId = null) {
       const dateStr = `${yearStr}-${monthStr}-${String(day).padStart(2, '0')}`;
       if (dateStr > today) break;
 
-      // If today, only mark absent if passed threshold
-      if (dateStr === today && currentTimeStr < '13:00') {
+      // If today, skip: today's attendance is managed dynamically in real time and employees may attend evening or subsequent shifts
+      if (dateStr === today) {
         continue;
       }
 

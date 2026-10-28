@@ -1,6 +1,6 @@
 /* ========================================================
-   WAQTY ATTENDANCE & PAYROLL SYSTEM - MODERN ENTERPRISE UI
-   Harmonized Turquoise Green & Navy Slate Visual Design
+   QASETLY FINANCIAL & SAAS DESIGN SYSTEM FOR WAQTY
+   Production-Quality Visual Redesign (Dark Navy & Emerald Teal)
    ======================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
@@ -9,44 +9,59 @@
   --font-ar: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-en: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Primary Brand: Turquoise Green */
+  /* Primary Brand: Sophisticated Emerald Teal */
   --brand-primary: #0d9488;
   --brand-primary-hover: #0f766e;
   --brand-primary-light: #f0fdfa;
   --brand-primary-tint: rgba(13, 148, 136, 0.12);
-  --brand-primary-border: rgba(13, 148, 136, 0.28);
+  --brand-primary-border: rgba(13, 148, 136, 0.25);
   --brand-accent: #2dd4bf;
-
-  /* Light Theme Surfaces & Lines */
-  --surface-bg-light: #f8fafc;
-  --surface-card-light: #ffffff;
-  --surface-card-elevated-light: #ffffff;
-  --line-border-light: #e2e8f0;
-  --line-border-subtle-light: #f1f5f9;
-  --text-heading-light: #0f172a;
-  --text-body-light: #334155;
-  --text-muted-light: #64748b;
 
   /* Dark Theme Surfaces & Lines (Deep Navy Slate) */
   --surface-bg-dark: #0b132b;
-  --surface-card-dark: #131e3a;
-  --surface-card-elevated-dark: #18264a;
+  --surface-card-dark: #111c38;
+  --surface-card-elevated-dark: #162447;
+  --surface-card-subtle-dark: #0e1730;
   --line-border-dark: #1e2e4e;
   --line-border-subtle-dark: #24375a;
   --text-heading-dark: #f8fafc;
   --text-body-dark: #cbd5e1;
   --text-muted-dark: #8fa0b8;
 
-  /* Status Colors */
+  /* Light Theme Surfaces & Lines (Crisp Neutral) */
+  --surface-bg-light: #f8fafc;
+  --surface-card-light: #ffffff;
+  --surface-card-elevated-light: #f1f5f9;
+  --surface-card-subtle-light: #f8fafc;
+  --line-border-light: #e2e8f0;
+  --line-border-subtle-light: #f1f5f9;
+  --text-heading-light: #0f172a;
+  --text-body-light: #334155;
+  --text-muted-light: #64748b;
+
+  /* Semantic Status Tokens */
   --status-success: #0d9488;
   --status-warning: #f59e0b;
   --status-danger: #ef4444;
-  --status-info: #3b82f6;
+  --status-info: #0284c7;
+
+  /* Layout & Elevations */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+  --shadow-card-light: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card-dark: 0 4px 20px rgba(0, 0, 0, 0.28);
 }
 
-/* Global Font Enforcement */
+/* Global Font & Numeric Alignment */
 *, body, button, input, select, textarea, span, h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-ar) !important;
+}
+
+.font-mono, td.font-mono, span.font-mono {
+  font-variant-numeric: tabular-nums !important;
 }
 
 body {
@@ -59,7 +74,7 @@ body {
 }
 
 /* ========================================================
-   DARK THEME (Deep Navy Slate Palette)
+   DARK THEME (Deep Navy Slate System)
    ======================================================== */
 html.dark,
 html.dark body,
@@ -85,7 +100,7 @@ html.dark .bg-slate-850 {
 }
 
 html.dark .bg-slate-800 {
-  background-color: #1a294d !important;
+  background-color: #152243 !important;
   border-color: var(--line-border-dark) !important;
 }
 
@@ -110,7 +125,7 @@ html.dark .text-slate-500 {
 }
 
 /* ========================================================
-   LIGHT THEME (Clean, Crisp Neutral Palette)
+   LIGHT THEME (Clean, Crisp Neutral System)
    ======================================================== */
 html:not(.dark),
 html:not(.dark) body,
@@ -127,7 +142,7 @@ html:not(.dark) .bg-slate-850 {
 }
 
 /* ========================================================
-   HEADER & NAVBAR (Refined Frosted Glass)
+   HEADER & NAVBAR (Frosted Glass With Subtle Elevation)
    ======================================================== */
 html.dark header {
   background-color: rgba(11, 19, 43, 0.92) !important;
@@ -142,11 +157,11 @@ html:not(.dark) header {
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
   border-bottom: 1px solid var(--line-border-light) !important;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
 }
 
 /* ========================================================
-   PRIMARY BUTTONS & CTA (Refined Turquoise Green)
+   PRIMARY BUTTONS & CTA (Restrained Emerald Teal)
    ======================================================== */
 .bg-blue-600,
 button.bg-blue-600,
@@ -155,8 +170,8 @@ a.bg-blue-600,
 .btn-primary {
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
   color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25) !important;
   font-weight: 700 !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -167,7 +182,7 @@ a.bg-blue-600:hover,
 #login-submit-btn:hover,
 .btn-primary:hover {
   background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.38) !important;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35) !important;
   transform: translateY(-1px);
 }
 
@@ -185,81 +200,99 @@ button.bg-blue-600:active {
 }
 
 .shadow-emerald-glow {
-  box-shadow: 0 4px 16px -2px rgba(13, 148, 136, 0.3) !important;
+  box-shadow: 0 4px 14px -2px rgba(13, 148, 136, 0.25) !important;
 }
 
 /* ========================================================
-   SIDEBAR & NAVIGATION
+   SIDEBAR & NAVIGATION (Compact, Professional RTL Architecture)
    ======================================================== */
 html.dark aside > div {
   background: var(--surface-card-dark) !important;
   border: 1px solid var(--line-border-dark) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card-dark) !important;
 }
 
 html:not(.dark) aside > div {
   background: #ffffff !important;
   border: 1px solid var(--line-border-light) !important;
-  border-radius: 18px !important;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card-light) !important;
 }
 
+/* Modern SaaS Active Indicator on Nav Items */
+#manager-nav-list button.bg-emerald-grad,
 #manager-nav-list button.bg-blue-600,
 #employee-subnav button.bg-blue-600 {
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 3px 12px rgba(13, 148, 136, 0.3) !important;
-  border-radius: 12px !important;
+  background: rgba(13, 148, 136, 0.12) !important;
+  color: #0d9488 !important;
+  border-right: 3px solid #0d9488 !important;
+  box-shadow: none !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 700 !important;
 }
 
-html.dark #manager-nav-list button:not(.bg-blue-600):hover,
+html.dark #manager-nav-list button.bg-emerald-grad,
+html.dark #manager-nav-list button.bg-blue-600,
+html.dark #employee-subnav button.bg-blue-600 {
+  background: rgba(13, 148, 136, 0.15) !important;
+  color: #2dd4bf !important;
+  border-right: 3px solid #2dd4bf !important;
+}
+
+html.dark #manager-nav-list button:not(.bg-emerald-grad):not(.bg-blue-600):hover,
 html.dark #employee-subnav button:not(.bg-blue-600):hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
   color: #ffffff !important;
 }
 
-html:not(.dark) #manager-nav-list button:not(.bg-blue-600):hover,
+html:not(.dark) #manager-nav-list button:not(.bg-emerald-grad):not(.bg-blue-600):hover,
 html:not(.dark) #employee-subnav button:not(.bg-blue-600):hover {
-  background-color: rgba(13, 148, 136, 0.07) !important;
-  color: #0f766e !important;
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
 }
 
 /* ========================================================
-   STAT / METRIC CARDS (Dashboard Widgets)
+   DASHBOARD METRIC CARDS (Fintech Balanced Cards)
    ======================================================== */
-html.dark #mgr-metrics-grid > div {
+html.dark #mgr-metrics-grid > div,
+html.dark .glass-card {
   background: var(--surface-card-dark) !important;
   border: 1px solid var(--line-border-dark) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card-dark) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
-html.dark #mgr-metrics-grid > div:hover {
+html.dark #mgr-metrics-grid > div:hover,
+html.dark .glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(13, 148, 136, 0.35) !important;
 }
 
-html:not(.dark) #mgr-metrics-grid > div {
+html:not(.dark) #mgr-metrics-grid > div,
+html:not(.dark) .glass-card {
   background: #ffffff !important;
   border: 1px solid var(--line-border-light) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card-light) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
-html:not(.dark) #mgr-metrics-grid > div:hover {
+html:not(.dark) #mgr-metrics-grid > div:hover,
+html:not(.dark) .glass-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+  border-color: rgba(13, 148, 136, 0.3) !important;
 }
 
 /* ========================================================
-   TABLES & LISTS
+   TABLES & FINANCIAL DATA (Crisp Lines & Tabular Alignment)
    ======================================================== */
 html.dark table thead,
 html.dark thead {
-  background-color: #0e1730 !important;
+  background-color: var(--surface-card-subtle-dark) !important;
   border-bottom: 1px solid var(--line-border-dark) !important;
 }
 
@@ -272,7 +305,7 @@ html:not(.dark) thead {
 html.dark thead th {
   color: var(--text-muted-dark) !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   letter-spacing: 0.3px;
   padding: 12px 14px !important;
 }
@@ -280,7 +313,7 @@ html.dark thead th {
 html:not(.dark) thead th {
   color: var(--text-muted-light) !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   letter-spacing: 0.3px;
   padding: 12px 14px !important;
 }
@@ -291,7 +324,7 @@ html.dark tbody tr {
 }
 
 html.dark tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-color: rgba(255, 255, 255, 0.025) !important;
 }
 
 html:not(.dark) tbody tr {
@@ -310,20 +343,21 @@ tbody td {
 /* ========================================================
    STATUS BADGES & PILLS
    ======================================================== */
-/* On Time / Present - Turquoise Green */
+/* On Time / Present - Signature Turquoise Teal */
 .badge-ontime,
 .badge-present,
 .dark .badge-ontime,
 .dark .badge-present {
   background: rgba(13, 148, 136, 0.12) !important;
   color: #2dd4bf !important;
-  border: 1px solid rgba(13, 148, 136, 0.3) !important;
+  border: 1px solid rgba(13, 148, 136, 0.28) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
-  padding: 4px 11px !important;
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 5px !important;
+  font-size: 11px !important;
 }
 
 html:not(.dark) .badge-ontime,
@@ -338,10 +372,11 @@ html:not(.dark) .badge-present {
 .dark .badge-late {
   background: rgba(245, 158, 11, 0.12) !important;
   color: #fbbf24 !important;
-  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
-  padding: 4px 11px !important;
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
 }
 
 html:not(.dark) .badge-late {
@@ -355,10 +390,11 @@ html:not(.dark) .badge-late {
 .dark .badge-halfday {
   background: rgba(249, 115, 22, 0.12) !important;
   color: #fb923c !important;
-  border: 1px solid rgba(249, 115, 22, 0.3) !important;
+  border: 1px solid rgba(249, 115, 22, 0.25) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
-  padding: 4px 11px !important;
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
 }
 
 html:not(.dark) .badge-halfday {
@@ -372,10 +408,11 @@ html:not(.dark) .badge-halfday {
 .dark .badge-absent {
   background: rgba(239, 68, 68, 0.12) !important;
   color: #f87171 !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
-  padding: 4px 11px !important;
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
 }
 
 html:not(.dark) .badge-absent {
@@ -389,10 +426,11 @@ html:not(.dark) .badge-absent {
 .dark .badge-earlyleave {
   background: rgba(168, 85, 247, 0.12) !important;
   color: #c084fc !important;
-  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
   font-weight: 700 !important;
-  border-radius: 9999px !important;
-  padding: 4px 11px !important;
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
 }
 
 html:not(.dark) .badge-earlyleave {
@@ -407,8 +445,8 @@ span.bg-purple-500\/10,
 span:has(i[data-lucide="layers"]) {
   background: rgba(59, 130, 246, 0.12) !important;
   color: #93c5fd !important;
-  border: 1px solid rgba(59, 130, 246, 0.28) !important;
-  border-radius: 9999px !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  border-radius: var(--radius-full) !important;
   font-weight: 700 !important;
 }
 
@@ -424,15 +462,15 @@ span.bg-amber-500\/10 {
   background: rgba(245, 158, 11, 0.1) !important;
   color: #fbbf24 !important;
   border: 1px solid rgba(245, 158, 11, 0.25) !important;
-  border-radius: 8px !important;
+  border-radius: var(--radius-sm) !important;
 }
 
 /* Inspection Action Button "معاينة التوثيق" */
 button:has(i[data-lucide="eye"]) {
   background: rgba(13, 148, 136, 0.08) !important;
-  border: 1px solid rgba(13, 148, 136, 0.3) !important;
+  border: 1px solid rgba(13, 148, 136, 0.25) !important;
   color: #0d9488 !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius-md) !important;
   font-weight: 700 !important;
   padding: 5px 12px !important;
   transition: all 0.2s ease !important;
@@ -443,7 +481,7 @@ html.dark button:has(i[data-lucide="eye"]) {
 }
 
 button:has(i[data-lucide="eye"]):hover {
-  background: rgba(13, 148, 136, 0.18) !important;
+  background: rgba(13, 148, 136, 0.16) !important;
   transform: translateY(-1px);
 }
 
@@ -458,7 +496,7 @@ html.dark .badge-emerald-pill {
 }
 
 /* ========================================================
-   FORM INPUTS & SELECTS
+   FORM INPUTS & SELECTS (Precision Fintech Controls)
    ======================================================== */
 input[type="text"],
 input[type="email"],
@@ -468,7 +506,7 @@ input[type="date"],
 input[type="time"],
 select,
 textarea {
-  border-radius: 12px !important;
+  border-radius: var(--radius-md) !important;
   transition: all 0.2s ease !important;
 }
 
@@ -480,7 +518,7 @@ textarea {
 .dark input[type="time"],
 .dark select,
 .dark textarea {
-  background-color: #0d1730 !important;
+  background-color: var(--surface-card-subtle-dark) !important;
   border: 1px solid var(--line-border-dark) !important;
   color: #ffffff !important;
 }
@@ -489,7 +527,7 @@ textarea {
 .dark select:focus,
 .dark textarea:focus {
   border-color: #0d9488 !important;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.22) !important;
   outline: none !important;
 }
 
@@ -518,8 +556,8 @@ html:not(.dark) textarea:focus {
    MODALS & DIALOGS
    ======================================================== */
 .modal-enter {
-  animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  border-radius: 20px !important;
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border-radius: var(--radius-xl) !important;
 }
 
 .dark .modal-enter {
@@ -537,12 +575,27 @@ html:not(.dark) .modal-enter {
 @keyframes modalFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(8px);
+    transform: scale(0.98) translateY(6px);
   }
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+/* ========================================================
+   DRAWER & NOTIFICATION MODALS
+   ======================================================== */
+html.dark #mobile-drawer,
+html.dark #notif-modal {
+  background-color: var(--surface-card-dark) !important;
+  border-color: var(--line-border-dark) !important;
+}
+
+html:not(.dark) #mobile-drawer,
+html:not(.dark) #notif-modal {
+  background-color: #ffffff !important;
+  border-color: var(--line-border-light) !important;
 }
 
 /* ========================================================
@@ -568,18 +621,18 @@ html:not(.dark) .modal-enter {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 /* Leaflet container fixes */
 #workplace-map, #preview-map, #employee-checkin-map {
   width: 100%;
   height: 100%;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md);
   z-index: 10;
 }
 
@@ -670,96 +723,51 @@ html:not(.dark) .modal-enter {
 }
 
 /* ========================================================
-   MODERN PANELS & CONTROLS
+   ATTENDANCE ACTION BUTTONS
    ======================================================== */
-
-/* Glassmorphism Panels & Cards */
-html.dark .glass-card {
-  background: rgba(19, 30, 58, 0.75) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  border: 1px solid var(--line-border-dark) !important;
-  box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.35) !important;
-}
-
-html:not(.dark) .glass-card {
-  background: #ffffff !important;
-  border: 1px solid var(--line-border-light) !important;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04) !important;
-}
-
-/* Drawer & Notification Modals Theming */
-html.dark #mobile-drawer,
-html.dark #notif-modal {
-  background-color: var(--surface-card-dark) !important;
-  border-color: var(--line-border-dark) !important;
-}
-
-html:not(.dark) #mobile-drawer,
-html:not(.dark) #notif-modal {
-  background-color: #ffffff !important;
-  border-color: var(--line-border-light) !important;
-}
-
-/* Hover Ambient Glow */
-.glow-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative;
-}
-
-.glow-hover:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 10px 25px -5px rgba(13, 148, 136, 0.18), 0 0 0 1px rgba(13, 148, 136, 0.2) !important;
-}
-
-/* Attendance Action Buttons */
 .hero-btn-checkin {
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
-  box-shadow: 0 8px 20px -3px rgba(13, 148, 136, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.28) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
 }
 
 .hero-btn-checkin:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.01) !important;
-  box-shadow: 0 12px 28px -4px rgba(13, 148, 136, 0.45), inset 0 1px 2px 0 rgba(255, 255, 255, 0.4) !important;
-  filter: brightness(1.04);
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.38) !important;
+  filter: brightness(1.03);
 }
 
 .hero-btn-checkin:active:not(:disabled) {
-  transform: translateY(1px) scale(0.99) !important;
-  box-shadow: 0 4px 10px -2px rgba(13, 148, 136, 0.28) !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2) !important;
 }
 
 .hero-btn-checkout {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
-  box-shadow: 0 8px 20px -3px rgba(239, 68, 68, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.28) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
 }
 
 .hero-btn-checkout:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.01) !important;
-  box-shadow: 0 12px 28px -4px rgba(239, 68, 68, 0.45), inset 0 1px 2px 0 rgba(255, 255, 255, 0.35) !important;
-  filter: brightness(1.04);
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.38) !important;
+  filter: brightness(1.03);
 }
 
 .hero-btn-checkout:active:not(:disabled) {
-  transform: translateY(1px) scale(0.99) !important;
-  box-shadow: 0 4px 10px -2px rgba(239, 68, 68, 0.28) !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
 }
 
-/* Live Shift Timer & Pulse Beacon */
+/* Live Shift Timer */
 .live-timer-neon {
   font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace !important;
   letter-spacing: 2px;
-  text-shadow: 0 0 12px rgba(45, 212, 191, 0.35);
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes radarWave {
@@ -777,7 +785,7 @@ html:not(.dark) #notif-modal {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background-color: #0d9488;
   animation: radarWave 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
@@ -786,11 +794,12 @@ html:not(.dark) #notif-modal {
 .shift-progress-track {
   background: rgba(15, 23, 42, 0.4);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-full);
 }
 
 .shift-progress-fill {
   background: linear-gradient(90deg, #0f766e 0%, #0d9488 50%, #2dd4bf 100%);
-  box-shadow: 0 0 10px rgba(13, 148, 136, 0.4);
+  border-radius: var(--radius-full);
 }
 
 /* Custom Table Scroll */
@@ -802,23 +811,23 @@ html:not(.dark) #notif-modal {
 }
 
 .custom-table-scroll::-webkit-scrollbar {
-  height: 8px;
+  height: 7px;
 }
 
 .custom-table-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.04);
-  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.03);
+  border-radius: var(--radius-full);
 }
 
 .dark .custom-table-scroll::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .custom-table-scroll::-webkit-scrollbar-thumb {
-  background: rgba(13, 148, 136, 0.4);
-  border-radius: 9999px;
+  background: rgba(13, 148, 136, 0.35);
+  border-radius: var(--radius-full);
 }
 
 .custom-table-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(13, 148, 136, 0.65);
+  background: rgba(13, 148, 136, 0.6);
 }

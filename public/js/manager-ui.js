@@ -55,10 +55,10 @@ const ManagerUI = {
           <button onclick="ManagerUI.switchSection('${s.id}')"
             class="flex items-center gap-3 px-3.5 py-2.5 lg:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all w-full text-right ${
               this.activeSection === s.id
-                ? 'bg-emerald-grad text-white shadow-md shadow-emerald-500/30 font-bold ring-1 ring-emerald-400/30'
+                ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border-r-4 border-r-teal-500'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
             }">
-            <i data-lucide="${s.icon}" class="w-4.5 h-4.5 flex-shrink-0"></i>
+            <i data-lucide="${s.icon}" class="w-4.5 h-4.5 flex-shrink-0 ${this.activeSection === s.id ? 'text-teal-500' : 'text-slate-400'}"></i>
             <span class="truncate">${s.label}</span>
           </button>
         </li>
@@ -71,10 +71,10 @@ const ManagerUI = {
           <button onclick="ManagerUI.switchSection('${s.id}'); if (window.App && App.closeMobileMenu) App.closeMobileMenu();"
             class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all w-full text-right ${
               this.activeSection === s.id
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/25 font-bold'
+                ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border-r-4 border-r-teal-500'
                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80'
             }">
-            <i data-lucide="${s.icon}" class="w-5 h-5 flex-shrink-0 ${this.activeSection === s.id ? 'text-white' : 'text-slate-400'}"></i>
+            <i data-lucide="${s.icon}" class="w-5 h-5 flex-shrink-0 ${this.activeSection === s.id ? 'text-teal-500' : 'text-slate-400'}"></i>
             <span class="truncate">${s.label}</span>
           </button>
         </li>
@@ -323,48 +323,73 @@ const ManagerUI = {
       const metricsGrid = document.getElementById('mgr-metrics-grid');
       if (metricsGrid) {
         metricsGrid.innerHTML = `
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-            <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold block">إجمالي الموظفين</span>
-            <div class="flex items-baseline justify-between mt-1">
-              <span class="text-2xl font-extrabold text-slate-900 dark:text-white">${m.totalEmployees}</span>
-              <span class="text-xs font-bold text-blue-600 dark:text-blue-400">${m.attendanceRate}% حضور</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>إجمالي الموظفين</span>
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-mono">${m.attendanceRate}% حضور</span>
             </div>
+            <span class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono tracking-tight mt-2 block">${m.totalEmployees}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
-            <span class="text-xs text-blue-600 dark:text-blue-400 font-semibold block">الحاضرون اليوم</span>
-            <span class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1 block">${m.presentCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-teal-500/40 dark:hover:border-teal-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>الحاضرون اليوم</span>
+              <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-teal-600 dark:text-teal-400 font-mono tracking-tight mt-2 block">${m.presentCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900">
-            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold block">في الموعد</span>
-            <span class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1 block">${m.onTimeCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-teal-500/40 dark:hover:border-teal-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>في الموعد</span>
+              <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-teal-600 dark:text-teal-400 font-mono tracking-tight mt-2 block">${m.onTimeCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
-            <span class="text-xs text-amber-600 dark:text-amber-400 font-semibold block">المتأخرون</span>
-            <span class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1 block">${m.lateCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-amber-500/40 dark:hover:border-amber-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>المتأخرون</span>
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight mt-2 block">${m.lateCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900">
-            <span class="text-xs text-orange-600 dark:text-orange-400 font-semibold block">نصف يوم</span>
-            <span class="text-2xl font-extrabold text-orange-700 dark:text-orange-300 mt-1 block">${m.halfDayCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-orange-500/40 dark:hover:border-orange-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>نصف يوم</span>
+              <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-orange-600 dark:text-orange-400 font-mono tracking-tight mt-2 block">${m.halfDayCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
-            <span class="text-xs text-rose-600 dark:text-rose-400 font-semibold block">الغائبون</span>
-            <span class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1 block">${m.absentCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-rose-500/40 dark:hover:border-rose-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>الغائبون</span>
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight mt-2 block">${m.absentCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900">
-            <span class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold block">على رأس العمل الآن</span>
-            <span class="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1 block">${m.workingNowCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-teal-500/40 dark:hover:border-teal-500/40 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>على رأس العمل الآن</span>
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+              </span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-teal-600 dark:text-teal-400 font-mono tracking-tight mt-2 block">${m.workingNowCount}</span>
           </div>
 
-          <div class="glass-card glow-hover p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900">
-            <span class="text-xs text-purple-600 dark:text-purple-400 font-semibold block">تم الانصراف</span>
-            <span class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-1 block">${m.checkedOutCount}</span>
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span>تم الانصراف</span>
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+            </div>
+            <span class="text-2xl sm:text-3xl font-black text-slate-700 dark:text-slate-300 font-mono tracking-tight mt-2 block">${m.checkedOutCount}</span>
           </div>
+        `;
         `;
       }
 
@@ -540,10 +565,10 @@ const ManagerUI = {
                       ` : ''}
                     </div>
                   ` : (r.check_in_time ? `
-                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-[11px] font-bold inline-flex items-center gap-2 border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
+                    <span class="px-2.5 py-1 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400 text-[11px] font-bold inline-flex items-center gap-2 border border-teal-500/25">
                       <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
                       </span>
                       <span>على رأس العمل</span>
                     </span>

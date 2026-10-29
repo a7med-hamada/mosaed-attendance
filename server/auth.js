@@ -373,7 +373,9 @@ router.get('/me', authenticateToken, (req, res) => {
     const user = db.prepare(`
       SELECT u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id, u.parent_manager_id,
              u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.is_active, u.profile_photo,
+             u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes,
              u.face_descriptor, u.face_photo, u.face_enrolled_at,
+             u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes,
              d.name as department_name,
              s.name as schedule_name, s.start_time, s.end_time, s.grace_period_minutes, s.half_day_threshold, s.absence_threshold, s.working_days
       FROM users u
@@ -412,7 +414,7 @@ router.get('/me', authenticateToken, (req, res) => {
 router.put('/profile', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const { full_name, email, phone, job_title, password, confirm_password, company_name, profile_photo } = req.body;
+    const { full_name, email, phone, job_title, password, confirm_password, company_name, profile_photo, payout_method, payout_account_number, payout_provider_name, payout_notes } = req.body;
 
     if (!full_name || !email) {
       return res.status(400).json({ success: false, error: 'الاسم الكامل والبريد الإلكتروني حقول إلزامية' });
@@ -463,9 +465,22 @@ router.put('/profile', authenticateToken, (req, res) => {
     // Update query
     let query = `
       UPDATE users SET
-        full_name = ?, email = ?, phone = ?, job_title = ?
+        full_name = ?, email = ?, phone = ?, job_title = ?,
+        payout_method = COALESCE(?, payout_method),
+        payout_account_number = COALESCE(?, payout_account_number),
+        payout_provider_name = COALESCE(?, payout_provider_name),
+        payout_notes = COALESCE(?, payout_notes)
     `;
-    const params = [full_name.trim(), email.trim(), phone ? phone.trim() : null, job_title ? job_title.trim() : null];
+    const params = [
+      full_name.trim(),
+      email.trim(),
+      phone ? phone.trim() : null,
+      job_title ? job_title.trim() : null,
+      payout_method !== undefined ? payout_method : null,
+      payout_account_number !== undefined ? (payout_account_number ? String(payout_account_number).trim() : '') : null,
+      payout_provider_name !== undefined ? (payout_provider_name ? String(payout_provider_name).trim() : '') : null,
+      payout_notes !== undefined ? (payout_notes ? String(payout_notes).trim() : '') : null
+    ];
 
     if (newHash) {
       query += `, password_hash = ? `;

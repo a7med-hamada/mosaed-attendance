@@ -132,6 +132,7 @@ advancesRouter.get('/', authenticateToken, (req, res) => {
       SELECT
         a.*,
         u.employee_code, u.full_name, u.email, u.job_title, u.profile_photo,
+        u.phone, u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes,
         d.name as department_name,
         approver.full_name as approver_name
       FROM salary_advances a

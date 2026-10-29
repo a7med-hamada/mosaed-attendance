@@ -1048,3 +1048,152 @@ function getStatusBadge(status) {
 
   return `<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badgeClass}">${label}</span>`;
 }
+
+
+// ==========================================================================
+// E-Wallet, InstaPay & Banking Payout Utilities
+// ==========================================================================
+const PAYOUT_METHODS_MAP = {
+  vodafone_cash: {
+    key: 'vodafone_cash',
+    label: 'فودافون كاش',
+    shortLabel: 'فودافون كاش',
+    icon: 'smartphone',
+    color: 'rose',
+    badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+    ussdPrefix: '*9*7*',
+    isUssd: true,
+    placeholder: '010XXXXXXXX'
+  },
+  instapay: {
+    key: 'instapay',
+    label: 'إنستاباي (InstaPay)',
+    shortLabel: 'إنستاباي',
+    icon: 'zap',
+    color: 'purple',
+    badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+    isInstaPay: true,
+    placeholder: 'name@instapay أو رقم الهاتف'
+  },
+  orange_cash: {
+    key: 'orange_cash',
+    label: 'أورنج كاش',
+    shortLabel: 'أورنج كاش',
+    icon: 'smartphone',
+    color: 'orange',
+    badgeClass: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30',
+    ussdPrefix: '*115*1*',
+    isUssd: true,
+    placeholder: '012XXXXXXXX'
+  },
+  etisalat_cash: {
+    key: 'etisalat_cash',
+    label: 'إي آند كاش (اتصالات)',
+    shortLabel: 'اتصالات كاش',
+    icon: 'smartphone',
+    color: 'emerald',
+    badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+    ussdPrefix: '*777*1*',
+    isUssd: true,
+    placeholder: '011XXXXXXXX'
+  },
+  we_pay: {
+    key: 'we_pay',
+    label: 'وي باي (WE Pay)',
+    shortLabel: 'وي باي',
+    icon: 'smartphone',
+    color: 'indigo',
+    badgeClass: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30',
+    ussdPrefix: '*322*1*',
+    isUssd: true,
+    placeholder: '015XXXXXXXX'
+  },
+  bank_account: {
+    key: 'bank_account',
+    label: 'حساب بنكي / آيبان (IBAN)',
+    shortLabel: 'حساب بنكي',
+    icon: 'landmark',
+    color: 'blue',
+    badgeClass: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30',
+    isBank: true,
+    placeholder: 'رقم الحساب أو الآيبان الدولي EG...'
+  },
+  cash: {
+    key: 'cash',
+    label: 'استلام نقدي (كاش)',
+    shortLabel: 'كاش',
+    icon: 'banknote',
+    color: 'slate',
+    badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30',
+    isCash: true,
+    placeholder: 'صرف يدوي من الخزينة'
+  },
+  other_wallet: {
+    key: 'other_wallet',
+    label: 'محفظة ذكية أخرى',
+    shortLabel: 'محفظة ذكية',
+    icon: 'wallet',
+    color: 'teal',
+    badgeClass: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30',
+    placeholder: 'رقم المحفظة / اسم الخدمة'
+  }
+};
+
+function getPayoutMethodDetails(method) {
+  return PAYOUT_METHODS_MAP[method] || PAYOUT_METHODS_MAP.cash;
+}
+
+function renderPayoutBadge(method, accountNum = '', providerName = '') {
+  const meta = getPayoutMethodDetails(method);
+  const numDisplay = accountNum ? String(accountNum).trim() : '';
+  const providerDisplay = providerName ? String(providerName).trim() : '';
+  
+  let labelText = meta.shortLabel;
+  if (providerDisplay && meta.isBank) {
+    labelText = providerDisplay;
+  }
+  
+  return `
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold whitespace-nowrap ${meta.badgeClass}" title="${meta.label} ${numDisplay ? '- ' + numDisplay : ''}">
+      <i data-lucide="${meta.icon}" class="w-3 h-3"></i>
+      <span>${labelText}</span>
+      ${numDisplay ? `<span class="font-mono text-[9px] opacity-80">${numDisplay.length > 11 ? numDisplay.slice(-6) + '..' : numDisplay}</span>` : ''}
+    </span>
+  `;
+}
+
+function generateUssdCode(method, accountNum, amount) {
+  const meta = getPayoutMethodDetails(method);
+  if (!meta.ussdPrefix || !accountNum) return null;
+  const cleanNum = String(accountNum).replace(/[^0-9]/g, '');
+  const cleanAmt = Math.round(Number(amount) || 0);
+  if (!cleanNum || cleanAmt <= 0) return null;
+  return `${meta.ussdPrefix}${cleanNum}*${cleanAmt}#`;
+}
+
+function generatePayoutWhatsAppMessage(data) {
+  const { employeeName, title, amount, method, accountNumber, providerName, month } = data;
+  const meta = getPayoutMethodDetails(method);
+  const now = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+  
+  let methodText = meta.label;
+  if (providerName) methodText += ` (${providerName})`;
+  if (accountNumber) methodText += ` - رقم: ${accountNumber}`;
+
+  return `السلام عليكم أخي الكريم ${employeeName || ''}،
+تم بنجاح اعتماد وتحويل مستحقاتك المالية:
+• البند: ${title || 'تحويل مستحقات مالية'} ${month ? `لشهر ${month}` : ''}
+• المبلغ المحول: ${Number(amount || 0).toLocaleString('ar-EG')} ج.م
+• وسيلة التحويل: ${methodText}
+• تاريخ العملية: ${now}
+
+يرجى مراجعة حسابك وتأكيد الاستلام. نتمنى لك دوام التوفيق والنجاح!`;
+}
+
+if (typeof window !== 'undefined') {
+  window.PAYOUT_METHODS_MAP = PAYOUT_METHODS_MAP;
+  window.getPayoutMethodDetails = getPayoutMethodDetails;
+  window.renderPayoutBadge = renderPayoutBadge;
+  window.generateUssdCode = generateUssdCode;
+  window.generatePayoutWhatsAppMessage = generatePayoutWhatsAppMessage;
+}

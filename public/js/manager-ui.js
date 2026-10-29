@@ -1040,6 +1040,88 @@ const ManagerUI = {
               <span class="text-[10px] text-slate-400 mt-0.5 block">إذا تم تحديد وردية، سيلتزم الموظف بمواعيدها تلقائياً. إذا تُرك مرن، يمكنه الحضور في أي وردية.</span>
             </div>
 
+            
+            <!-- Payout & E-Wallet Information -->
+            <div class="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-3">
+              <div class="flex items-center gap-1.5 text-teal-700 dark:text-teal-300 font-bold text-xs">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span>بيانات صرف الراتب والمحافظ الإلكترونية (اختياري)</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                حدد طريقة تحويل مستحقات وسلف الموظف لتسهيل التحويل المباشر عبر المحافظ أو إنستاباي.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">طريقة الصرف المفضلة</label>
+                  <select name="payout_method" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                    <option value="cash">استلام نقدي (كاش من الخزينة)</option>
+                    <option value="vodafone_cash">فودافون كاش (Vodafone Cash)</option>
+                    <option value="instapay">إنستاباي (InstaPay)</option>
+                    <option value="orange_cash">أورنج كاش (Orange Cash)</option>
+                    <option value="etisalat_cash">إي آند كاش (اتصالات كاش)</option>
+                    <option value="we_pay">وي باي (WE Pay)</option>
+                    <option value="bank_account">تحويل بنكي / آيبان (Bank / IBAN)</option>
+                    <option value="other_wallet">محفظة ذكية أخرى</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم المحفظة / معرف إنستاباي / الآيبان</label>
+                  <input type="text" name="payout_account_number" placeholder="010... أو name@instapay أو رقم الحساب" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم البنك / مزود الخدمة (اختياري)</label>
+                  <input type="text" name="payout_provider_name" placeholder="مثلاً: البنك الأهلي، CIB، فودافون" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+                </div>
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">ملاحظات التحويل (اختياري)</label>
+                  <input type="text" name="payout_notes" placeholder="مثلاً: المحفظة باسم الوالد" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+                </div>
+              </div>
+            </div>
+
+            
+            <!-- Payout & E-Wallet Information -->
+            <div class="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-3">
+              <div class="flex items-center gap-1.5 text-teal-700 dark:text-teal-300 font-bold text-xs">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span>بيانات صرف الراتب والمحافظ الإلكترونية (اختياري)</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                حدد طريقة تحويل مستحقات وسلف الموظف لتسهيل التحويل المباشر عبر المحافظ أو إنستاباي.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">طريقة الصرف المفضلة</label>
+                  <select name="payout_method" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                    <option value="cash" ${emp.payout_method === 'cash' ? 'selected' : ''}>استلام نقدي (كاش من الخزينة)</option>
+                    <option value="vodafone_cash" ${emp.payout_method === 'vodafone_cash' ? 'selected' : ''}>فودافون كاش (Vodafone Cash)</option>
+                    <option value="instapay" ${emp.payout_method === 'instapay' ? 'selected' : ''}>إنستاباي (InstaPay)</option>
+                    <option value="orange_cash" ${emp.payout_method === 'orange_cash' ? 'selected' : ''}>أورنج كاش (Orange Cash)</option>
+                    <option value="etisalat_cash" ${emp.payout_method === 'etisalat_cash' ? 'selected' : ''}>إي آند كاش (اتصالات كاش)</option>
+                    <option value="we_pay" ${emp.payout_method === 'we_pay' ? 'selected' : ''}>وي باي (WE Pay)</option>
+                    <option value="bank_account" ${emp.payout_method === 'bank_account' ? 'selected' : ''}>تحويل بنكي / آيبان (Bank / IBAN)</option>
+                    <option value="other_wallet" ${emp.payout_method === 'other_wallet' ? 'selected' : ''}>محفظة ذكية أخرى</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم المحفظة / معرف إنستاباي / الآيبان</label>
+                  <input type="text" name="payout_account_number" value="${(emp.payout_account_number || '').replace(/"/g, '&quot;')}" placeholder="010... أو name@instapay أو رقم الحساب" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم البنك / مزود الخدمة (اختياري)</label>
+                  <input type="text" name="payout_provider_name" value="${(emp.payout_provider_name || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: البنك الأهلي، CIB، فودافون" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+                </div>
+                <div>
+                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">ملاحظات التحويل (اختياري)</label>
+                  <input type="text" name="payout_notes" value="${(emp.payout_notes || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: المحفظة باسم الوالد" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">حالة الحساب</label>
               <select name="is_active" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold">
@@ -1082,7 +1164,11 @@ const ManagerUI = {
       job_title: form.job_title.value.trim() || null,
       base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
       shift_id: form.shift_id && form.shift_id.value ? parseInt(form.shift_id.value, 10) : null,
-      is_active: parseInt(form.is_active.value, 10)
+      is_active: parseInt(form.is_active.value, 10),
+      payout_method: form.payout_method ? form.payout_method.value : 'cash',
+      payout_account_number: form.payout_account_number && form.payout_account_number.value.trim() ? form.payout_account_number.value.trim() : null,
+      payout_provider_name: form.payout_provider_name && form.payout_provider_name.value.trim() ? form.payout_provider_name.value.trim() : null,
+      payout_notes: form.payout_notes && form.payout_notes.value.trim() ? form.payout_notes.value.trim() : null
     };
 
     try {
@@ -1389,7 +1475,11 @@ const ManagerUI = {
       department_id: form.department_id.value ? parseInt(form.department_id.value, 10) : null,
       base_salary: form.base_salary ? parseFloat(form.base_salary.value) : 3000,
       shift_id: form.shift_id && form.shift_id.value ? parseInt(form.shift_id.value, 10) : null,
-      is_active: parseInt(form.is_active.value, 10)
+      is_active: parseInt(form.is_active.value, 10),
+      payout_method: form.payout_method ? form.payout_method.value : 'cash',
+      payout_account_number: form.payout_account_number && form.payout_account_number.value.trim() ? form.payout_account_number.value.trim() : null,
+      payout_provider_name: form.payout_provider_name && form.payout_provider_name.value.trim() ? form.payout_provider_name.value.trim() : null,
+      payout_notes: form.payout_notes && form.payout_notes.value.trim() ? form.payout_notes.value.trim() : null
     };
 
     if (pwd && pwd.length > 0) {
@@ -3753,6 +3843,317 @@ const ManagerUI = {
     }
   },
 
+  async exportPayoutSheetCsv(month) {
+    try {
+      const activeMonth = month || this.currentArchiveMonth || new Date().toISOString().slice(0, 7);
+      const res = await API.getMonthlySummary({ month: activeMonth });
+      const summaries = res.summaries || [];
+
+      if (summaries.length === 0) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'info',
+            title: 'لا توجد بيانات',
+            text: 'لا توجد سجلات رواتب موظفين للتصدير في هذا الشهر',
+            confirmButtonText: 'حسناً',
+            confirmButtonColor: '#0d9488'
+          });
+        } else {
+          showToast('لا توجد سجلات للتصدير', 'warning');
+        }
+        return;
+      }
+
+      const headers = [
+        'كود الموظف',
+        'اسم الموظف',
+        'رقم الهاتف',
+        'القسم',
+        'المسمى الوظيفي',
+        'المرتب الأساسي',
+        'المكافآت',
+        'خصم التأخير والغياب',
+        'الجزاءات والخصومات',
+        'السلف المعتمدة',
+        'صافي القبض المستحق',
+        'طريقة الصرف',
+        'رقم المحفظة أو الحساب',
+        'اسم البنك أو مزود الخدمة',
+        'كود USSD للتحويل',
+        'ملاحظات التحويل'
+      ];
+
+      const rows = summaries.map(s => {
+        const baseSal = s.baseSalary || 3000;
+        const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
+        const emp = s.employee || {};
+        const methodMeta = (typeof getPayoutMethodDetails === 'function') ? getPayoutMethodDetails(emp.payout_method) : { label: 'كاش' };
+        const ussd = (typeof generateUssdCode === 'function') ? generateUssdCode(emp.payout_method, emp.payout_account_number, netSal) : '';
+
+        return [
+          `"${(emp.employee_code || '').replace(/"/g, '""')}"`,
+          `"${(emp.full_name || '').replace(/"/g, '""')}"`,
+          `"${(emp.phone || '').replace(/"/g, '""')}"`,
+          `"${(emp.department_name || '').replace(/"/g, '""')}"`,
+          `"${(emp.job_title || '').replace(/"/g, '""')}"`,
+          baseSal,
+          s.totalBonuses || 0,
+          s.totalDeductions || 0,
+          s.totalManualDeductions || 0,
+          s.totalAdvances || 0,
+          netSal,
+          `"${(methodMeta.label || '').replace(/"/g, '""')}"`,
+          `"${(emp.payout_account_number || '').replace(/"/g, '""')}"`,
+          `"${(emp.payout_provider_name || '').replace(/"/g, '""')}"`,
+          `"${(ussd || '').replace(/"/g, '""')}"`,
+          `"${(emp.payout_notes || '').replace(/"/g, '""')}"`
+        ].join(',');
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payout_disbursement_sheet_${activeMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'تم تصدير كشف التحويلات للمحافظ والبنوك بنجاح',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      } else {
+        showToast('تم تصدير كشف التحويلات بنجاح', 'success');
+      }
+    } catch (err) {
+      console.error('Export payout sheet error:', err);
+      showToast(err.message || 'تعذر تصدير كشف التحويلات', 'danger');
+    }
+  },
+
+  triggerSalaryPayout(employeeId) {
+    const s = (this._cachedSummaries || []).find(item => item.employee && item.employee.id === employeeId);
+    if (!s) return;
+    const baseSal = s.baseSalary || 3000;
+    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
+    const monthLabel = this.currentArchiveMonthObj ? this.currentArchiveMonthObj.label : (this.currentArchiveMonth || 'الشهر الحالي');
+    this.openPayoutModal({
+      type: 'salary',
+      title: 'صافي راتب شهر ' + monthLabel,
+      month: monthLabel,
+      employeeName: s.employee.full_name || '',
+      phone: s.employee.phone || '',
+      amount: netSal,
+      payoutMethod: s.employee.payout_method || 'cash',
+      accountNumber: s.employee.payout_account_number || '',
+      providerName: s.employee.payout_provider_name || '',
+      notes: s.employee.payout_notes || ''
+    });
+  },
+
+  triggerAdvancePayout(advanceId) {
+    const a = (this._cachedAdvances || []).find(item => item.id === advanceId);
+    if (!a) return;
+    this.openPayoutModal({
+      type: 'advance',
+      title: 'صرف سلفة معتمدة للموظف',
+      month: a.month || '',
+      employeeName: a.full_name || '',
+      phone: a.phone || '',
+      amount: parseFloat(a.amount) || 0,
+      payoutMethod: a.payout_method || 'cash',
+      accountNumber: a.payout_account_number || '',
+      providerName: a.payout_provider_name || '',
+      notes: a.payout_notes || a.reason || ''
+    });
+  },
+
+  openPayoutModal(opts) {
+    const {
+      type = 'salary',
+      title = 'صرف المستحقات',
+      month = '',
+      employeeName = '',
+      phone = '',
+      amount = 0,
+      payoutMethod = 'cash',
+      accountNumber = '',
+      providerName = '',
+      notes = ''
+    } = opts;
+
+    const modalId = 'payout-transfer-modal';
+    const oldModal = document.getElementById(modalId);
+    if (oldModal) oldModal.remove();
+
+    const meta = (typeof getPayoutMethodDetails === 'function') 
+      ? getPayoutMethodDetails(payoutMethod) 
+      : (window.PAYOUT_METHODS_MAP ? window.PAYOUT_METHODS_MAP[payoutMethod] : { label: 'كاش', badgeClass: '' });
+    
+    const ussdCode = (typeof generateUssdCode === 'function')
+      ? generateUssdCode(payoutMethod, accountNumber, amount)
+      : null;
+
+    const waMessage = (typeof generatePayoutWhatsAppMessage === 'function')
+      ? generatePayoutWhatsAppMessage({
+          employeeName,
+          title,
+          amount,
+          method: payoutMethod,
+          accountNumber,
+          providerName,
+          month
+        })
+      : '';
+
+    const cleanPhone = phone ? String(phone).replace(/[^0-9]/g, '') : '';
+    const intlPhone = cleanPhone.startsWith('0') ? '2' + cleanPhone : cleanPhone;
+    const waUrl = intlPhone ? `https://wa.me/${intlPhone}?text=${encodeURIComponent(waMessage)}` : null;
+
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in';
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 text-right font-sans max-h-[92vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20">
+              <i data-lucide="wallet" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">${title}</h3>
+              <p class="text-[11px] text-slate-400">بوابة تحويل المستحقات عبر المحافظ الإلكترونية وإنستاباي والبنوك</p>
+            </div>
+          </div>
+          <button onclick="document.getElementById('${modalId}').remove()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Employee & Amount Summary Card -->
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <span class="text-[10px] text-slate-400 block font-semibold">الموظف المستفيد</span>
+              <span class="font-bold text-sm text-slate-800 dark:text-slate-100">${employeeName || 'غير محدد'}</span>
+              ${phone ? `<span class="text-[11px] text-slate-500 block font-mono mt-0.5">${phone}</span>` : ''}
+            </div>
+            <div class="text-left">
+              <span class="text-[10px] text-slate-400 block font-semibold">المبلغ المستحق</span>
+              <span class="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">${Number(amount || 0).toLocaleString('ar-EG')} ج.م</span>
+            </div>
+          </div>
+
+          <!-- Payout Method Details -->
+          <div class="pt-2 border-t border-slate-200/70 dark:border-slate-700/70 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-500">وسيلة الصرف:</span>
+              ${typeof renderPayoutBadge === 'function' ? renderPayoutBadge(payoutMethod, accountNumber, providerName) : `<span class="text-xs font-bold">${meta.label}</span>`}
+            </div>
+            ${providerName ? `<span class="text-xs text-slate-500 font-semibold">المزود: <strong class="text-slate-700 dark:text-slate-200">${providerName}</strong></span>` : ''}
+          </div>
+
+          ${notes ? `
+            <div class="text-[11px] text-slate-500 bg-white/70 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200/60 dark:border-slate-800">
+              <span class="font-bold text-slate-600 dark:text-slate-300">ملاحظات التحويل:</span> ${notes}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Account / Wallet Number Quick Action -->
+        ${accountNumber ? `
+          <div class="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                <i data-lucide="credit-card" class="w-4 h-4 text-teal-500"></i>
+                رقم المحفظة / الحساب للتحويل:
+              </span>
+              <button onclick="navigator.clipboard.writeText('${accountNumber}').then(() => { if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم نسخ رقم الحساب بنجاح', showConfirmButton: false, timer: 2000 }); else showToast('تم نسخ الرقم', 'success'); })"
+                class="px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition-all">
+                <i data-lucide="copy" class="w-3 h-3"></i> نسخ الرقم
+              </button>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-teal-500/30 text-center font-mono font-bold text-base text-slate-900 dark:text-white select-all">
+              ${accountNumber}
+            </div>
+          </div>
+        ` : `
+          <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span>لم يسجل هذا الموظف رقم محفظة أو حساب بنكي بعد. طريقة الصرف الافتراضية: <strong>${meta.label}</strong>.</span>
+          </div>
+        `}
+
+        <!-- USSD Fast Code Action (If available for mobile wallet) -->
+        ${ussdCode ? `
+          <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
+                <i data-lucide="smartphone" class="w-4 h-4 text-indigo-500"></i>
+                كود USSD للتحويل المباشر من هاتفك:
+              </span>
+              <button onclick="navigator.clipboard.writeText('${ussdCode}').then(() => { if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم نسخ كود USSD بنجاح', showConfirmButton: false, timer: 2000 }); else showToast('تم نسخ الكود', 'success'); })"
+                class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition-all">
+                <i data-lucide="copy" class="w-3 h-3"></i> نسخ الكود
+              </button>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-indigo-500/30 text-center font-mono font-bold text-base text-indigo-600 dark:text-indigo-400 select-all" dir="ltr">
+              ${ussdCode}
+            </div>
+            <p class="text-[10px] text-slate-400 text-center">انسخ الكود وافتحه في تطبيق الهاتف وسيبدأ عملية التحويل السريع مباشرة.</p>
+          </div>
+        ` : ''}
+
+        <!-- WhatsApp Voucher & Confirmation -->
+        <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+              <i data-lucide="message-circle" class="w-4 h-4 text-emerald-500"></i>
+              إشعار تحويل المستحقات عبر واتساب:
+            </span>
+            <button onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(waMessage)}')).then(() => { if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم نسخ رسالة التأكيد بنجاح', showConfirmButton: false, timer: 2000 }); else showToast('تم نسخ الرسالة', 'success'); })"
+              class="px-2 py-0.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold inline-flex items-center gap-1 transition-all">
+              <i data-lucide="copy" class="w-3 h-3"></i> نسخ الرسالة
+            </button>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-emerald-500/30 text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto">
+            ${waMessage}
+          </div>
+          ${waUrl ? `
+            <a href="${waUrl}" target="_blank"
+              class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm shadow-emerald-500/20 transition-all">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>إرسال إشعار التحويل للموظف عبر واتساب</span>
+            </a>
+          ` : `
+            <span class="text-[10px] text-slate-400 block text-center">لا يتوفر رقم هاتف للموظف لإرسال رسالة مباشرة عبر واتساب.</span>
+          `}
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button onclick="document.getElementById('${modalId}').remove()"
+            class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all">
+            إغلاق
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    if (window.lucide) lucide.createIcons();
+  },
+
+
   // ========================================================
   // 7. SETTINGS & DEDUCTIONS ("الإعدادات")
   // ========================================================
@@ -4389,6 +4790,7 @@ const ManagerUI = {
       const emp = res.employee || {};
       const records = res.recentRecords || [];
       const advances = res.advances || [];
+      this._cachedAdvances = advances;
       const bonuses = res.bonuses || [];
       const manualDeductions = res.manualDeductions || res.deductions || [];
       const availMonths = res.availableMonths || [];
@@ -4784,6 +5186,14 @@ const ManagerUI = {
               </div>
             </div>
 
+            
+            <!-- Export Payout Sheet (E-Wallets & Banks) -->
+            <button onclick="ManagerUI.exportPayoutSheetCsv('${targetMonth}')"
+              class="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-sm shadow-teal-500/20 flex items-center gap-1.5 transition-all" title="تصدير كشف حسابات ومحافظ الموظفين للتحويل المالي المباشر">
+              <i data-lucide="wallet" class="w-4 h-4"></i>
+              <span>كشف التحويلات (Excel)</span>
+            </button>
+
             <!-- 4. Export Excel Button -->
             <button onclick="ManagerUI.exportMonthCsv('${targetMonth}')"
               class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 transition-all">
@@ -4797,6 +5207,10 @@ const ManagerUI = {
       // Fetch summary for targetMonth
       const summaryRes = await API.getMonthlySummary({ month: targetMonth });
       const summaries = summaryRes.summaries || [];
+      const activeMonthObj = months.find(m => m.value === targetMonth) || { label: targetMonth };
+      this._cachedSummaries = summaries;
+      this.currentArchiveMonthObj = activeMonthObj;
+      this.currentArchiveMonth = targetMonth;
 
       // Calculate totals across all employees for this month
       let totalLateMinsCompany = 0;
@@ -4825,8 +5239,6 @@ const ManagerUI = {
 
       const mainContainer = document.getElementById('mgr-archive-main-container');
       if (!mainContainer) return;
-
-      const activeMonthObj = months.find(m => m.value === targetMonth) || { label: targetMonth };
 
       mainContainer.innerHTML = `
         <!-- Month Payroll & Attendance Executive Stat Cards -->
@@ -4932,7 +5344,10 @@ const ManagerUI = {
                           <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
                           <div class="min-w-0">
                             <span class="font-bold text-slate-800 dark:text-slate-200 block truncate">${s.employee.full_name}</span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
+                            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span class="text-[10px] text-slate-400 font-mono">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
+                              ${window.renderPayoutBadge ? window.renderPayoutBadge(s.employee.payout_method, s.employee.payout_account_number, s.employee.payout_provider_name) : ''}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -4989,6 +5404,13 @@ const ManagerUI = {
                       </td>
                       <td class="py-3 px-3 text-center whitespace-nowrap">
                         <div class="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                          
+                          <button onclick="ManagerUI.triggerSalaryPayout(${s.employee.id})"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold text-xs border border-teal-500/30 transition-all shadow-xs" title="تحويل الراتب لمحفظة / حساب الموظف">
+                            <i data-lucide="send" class="w-3.5 h-3.5 text-teal-500"></i>
+                            <span>تحويل الراتب</span>
+                          </button>
+
                           <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
                             class="px-2 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center gap-1" title="كشف الحساب وسجل الأيام">
                             <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-500"></i>
@@ -5798,6 +6220,7 @@ const ManagerUI = {
                   <td class="py-3 px-3 font-sans">
                     <span class="font-bold text-slate-800 dark:text-slate-200 block">${a.full_name}</span>
                     <span class="text-[10px] text-slate-400 font-mono">${a.employee_code} • ${a.department_name || 'عام'}</span>
+                    <div class="mt-1">${renderPayoutBadge(a.payout_method, a.payout_account_number, a.payout_provider_name)}</div>
                   </td>
                   <td class="py-3 px-3 font-black text-amber-600 dark:text-amber-400 text-sm">
                     ${parseFloat(a.amount).toLocaleString('ar-EG')} ج.م
@@ -5828,6 +6251,13 @@ const ManagerUI = {
                       </div>
                     ` : `
                       <div class="flex items-center justify-center gap-2">
+                        ${a.status === 'approved' ? `
+                          <button onclick="ManagerUI.triggerAdvancePayout(${a.id})"
+                            class="px-2 py-1 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 flex items-center gap-1 text-[11px] font-bold transition-colors" title="تحويل مبلغ السلفة لمحفظة الموظف">
+                            <i data-lucide="send" class="w-3.5 h-3.5 text-teal-500"></i>
+                            <span>تحويل</span>
+                          </button>
+                        ` : ''}
                         <span class="text-[10px] text-slate-400 font-mono">${a.approver_name ? 'بواسطة: ' + a.approver_name : 'تمت المعالجة'}</span>
                         <button onclick="ManagerUI.deleteAdvance(${a.id}, null, '${targetMonth}')"
                           class="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1 text-[11px] font-bold transition-colors" title="حذف السلفة نهائياً">

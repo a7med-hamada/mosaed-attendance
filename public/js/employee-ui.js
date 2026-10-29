@@ -2666,6 +2666,96 @@ const EmployeeUI = {
               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
           </div>
 
+          
+          <!-- E-Wallet and Bank Account Payout Preferences -->
+          <div class="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">بيانات استلام الراتب والسلف المالية</h4>
+                <p class="text-[11px] text-slate-500">اختر المحفظة الإلكترونية أو الحساب البنكي المفضل لديك لتحويل مستحقاتك</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">طريقة الاستلام المفضلة</label>
+                <select id="emp-edit-payout-method" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                  <option value="cash" ${u.payout_method === 'cash' ? 'selected' : ''}>استلام نقدي (كاش)</option>
+                  <option value="vodafone_cash" ${u.payout_method === 'vodafone_cash' ? 'selected' : ''}>فودافون كاش (Vodafone Cash)</option>
+                  <option value="instapay" ${u.payout_method === 'instapay' ? 'selected' : ''}>إنستاباي (InstaPay)</option>
+                  <option value="orange_cash" ${u.payout_method === 'orange_cash' ? 'selected' : ''}>أورنج كاش (Orange Cash)</option>
+                  <option value="etisalat_cash" ${u.payout_method === 'etisalat_cash' ? 'selected' : ''}>إي آند كاش (اتصالات كاش)</option>
+                  <option value="we_pay" ${u.payout_method === 'we_pay' ? 'selected' : ''}>وي باي (WE Pay)</option>
+                  <option value="bank_account" ${u.payout_method === 'bank_account' ? 'selected' : ''}>حساب بنكي / آيبان (IBAN)</option>
+                  <option value="other_wallet" ${u.payout_method === 'other_wallet' ? 'selected' : ''}>محفظة ذكية أخرى</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">رقم المحفظة / عنوان إنستاباي / الآيبان</label>
+                <input type="text" id="emp-edit-payout-account" value="${(u.payout_account_number || '').replace(/"/g, '&quot;')}" placeholder="010... أو username@instapay أو رقم الحساب" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">اسم البنك / مزود الخدمة (اختياري)</label>
+                <input type="text" id="emp-edit-payout-provider" value="${(u.payout_provider_name || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: البنك الأهلي، بنك مصر، CIB" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">ملاحظات إضافية للتحويل (اختياري)</label>
+                <input type="text" id="emp-edit-payout-notes" value="${(u.payout_notes || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: المحفظة باسم فلان" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+              </div>
+            </div>
+          </div>
+
+          
+          <!-- E-Wallet and Bank Account Payout Preferences -->
+          <div class="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">بيانات استلام الراتب والسلف المالية</h4>
+                <p class="text-[11px] text-slate-500">اختر المحفظة الإلكترونية أو الحساب البنكي المفضل لديك لتحويل مستحقاتك</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">طريقة الاستلام المفضلة</label>
+                <select id="emp-edit-payout-method" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                  <option value="cash" ${u.payout_method === 'cash' ? 'selected' : ''}>استلام نقدي (كاش)</option>
+                  <option value="vodafone_cash" ${u.payout_method === 'vodafone_cash' ? 'selected' : ''}>فودافون كاش (Vodafone Cash)</option>
+                  <option value="instapay" ${u.payout_method === 'instapay' ? 'selected' : ''}>إنستاباي (InstaPay)</option>
+                  <option value="orange_cash" ${u.payout_method === 'orange_cash' ? 'selected' : ''}>أورنج كاش (Orange Cash)</option>
+                  <option value="etisalat_cash" ${u.payout_method === 'etisalat_cash' ? 'selected' : ''}>إي آند كاش (اتصالات كاش)</option>
+                  <option value="we_pay" ${u.payout_method === 'we_pay' ? 'selected' : ''}>وي باي (WE Pay)</option>
+                  <option value="bank_account" ${u.payout_method === 'bank_account' ? 'selected' : ''}>حساب بنكي / آيبان (IBAN)</option>
+                  <option value="other_wallet" ${u.payout_method === 'other_wallet' ? 'selected' : ''}>محفظة ذكية أخرى</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">رقم المحفظة / عنوان إنستاباي / الآيبان</label>
+                <input type="text" id="emp-edit-payout-account" value="${(u.payout_account_number || '').replace(/"/g, '&quot;')}" placeholder="010... أو username@instapay أو رقم الحساب" class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">اسم البنك / مزود الخدمة (اختياري)</label>
+                <input type="text" id="emp-edit-payout-provider" value="${(u.payout_provider_name || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: البنك الأهلي، بنك مصر، CIB" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">ملاحظات إضافية للتحويل (اختياري)</label>
+                <input type="text" id="emp-edit-payout-notes" value="${(u.payout_notes || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: المحفظة باسم فلان" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
+              </div>
+            </div>
+          </div>
+
           <!-- Password change (optional) -->
           <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
             <span class="text-xs font-bold text-amber-700 dark:text-amber-400 block">تغيير كلمة المرور (اختياري)</span>

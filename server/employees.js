@@ -29,7 +29,7 @@ router.get('/', authenticateToken, requireManager, (req, res) => {
     let query = `
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id, u.parent_manager_id,
-        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
+        u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active, u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes,
         u.profile_photo, (u.face_descriptor IS NOT NULL) as has_face_enrolled, u.face_enrolled_at, u.created_at,
         d.name as department_name,
         s.name as schedule_name, s.start_time, s.end_time,
@@ -84,7 +84,7 @@ router.get('/:id', authenticateToken, (req, res) => {
       SELECT
         u.id, u.employee_code, u.full_name, u.email, u.role, u.department_id, u.manager_id,
         u.job_title, u.phone, u.hire_date, u.base_salary, u.schedule_id, u.shift_id, u.is_active,
-        u.profile_photo, u.created_at,
+        u.profile_photo, u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes, u.created_at,
         d.name as department_name,
         s.name as schedule_name, s.start_time, s.end_time, s.grace_period_minutes, s.half_day_threshold,
         cs.name as shift_name
@@ -318,7 +318,7 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
     let {
       employee_code, full_name, email, password, confirm_password, department_id,
       job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo,
-      role, start_mode
+      role, start_mode, payout_method, payout_account_number, payout_provider_name, payout_notes
     } = req.body;
 
     const accountRole = (role === 'manager') ? 'manager' : 'employee';
@@ -423,8 +423,9 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
         employee_code, full_name, email, password_hash, role, manager_id, parent_manager_id,
         department_id, job_title, phone, hire_date, base_salary,
         schedule_id, shift_id, is_active, profile_photo,
-        subscription_plan, subscription_expires_at, trial_days
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        subscription_plan, subscription_expires_at, trial_days,
+        payout_method, payout_account_number, payout_provider_name, payout_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -446,7 +447,11 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
       photoPath,
       primaryMgr.subscription_plan || 'trial',
       primaryMgr.subscription_expires_at || null,
-      primaryMgr.trial_days || 14
+      primaryMgr.trial_days || 14,
+      payout_method || 'cash',
+      payout_account_number ? String(payout_account_number).trim() : null,
+      payout_provider_name ? String(payout_provider_name).trim() : null,
+      payout_notes ? String(payout_notes).trim() : null
     );
 
     const newUserId = result.lastInsertRowid;
@@ -544,7 +549,8 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const {
       full_name, email, password, confirm_password, department_id,
-      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo
+      job_title, phone, hire_date, base_salary, schedule_id, shift_id, is_active, profile_photo,
+      payout_method, payout_account_number, payout_provider_name, payout_notes
     } = req.body;
 
     for (const [table, id] of [
@@ -605,7 +611,8 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       UPDATE users SET
         full_name = ?, email = ?, password_hash = ?, department_id = ?,
         job_title = ?, phone = ?, hire_date = ?, base_salary = ?,
-        schedule_id = ?, shift_id = ?, is_active = ?, profile_photo = ?
+        schedule_id = ?, shift_id = ?, is_active = ?, profile_photo = ?,
+        payout_method = ?, payout_account_number = ?, payout_provider_name = ?, payout_notes = ?
       WHERE id = ?
     `).run(
       full_name !== undefined && full_name.trim().length > 0 ? full_name.trim() : oldEmp.full_name,
@@ -620,6 +627,10 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       updatedShiftId,
       is_active !== undefined ? parseInt(is_active, 10) : oldEmp.is_active,
       photoPath,
+      payout_method !== undefined ? payout_method : (oldEmp.payout_method || 'cash'),
+      payout_account_number !== undefined ? (payout_account_number ? String(payout_account_number).trim() : null) : oldEmp.payout_account_number,
+      payout_provider_name !== undefined ? (payout_provider_name ? String(payout_provider_name).trim() : null) : oldEmp.payout_provider_name,
+      payout_notes !== undefined ? (payout_notes ? String(payout_notes).trim() : null) : oldEmp.payout_notes,
       targetId
     );
 

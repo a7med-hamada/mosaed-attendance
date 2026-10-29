@@ -90,6 +90,10 @@ db.exec(`
     schedule_id INTEGER,
     is_active INTEGER DEFAULT 1,
     profile_photo TEXT,
+    payout_method TEXT DEFAULT 'cash',
+    payout_account_number TEXT DEFAULT NULL,
+    payout_provider_name TEXT DEFAULT NULL,
+    payout_notes TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(department_id) REFERENCES departments(id) ON DELETE SET NULL,
     FOREIGN KEY(schedule_id) REFERENCES schedules(id) ON DELETE SET NULL

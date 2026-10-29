@@ -28,7 +28,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
     const isManagerTracking = trackSetting && trackSetting.value === '1';
 
     let empQuery = `
-      SELECT u.id, u.employee_code, u.full_name, u.email, u.job_title, u.base_salary, u.role,
+      SELECT u.id, u.employee_code, u.full_name, u.email, u.phone, u.job_title, u.base_salary, u.role, u.payout_method, u.payout_account_number, u.payout_provider_name, u.payout_notes,
              COALESCE(d.name, CASE WHEN u.role = 'manager' THEN 'الإدارة العامة' ELSE 'عام' END) as department_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id

@@ -276,7 +276,7 @@ async function loadFromCloud(force = false) {
     try {
       const token = getSyncToken();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
+      const timeout = setTimeout(() => controller.abort(), 4000);
 
       const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(GIST_ID)}?t=${now}`, {
         headers: {
@@ -319,6 +319,8 @@ async function loadFromCloud(force = false) {
       lastSyncTime = Date.now();
     } catch (err) {
       console.warn('[CloudSync] Load warning:', err.message);
+      initialLoadDone = true;
+      lastSyncTime = Date.now();
     } finally {
       syncInProgress = null;
     }
@@ -356,7 +358,7 @@ async function saveToCloud() {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
 
     const res = await fetch(`https://api.github.com/gists/${encodeURIComponent(GIST_ID)}`, {
       method: 'PATCH',

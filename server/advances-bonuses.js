@@ -12,6 +12,116 @@ const getCurrentDateString = getTodayString;
 // 1. SALARY ADVANCES ROUTER (/api/advances)
 // ==========================================
 
+function getEmployeeAdvanceEligibility(employeeId, targetMonth) {
+  const emp = db.prepare(`
+    SELECT id, full_name, role, base_salary, manager_id
+    FROM users
+    WHERE id = ?
+  `).get(employeeId);
+
+  if (!emp) {
+    return {
+      success: false,
+      error: 'الموظف غير موجود',
+      maxEligibleAdvance: 0,
+      canRequest: false
+    };
+  }
+
+  const baseSalary = parseFloat(emp.base_salary !== undefined && emp.base_salary !== null && emp.base_salary > 0 ? emp.base_salary : (emp.role === 'manager' ? 5000 : 3000));
+  const dailyWage = parseFloat((baseSalary / 30).toFixed(2));
+
+  // Count distinct attended days in target month where employee has checked in
+  const attendanceQuery = db.prepare(`
+    SELECT count(DISTINCT date) as attended_days
+    FROM attendance_records
+    WHERE employee_id = ?
+      AND date LIKE ?
+      AND check_in_time IS NOT NULL
+      AND (status != 'Absent' OR status IS NULL)
+  `).get(employeeId, `${targetMonth}%`);
+
+  const attendedDays = (attendanceQuery && attendanceQuery.attended_days) ? parseInt(attendanceQuery.attended_days, 10) : 0;
+
+  // Gross earned dues so far based on actual worked days
+  const grossEarned = parseFloat((attendedDays * dailyWage).toFixed(2));
+
+  // Sum of existing advances for this month (approved or pending)
+  const advancesQuery = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total_advances
+    FROM salary_advances
+    WHERE employee_id = ?
+      AND month = ?
+      AND status IN ('approved', 'pending')
+  `).get(employeeId, targetMonth);
+
+  const existingAdvances = parseFloat(((advancesQuery && advancesQuery.total_advances) || 0).toFixed(2));
+
+  // Sum of manual deductions for this month
+  const deductionsQuery = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total_deductions
+    FROM employee_deductions
+    WHERE employee_id = ?
+      AND month = ?
+  `).get(employeeId, targetMonth);
+
+  const existingDeductions = parseFloat(((deductionsQuery && deductionsQuery.total_deductions) || 0).toFixed(2));
+
+  // Maximum eligible advance is gross earned minus existing advances and deductions
+  const rawRemaining = grossEarned - existingAdvances - existingDeductions;
+  let maxEligibleAdvance = Math.max(0, Math.floor(rawRemaining));
+  if (maxEligibleAdvance > baseSalary) {
+    maxEligibleAdvance = Math.floor(baseSalary);
+  }
+
+  const canRequest = maxEligibleAdvance > 0;
+  let disallowReason = null;
+
+  if (attendedDays === 0) {
+    disallowReason = 'لم تسجل أي أيام حضور في العمل حتى الآن خلال هذا الشهر. لا يمكنك طلب سلفة لأيام لم يتم العمل بها بعد.';
+  } else if (maxEligibleAdvance <= 0) {
+    disallowReason = `لقد استنفدت كامل رصيد مستحقات أيام عملك السابقة لهذا الشهر (${attendedDays} يوم = ${grossEarned.toLocaleString('ar-EG')} ج.م) بالسلف والخصومات الحالية (${(existingAdvances + existingDeductions).toLocaleString('ar-EG')} ج.م).`;
+  }
+
+  return {
+    success: true,
+    employeeId: emp.id,
+    fullName: emp.full_name,
+    month: targetMonth,
+    baseSalary,
+    dailyWage,
+    attendedDays,
+    grossEarned,
+    existingAdvances,
+    existingDeductions,
+    maxEligibleAdvance,
+    canRequest,
+    disallowReason
+  };
+}
+
+// GET /api/advances/eligibility - Check employee advance eligibility & dynamic cap
+advancesRouter.get('/eligibility', authenticateToken, (req, res) => {
+  try {
+    const isManager = req.user.role === 'manager';
+    const month = req.query.month || getCurrentDateString().substring(0, 7);
+    let targetEmployeeId = req.user.id;
+
+    if (isManager && req.query.employee_id) {
+      targetEmployeeId = parseInt(req.query.employee_id, 10);
+      if (!isManagedEmployee(req.user.manager_id || req.user.id, targetEmployeeId)) {
+        return res.status(403).json({ success: false, error: 'غير مصرح لك بعرض بيانات موظف في منشأة أخرى' });
+      }
+    }
+
+    const eligibility = getEmployeeAdvanceEligibility(targetEmployeeId, month);
+    res.json(eligibility);
+  } catch (error) {
+    console.error('Advance eligibility error:', error);
+    res.status(500).json({ success: false, error: 'فشل في احتساب استحقاق السلفة' });
+  }
+});
+
 // GET /api/advances - List advances
 advancesRouter.get('/', authenticateToken, (req, res) => {
   try {
@@ -95,6 +205,26 @@ advancesRouter.post('/', authenticateToken, (req, res) => {
 
     const advanceDate = date || getCurrentDateString();
     const advanceMonth = month || advanceDate.substring(0, 7);
+
+    // Dynamic smart entitlement cap for employee requests
+    if (!isManager) {
+      const eligibility = getEmployeeAdvanceEligibility(targetEmployeeId, advanceMonth);
+      if (parsedAmount > eligibility.maxEligibleAdvance) {
+        return res.status(400).json({
+          success: false,
+          error: `الحد الأقصى المتاح لك للسلفة حتى اليوم هو ${eligibility.maxEligibleAdvance.toLocaleString('ar-EG')} ج.م بناءً على رصيد عملك الفعلي هذا الشهر (${eligibility.attendedDays} يوم × ${Math.round(eligibility.dailyWage)} ج.م). لا يمكنك طلب سلفة لأيام لم يتم العمل بها بعد.`,
+          maxEligibleAdvance: eligibility.maxEligibleAdvance,
+          attendedDays: eligibility.attendedDays,
+          dailyWage: eligibility.dailyWage
+        });
+      }
+      if (parsedAmount > eligibility.baseSalary) {
+        return res.status(400).json({
+          success: false,
+          error: `لا يمكن طلب سلفة تتجاوز إجمالي راتبك الشهري (${eligibility.baseSalary.toLocaleString('ar-EG')} ج.م).`
+        });
+      }
+    }
 
     let advanceStatus = 'pending';
     let approvedBy = null;
@@ -197,7 +327,7 @@ advancesRouter.put('/:id/review', authenticateToken, requireManager, (req, res) 
 
     // Notify employee
     const isApproved = action === 'approved';
-    const notifTitle = isApproved ? 'تمت الموافقة على السلفة ✅' : 'تم رفض طلب السلفة ❌';
+    const notifTitle = isApproved ? 'تمت الموافقة على السلفة' : 'تم رفض طلب السلفة';
     const notifMsg = isApproved
       ? `تمت الموافقة على طلب السلفة بقيمة ${advance.amount.toLocaleString('ar-EG')} ج.م لشهر ${advance.month}. سيتم خصمها من صافي المرتب.`
       : `نعتذر، تم رفض طلب السلفة بقيمة ${advance.amount.toLocaleString('ar-EG')} ج.م. ${review_notes ? 'السبب: ' + review_notes : ''}`;

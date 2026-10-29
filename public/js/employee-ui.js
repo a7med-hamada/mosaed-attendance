@@ -3438,79 +3438,198 @@ const EmployeeUI = {
     }
   },
 
-  // Modal: Employee Submits Advance Request
-  openRequestAdvanceModal(month = null) {
+  // Modal: Employee Submits Smart Advance Request with Dynamic Cap
+  async openRequestAdvanceModal(month = null) {
     const modal = document.getElementById('advances-modal');
     if (!modal) return;
 
     const todayDate = new Date().toISOString().substring(0, 10);
     const targetMonth = month || todayDate.substring(0, 7);
 
+    // Initial Loading Skeleton
     modal.innerHTML = `
       <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> تقديم طلب سلفة مالية
-              </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">سيتم إرسال الطلب للمدير للمراجعة واعتماده لخصمه من كشف الراتب</p>
-            </div>
-            <button onclick="document.getElementById('advances-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
-              <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-          </div>
-
-          <form onsubmit="EmployeeUI.submitRequestAdvance(event, '${targetMonth}')" class="space-y-3.5 pt-4">
-            <div>
-              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">المبلغ المطلوب (ج.م) *</label>
-              <input type="number" id="emp-adv-amount" step="1" min="50" required placeholder="مثال: 500"
-                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-amber-600 text-sm" />
-            </div>
-
-            <div>
-              <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب طلب السلفة *</label>
-              <input type="text" id="emp-adv-reason" required placeholder="مثال: ظرف أسري طارئ، مصاريف شخصية، التزامات شهرية"
-                class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الخصم المطلوب</label>
-                <input type="month" id="emp-adv-month" required value="${targetMonth}"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
-              </div>
-              <div>
-                <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ الطلب</label>
-                <input type="date" id="emp-adv-date" required value="${todayDate}"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono" />
-              </div>
-            </div>
-
-            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-300">
-              <p class="leading-relaxed text-[11px]">بمجرد إرسال الطلب، سيتلقى المدير إشعاراً فورياً لدراسة الطلب والموافقة عليه وإدراجه بمسير الراتب.</p>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button type="button" onclick="document.getElementById('advances-modal').innerHTML=''"
-                class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">إلغاء</button>
-              <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/25">
-                <i data-lucide="send" class="w-4 h-4"></i> إرسال الطلب للمدير
-              </button>
-            </div>
-          </form>
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs text-center space-y-4">
+          <div class="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p class="font-bold text-slate-700 dark:text-slate-200">جاري احتساب الحد الأقصى المتاح لك للسلفة بناءً على أيام عملك الفعلية...</p>
         </div>
       </div>
     `;
-    if (window.lucide) lucide.createIcons();
+
+    try {
+      const eligibility = await API.getAdvanceEligibility(targetMonth);
+
+      modal.innerHTML = `
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="hand-coins" class="w-5 h-5 text-amber-500"></i> طلب سلفة مالية ذكي
+                </h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">احتساب تلقائي لأيام العمل الفعلية لشهر ${targetMonth}</p>
+              </div>
+              <button onclick="document.getElementById('advances-modal').innerHTML=''" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <!-- Smart Entitlement Calculation Card -->
+            <div class="mt-4 p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-slate-800/80 dark:to-slate-800/40 border border-amber-200/80 dark:border-amber-900/40 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-500 dark:text-slate-400 font-semibold">الراتب الشهري الأساسي:</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200 font-mono">${eligibility.baseSalary.toLocaleString('ar-EG')} ج.م (اليوم: ${Math.round(eligibility.dailyWage)} ج.م)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-500 dark:text-slate-400 font-semibold">أيام الحضور الفعلية هذا الشهر:</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">${eligibility.attendedDays} يوم عمل مكتسب</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-500 dark:text-slate-400 font-semibold">رصيد الأيام المنقضية المكتسبة:</span>
+                <span class="font-bold text-slate-900 dark:text-white font-mono">${eligibility.grossEarned.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+              ${(eligibility.existingAdvances > 0 || eligibility.existingDeductions > 0) ? `
+                <div class="flex items-center justify-between text-[11px] text-rose-500">
+                  <span>سلف وخصومات سابقة:</span>
+                  <span class="font-mono font-bold">-${(eligibility.existingAdvances + eligibility.existingDeductions).toLocaleString('ar-EG')} ج.م</span>
+                </div>
+              ` : ''}
+              <div class="pt-2 border-t border-amber-200/60 dark:border-slate-700/60 flex items-center justify-between font-bold">
+                <span class="text-amber-800 dark:text-amber-300">أقصى مبلغ متاح لك الآن:</span>
+                <span class="text-base font-black text-amber-600 dark:text-amber-400 font-mono">${eligibility.maxEligibleAdvance.toLocaleString('ar-EG')} ج.م</span>
+              </div>
+            </div>
+
+            ${(!eligibility.canRequest || eligibility.maxEligibleAdvance <= 0) ? `
+              <!-- Disallow Message Card -->
+              <div class="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 space-y-2">
+                <div class="flex items-start gap-2.5">
+                  <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <h4 class="font-bold text-xs mb-1">غير متاح طلب سلفة حالياً</h4>
+                    <p class="text-[11px] leading-relaxed">${eligibility.disallowReason || 'لا يمكنك طلب سلفة لأيام لم يتم العمل بها بعد.'}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="document.getElementById('advances-modal').innerHTML=''"
+                  class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 font-bold text-slate-700 dark:text-slate-300">
+                  إغلاق
+                </button>
+              </div>
+            ` : `
+              <!-- Advance Submission Form -->
+              <form onsubmit="EmployeeUI.submitRequestAdvance(event, '${targetMonth}', ${eligibility.maxEligibleAdvance}, ${eligibility.attendedDays}, ${Math.round(eligibility.dailyWage)})" class="space-y-3.5 pt-3">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block text-slate-600 dark:text-slate-300 font-bold">المبلغ المطلوب (ج.م) *</label>
+                    <span class="text-[11px] text-slate-400 font-mono">الحد الأقصى: ${eligibility.maxEligibleAdvance} ج.م</span>
+                  </div>
+                  <input type="number" id="emp-adv-amount" step="1" min="1" max="${eligibility.maxEligibleAdvance}" required
+                    placeholder="أدخل مبلغ السلفة (أقصاه ${eligibility.maxEligibleAdvance} ج.م)"
+                    oninput="EmployeeUI.onAdvanceAmountChange(this.value, ${eligibility.maxEligibleAdvance}, ${eligibility.attendedDays}, ${Math.round(eligibility.dailyWage)})"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-amber-600 dark:text-amber-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                  <div id="emp-adv-feedback" class="mt-1.5 hidden text-[11px] font-semibold leading-relaxed"></div>
+                </div>
+
+                <div>
+                  <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">سبب طلب السلفة *</label>
+                  <input type="text" id="emp-adv-reason" required placeholder="مثال: ظرف شخصي طارئ، مصاريف علاجية، التزامات أسرية"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">شهر الخصم</label>
+                    <input type="month" id="emp-adv-month" required value="${targetMonth}" readonly
+                      class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono text-slate-500 cursor-not-allowed" />
+                  </div>
+                  <div>
+                    <label class="block text-slate-600 dark:text-slate-300 font-bold mb-1">تاريخ الطلب</label>
+                    <input type="date" id="emp-adv-date" required value="${todayDate}" readonly
+                      class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 font-mono text-slate-500 cursor-not-allowed" />
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <button type="button" onclick="document.getElementById('advances-modal').innerHTML=''"
+                    class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">إلغاء</button>
+                  <button type="submit" id="emp-adv-submit-btn" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/25 transition-all">
+                    <i data-lucide="send" class="w-4 h-4"></i> إرسال الطلب للمدير
+                  </button>
+                </div>
+              </form>
+            `}
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      modal.innerHTML = `
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 border border-rose-500/30">
+            <p class="text-rose-500 text-xs font-bold">${err.message}</p>
+            <button onclick="document.getElementById('advances-modal').innerHTML=''" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">إغلاق</button>
+          </div>
+        </div>
+      `;
+    }
   },
 
-  async submitRequestAdvance(event, currentMonth) {
+  onAdvanceAmountChange(valStr, maxEligible, attendedDays, dailyWage) {
+    const val = parseFloat(valStr);
+    const feedback = document.getElementById('emp-adv-feedback');
+    const submitBtn = document.getElementById('emp-adv-submit-btn');
+    const inputEl = document.getElementById('emp-adv-amount');
+    if (!feedback || !submitBtn) return;
+
+    if (!val || isNaN(val) || val <= 0) {
+      feedback.classList.remove('hidden');
+      feedback.className = 'mt-1.5 text-[11px] font-semibold text-slate-400';
+      feedback.textContent = `يرجى إدخال مبلغ صحيح أكبر من الصفر (الحد الأقصى المتاح لك: ${maxEligible} ج.م).`;
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      if (inputEl) inputEl.classList.remove('border-rose-500', 'border-emerald-500');
+      return;
+    }
+
+    if (val > maxEligible) {
+      feedback.classList.remove('hidden');
+      feedback.className = 'mt-1.5 text-[11px] font-bold text-rose-500 leading-relaxed';
+      feedback.textContent = `تنبيه: لقد أدخلت مبلغ ${val.toLocaleString('ar-EG')} ج.م، بينما الحد الأقصى المتاح لك هو ${maxEligible.toLocaleString('ar-EG')} ج.م بناءً على رصيد عملك الفعلي (${attendedDays} يوم عمل × ${dailyWage} ج.م). لا يمكنك طلب سلفة لأيام لم يتم العمل بها بعد.`;
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      if (inputEl) {
+        inputEl.classList.add('border-rose-500');
+        inputEl.classList.remove('border-emerald-500');
+      }
+    } else {
+      feedback.classList.remove('hidden');
+      feedback.className = 'mt-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400';
+      feedback.textContent = `المبلغ المطلوب (${val.toLocaleString('ar-EG')} ج.م) ضمن رصيد أيام عملك المكتسبة المسموح بها (${maxEligible.toLocaleString('ar-EG')} ج.م).`;
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      if (inputEl) {
+        inputEl.classList.remove('border-rose-500');
+        inputEl.classList.add('border-emerald-500');
+      }
+    }
+  },
+
+  async submitRequestAdvance(event, currentMonth, maxEligible, attendedDays, dailyWage) {
     event.preventDefault();
-    const amount = document.getElementById('emp-adv-amount').value;
-    const reason = document.getElementById('emp-adv-reason').value;
+    const amountInput = document.getElementById('emp-adv-amount');
+    const reasonInput = document.getElementById('emp-adv-reason');
     const month = document.getElementById('emp-adv-month').value;
     const date = document.getElementById('emp-adv-date').value;
+
+    const amount = parseFloat(amountInput.value);
+    const reason = reasonInput.value.trim();
+
+    if (amount > maxEligible) {
+      showToast(`الحد الأقصى المتاح لك هو ${maxEligible} ج.م بناءً على رصيد عملك الفعلي (${attendedDays} يوم عمل). لا يمكنك طلب سلفة لأيام لم تعمل بها بعد.`, 'danger', 5000);
+      return;
+    }
 
     try {
       const res = await API.submitAdvance({ amount, reason, month, date });

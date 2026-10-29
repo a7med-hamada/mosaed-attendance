@@ -427,6 +427,11 @@ const API = {
     return this.request(`/advances?${qs}`);
   },
 
+  getAdvanceEligibility(month = '') {
+    const qs = month ? `?month=${encodeURIComponent(month)}` : '';
+    return this.request(`/advances/eligibility${qs}`);
+  },
+
   submitAdvance(data) {
     return this.request('/advances', {
       method: 'POST',

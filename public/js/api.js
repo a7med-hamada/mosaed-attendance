@@ -802,8 +802,70 @@ async function showAppAlert(titleOrText, textOrType = '', type = 'info') {
 }
 
 // Hook native alert so any unexpected alert() call renders as SweetAlert2
+
+async function showAppPrompt(titleOrOpts, messageText = '', defaultValue = '') {
+  if (typeof window.Swal === 'undefined') {
+    return prompt(typeof titleOrOpts === 'object' ? (titleOrOpts.title || titleOrOpts.text) : (messageText || titleOrOpts), defaultValue);
+  }
+
+  const base = getSwalThemeOptions();
+  let title = 'إدخال بيانات';
+  let inputLabel = '';
+  let inputValue = defaultValue;
+  let placeholder = '';
+  let confirmText = 'متابعة';
+  let cancelText = 'إلغاء';
+  let inputType = 'text';
+  let isDanger = false;
+  let icon = 'question';
+
+  if (typeof titleOrOpts === 'object' && titleOrOpts !== null) {
+    title = titleOrOpts.title || title;
+    inputLabel = titleOrOpts.label || titleOrOpts.text || inputLabel;
+    inputValue = titleOrOpts.defaultValue !== undefined ? titleOrOpts.defaultValue : inputValue;
+    placeholder = titleOrOpts.placeholder || placeholder;
+    confirmText = titleOrOpts.confirmButtonText || confirmText;
+    cancelText = titleOrOpts.cancelButtonText || cancelText;
+    inputType = titleOrOpts.inputType || 'text';
+    isDanger = titleOrOpts.isDanger || false;
+    icon = titleOrOpts.icon || icon;
+  } else if (messageText) {
+    title = titleOrOpts;
+    inputLabel = messageText;
+  } else {
+    inputLabel = titleOrOpts;
+  }
+
+  const confirmClass = isDanger ? 'swal2-confirm swal2-qasetly-danger' : 'swal2-confirm';
+
+  const res = await Swal.fire({
+    ...base,
+    title: title,
+    input: inputType,
+    inputLabel: inputLabel,
+    inputValue: inputValue,
+    inputPlaceholder: placeholder,
+    icon: icon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    customClass: {
+      ...base.customClass,
+      confirmButton: confirmClass,
+      input: 'swal2-qasetly-input'
+    }
+  });
+
+  if (res.isConfirmed) {
+    return res.value !== undefined ? res.value : '';
+  }
+  return null;
+}
+
 if (typeof window !== 'undefined') {
   window.showAppConfirm = showAppConfirm;
+  window.showAppPrompt = showAppPrompt;
   window.showAppAlert = showAppAlert;
   const _nativeAlert = window.alert;
   window.alert = function(msg) {

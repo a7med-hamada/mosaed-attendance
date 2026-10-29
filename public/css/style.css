@@ -978,3 +978,49 @@ html:not(.dark) #notif-modal {
   border-color: #0ea5e9 !important;
   color: #0ea5e9 !important;
 }
+
+/* SweetAlert2 Input Styling */
+.swal2-input,
+.swal2-textarea,
+.swal2-qasetly-input {
+  direction: rtl !important;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  border-radius: 14px !important;
+  font-size: 0.9rem !important;
+  padding: 12px 16px !important;
+  border: 1px solid rgba(203, 213, 225, 0.9) !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  margin: 12px auto !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  width: 90% !important;
+}
+
+.dark .swal2-input,
+.dark .swal2-textarea,
+.dark .swal2-qasetly-input {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus,
+.swal2-qasetly-input:focus {
+  border-color: #0d9488 !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  outline: none !important;
+}
+
+.swal2-input-label {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  font-size: 0.9rem !important;
+  color: #475569 !important;
+  margin-bottom: 8px !important;
+}
+
+.dark .swal2-input-label {
+  color: #94a3b8 !important;
+}

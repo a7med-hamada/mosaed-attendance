@@ -5853,7 +5853,17 @@ const ManagerUI = {
   async reviewAdvanceRequest(advanceId, action, month = null) {
     let review_notes = '';
     if (action === 'rejected') {
-      review_notes = prompt('يرجى كتابة سبب رفض السلفة (اختياري، سيظهر للموظف):') || '';
+      const promptResult = await showAppPrompt({
+        title: 'رفض طلب السلفة',
+        text: 'يرجى كتابة سبب رفض السلفة (اختياري، سيظهر للموظف):',
+        placeholder: 'اكتب سبب الرفض هنا...',
+        confirmButtonText: 'تأكيد الرفض',
+        cancelButtonText: 'إلغاء',
+        isDanger: true,
+        icon: 'warning'
+      });
+      if (promptResult === null) return;
+      review_notes = promptResult;
     }
     try {
       const res = await API.reviewAdvance(advanceId, action, review_notes);

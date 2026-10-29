@@ -1169,8 +1169,70 @@
       });
     }
 
+    
+async function showAppPrompt(titleOrOpts, messageText = '', defaultValue = '') {
+  if (typeof window.Swal === 'undefined') {
+    return prompt(typeof titleOrOpts === 'object' ? (titleOrOpts.title || titleOrOpts.text) : (messageText || titleOrOpts), defaultValue);
+  }
+
+  const base = getSwalThemeOptions();
+  let title = 'إدخال بيانات';
+  let inputLabel = '';
+  let inputValue = defaultValue;
+  let placeholder = '';
+  let confirmText = 'متابعة';
+  let cancelText = 'إلغاء';
+  let inputType = 'text';
+  let isDanger = false;
+  let icon = 'question';
+
+  if (typeof titleOrOpts === 'object' && titleOrOpts !== null) {
+    title = titleOrOpts.title || title;
+    inputLabel = titleOrOpts.label || titleOrOpts.text || inputLabel;
+    inputValue = titleOrOpts.defaultValue !== undefined ? titleOrOpts.defaultValue : inputValue;
+    placeholder = titleOrOpts.placeholder || placeholder;
+    confirmText = titleOrOpts.confirmButtonText || confirmText;
+    cancelText = titleOrOpts.cancelButtonText || cancelText;
+    inputType = titleOrOpts.inputType || 'text';
+    isDanger = titleOrOpts.isDanger || false;
+    icon = titleOrOpts.icon || icon;
+  } else if (messageText) {
+    title = titleOrOpts;
+    inputLabel = messageText;
+  } else {
+    inputLabel = titleOrOpts;
+  }
+
+  const confirmClass = isDanger ? 'swal2-confirm swal2-qasetly-danger' : 'swal2-confirm';
+
+  const res = await Swal.fire({
+    ...base,
+    title: title,
+    input: inputType,
+    inputLabel: inputLabel,
+    inputValue: inputValue,
+    inputPlaceholder: placeholder,
+    icon: icon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    customClass: {
+      ...base.customClass,
+      confirmButton: confirmClass,
+      input: 'swal2-qasetly-input'
+    }
+  });
+
+  if (res.isConfirmed) {
+    return res.value !== undefined ? res.value : '';
+  }
+  return null;
+}
+
     window.showAppConfirm = showAppConfirm;
     window.showAppAlert = showAppAlert;
+    window.showAppPrompt = showAppPrompt;
 
     // Toast helper
     function showToast(message, type = 'info') {
@@ -2538,10 +2600,23 @@
     async function reviewBranchRequest(id, action) {
       let notes = '';
       if (action === 'approve') {
-        notes = prompt('ملاحظات التفعيل (اختياري - مثلاً: تم استلام الرسوم عبر فودافون كاش):', 'تم تأكيد استلام الرسوم وتفعيل الفرع بنجاح');
+        notes = await showAppPrompt({
+          title: 'تأكيد تفعيل الفرع',
+          text: 'ملاحظات التفعيل (اختياري - مثلاً: تم استلام الرسوم عبر فودافون كاش):',
+          defaultValue: 'تم تأكيد استلام الرسوم وتفعيل الفرع بنجاح',
+          confirmButtonText: 'تفعيل الفرع',
+          icon: 'question'
+        });
         if (notes === null) return;
       } else if (action === 'reject') {
-        notes = prompt('سبب رفض طلب تفعيل الفرع:', 'لم يتم تأكيد تحويل الرسوم.');
+        notes = await showAppPrompt({
+          title: 'رفض طلب تفعيل الفرع',
+          text: 'سبب رفض طلب تفعيل الفرع:',
+          defaultValue: 'لم يتم تأكيد تحويل الرسوم.',
+          confirmButtonText: 'تأكيد الرفض',
+          isDanger: true,
+          icon: 'warning'
+        });
         if (notes === null) return;
       }
 

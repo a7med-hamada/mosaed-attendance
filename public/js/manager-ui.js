@@ -1110,7 +1110,7 @@ const ManagerUI = {
   },
 
   async resetEmployeeFace(id, name) {
-    if (!confirm(`هل أنت متأكد من إعادة تعيين بصمة وجه الموظف "${name}"؟ سيُطلب منه تعريف وجهه مجدداً عند تسجيل الدخول.`)) return;
+    if (!(await showAppConfirm('إعادة تعيين بصمة الوجه', `هل أنت متأكد من إعادة تعيين بصمة وجه الموظف "${name}"؟ سيُطلب منه تعريف وجهه مجدداً عند تسجيل الدخول.`, 'warning'))) return;
     try {
       await API.resetEmployeeFace(id);
       showToast('تمت إعادة تعيين بصمة وجه الموظف بنجاح', 'success');
@@ -1127,7 +1127,7 @@ const ManagerUI = {
     }
 
     const warningMsg = `[تحذير إداري هام جداً]\n\nهل أنت متأكد من رغبتك في حذف الموظف "${name}" نهائياً من المنظومة؟\n\nتنبيه: هذا الإجراء سيؤدي فوراً إلى:\n1. مسح وحذف كافة تقارير الموظف الشهرية وكشوف الحساب بالكامل.\n2. حذف جميع سجلات الحضور والانصراف السابقة الخاصة به نهائياً.\n3. مسح كافة طلبات الإجازات والأذونات والسلفيات والمكافآت والخصومات المرتبطة به.\n\nهذا الإجراء نهائي ولا يمكن التراجع عنه أو استرجاع بياناته بعد الحذف. هل تريد المتابعة وتأكيد الحذف؟`;
-    if (!confirm(warningMsg)) return;
+    if (!(await showAppConfirm({ title: 'تحذير إداري: حذف موظف', text: warningMsg, confirmButtonText: 'نعم، حذف الموظف نهائياً', cancelButtonText: 'إلغاء', isDanger: true }))) return;
 
     try {
       const res = await API.deleteEmployee(id);
@@ -1857,7 +1857,7 @@ const ManagerUI = {
     const confirmMsg = empName 
       ? `هل أنت متأكد من حذف طلب الإجازة للموظف (${empName})؟\n\nتنبيه: سيتم إلغاء الإجازة فوراً واستعادة رصيد إجازات الموظف وتحديث سجلات الحضور.`
       : `هل أنت متأكد من حذف طلب الإجازة؟`;
-    if (!confirm(confirmMsg)) return;
+    if (!(await showAppConfirm('حذف طلب الإجازة', confirmMsg, 'warning'))) return;
 
     try {
       const res = await API.deleteLeave(id);
@@ -1876,7 +1876,7 @@ const ManagerUI = {
     const confirmMsg = empName
       ? `هل أنت متأكد من حذف طلب الإذن للموظف (${empName})؟`
       : `هل أنت متأكد من حذف طلب الإذن؟`;
-    if (!confirm(confirmMsg)) return;
+    if (!(await showAppConfirm('حذف طلب الإذن', confirmMsg, 'warning'))) return;
 
     try {
       const res = await API.deletePermission(id);
@@ -3254,7 +3254,7 @@ const ManagerUI = {
   },
 
   async deleteAttendanceRecord(recordId, employeeName, date) {
-    if (!confirm(`تحذير:\nهل أنت متأكد من حذف سجل حضور "${employeeName}" ليوم ${date}؟\n\nهذا الإجراء سيقوم بحذف السجل وتوثيق العملية في سجل العمليات الرقابي.`)) {
+    if (!(await showAppConfirm('حذف سجل حضور', `هل أنت متأكد من حذف سجل حضور "${employeeName}" ليوم ${date}؟\nسيتم حذف السجل وتوثيق العملية في سجل العمليات الرقابي.`, 'warning'))) {
       return;
     }
 
@@ -5032,7 +5032,7 @@ const ManagerUI = {
   },
 
   async confirmResetArchive() {
-    if (!confirm('هل أنت متأكد من تصفير سجلات وأرشيف الحضور؟\nسيتم حذف جميع سجلات الحضور والانصراف السابقة لتبدأ الدورة الشهرية بحسابات فارغة ونظيفة.')) {
+    if (!(await showAppConfirm({ title: 'تصفير الأرشيف الشهري', text: 'هل أنت متأكد من تصفير سجلات وأرشيف الحضور؟\nسيتم حذف جميع سجلات الحضور والانصراف السابقة لتبدأ الدورة الشهرية بحسابات فارغة ونظيفة.', confirmButtonText: 'تأكيد التصفير', isDanger: true }))) {
       return;
     }
     try {
@@ -5352,7 +5352,7 @@ const ManagerUI = {
       if (window.Tafqeet && window.Tafqeet.showPayslipModal) {
         window.Tafqeet.showPayslipModal(res, true);
       } else {
-        alert('حدث خطأ في تحميل وحدة توليد قسائم الرواتب.');
+        showAppAlert('خطأ في التحميل', 'حدث خطأ في تحميل وحدة توليد قسائم الرواتب.', 'error');
       }
     } catch (err) {
       showToast(err.message, 'danger');
@@ -5476,7 +5476,7 @@ const ManagerUI = {
   },
 
   async deleteBonus(bonusId, employeeId = null, month = null) {
-    if (!confirm('هل أنت متأكد من حذف هذه المكافأة من حساب الموظف؟')) return;
+    if (!(await showAppConfirm('حذف مكافأة', 'هل أنت متأكد من حذف هذه المكافأة من حساب الموظف؟', 'warning'))) return;
     try {
       const res = await API.deleteBonus(bonusId);
       showToast(res.message || 'تم حذف المكافأة بنجاح', 'success');
@@ -5868,7 +5868,7 @@ const ManagerUI = {
   },
 
   async deleteAdvance(advanceId, employeeId = null, month = null) {
-    if (!confirm('هل أنت متأكد من حذف هذه السلفة من السجلات؟')) return;
+    if (!(await showAppConfirm('حذف سلفة', 'هل أنت متأكد من حذف هذه السلفة من السجلات؟', 'warning'))) return;
     try {
       const res = await API.deleteAdvance(advanceId);
       showToast(res.message || 'تم حذف السلفة بنجاح', 'success');
@@ -6016,7 +6016,7 @@ const ManagerUI = {
   },
 
   async deleteDeduction(deductionId, employeeId = null, month = null) {
-    if (!confirm('هل أنت متأكد من حذف هذا الخصم / الجزاء من حساب الموظف؟')) return;
+    if (!(await showAppConfirm('حذف خصم / جزاء', 'هل أنت متأكد من حذف هذا الخصم / الجزاء من حساب الموظف؟', 'warning'))) return;
     try {
       const res = await API.deleteDeduction(deductionId);
       showToast(res.message || 'تم حذف الخصم بنجاح', 'success');
@@ -6635,7 +6635,7 @@ const ManagerUI = {
   },
 
   async sendAllPayslipsWhatsApp(month) {
-    if (!confirm(`هل تريد تجهيز وإرسال كشوف الرواتب لشهر (${month}) لجميع الموظفين عبر الواتساب؟`)) {
+    if (!(await showAppConfirm({ title: 'إرسال كشوف الرواتب عبر الواتساب', text: `هل تريد تجهيز وإرسال كشوف الرواتب لشهر (${month}) لجميع الموظفين عبر الواتساب؟`, confirmButtonText: 'نعم، ابدأ التجهيز', isDanger: false, icon: 'question' }))) {
       return;
     }
 
@@ -6914,7 +6914,7 @@ const ManagerUI = {
   },
 
   async resetManagerFaceBiometric() {
-    if (!confirm('هل أنت متأكد من رغبتك في إعادة تعيين وحذف بصمة الوجه الحالية الخاصة بك كمدير؟ سيتطلب ذلك تسجيل بصمة وجه جديدة.')) {
+    if (!(await showAppConfirm('إعادة تعيين بصمة وجه المدير', 'هل أنت متأكد من رغبتك في إعادة تعيين وحذف بصمة الوجه الحالية الخاصة بك كمدير؟ سيتطلب ذلك تسجيل بصمة وجه جديدة.', 'warning'))) {
       return;
     }
 
@@ -7672,7 +7672,7 @@ const ManagerUI = {
   },
 
   async cancelBranchRequest(id) {
-    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب هذا الفرع؟')) return;
+    if (!(await showAppConfirm('إلغاء طلب الفرع', 'هل أنت متأكد من رغبتك في إلغاء طلب هذا الفرع؟', 'warning'))) return;
     try {
       const res = await API.cancelBranchRequest(id);
       showToast(res.message || 'تم إلغاء الطلب بنجاح', 'success');

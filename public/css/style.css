@@ -831,3 +831,150 @@ html:not(.dark) #notif-modal {
 .custom-table-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(13, 148, 136, 0.6);
 }
+
+
+/* ==========================================================================
+   SweetAlert2 Custom Modern SaaS Theme (RTL + Qasetly Palette)
+   ========================================================================== */
+.swal2-container {
+  z-index: 100000 !important;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  direction: rtl !important;
+}
+
+.swal2-container.swal2-backdrop-show {
+  background: rgba(11, 19, 43, 0.72) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.swal2-popup {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  border-radius: 24px !important;
+  padding: 26px 28px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dark .swal2-popup {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.8) !important;
+}
+
+.swal2-title {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 1.25rem !important;
+  color: #0f172a !important;
+  padding: 0 0 6px 0 !important;
+}
+
+.dark .swal2-title {
+  color: #f8fafc !important;
+}
+
+.swal2-html-container {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  font-size: 0.925rem !important;
+  line-height: 1.7 !important;
+  color: #475569 !important;
+  margin: 10px 0 20px 0 !important;
+  text-align: center !important;
+}
+
+.dark .swal2-html-container {
+  color: #94a3b8 !important;
+}
+
+.swal2-actions {
+  display: flex !important;
+  gap: 12px !important;
+  width: 100% !important;
+  justify-content: center !important;
+  margin-top: 18px !important;
+}
+
+.swal2-confirm,
+.swal2-qasetly-confirm {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  background: linear-gradient(135deg, #0d9488 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  padding: 10px 24px !important;
+  border-radius: 14px !important;
+  border: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px 0 rgba(13, 148, 136, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.swal2-confirm:hover,
+.swal2-qasetly-confirm:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px 0 rgba(13, 148, 136, 0.45) !important;
+}
+
+.swal2-confirm.swal2-qasetly-danger {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  box-shadow: 0 4px 14px 0 rgba(225, 29, 72, 0.35) !important;
+}
+
+.swal2-confirm.swal2-qasetly-danger:hover {
+  box-shadow: 0 6px 20px 0 rgba(225, 29, 72, 0.45) !important;
+}
+
+.swal2-cancel,
+.swal2-qasetly-cancel {
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  padding: 10px 22px !important;
+  border-radius: 14px !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark .swal2-cancel,
+.dark .swal2-qasetly-cancel {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+.swal2-cancel:hover,
+.swal2-qasetly-cancel:hover {
+  background: #e2e8f0 !important;
+}
+
+.dark .swal2-cancel:hover,
+.dark .swal2-qasetly-cancel:hover {
+  background: rgba(148, 163, 184, 0.2) !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #f59e0b !important;
+}
+
+.swal2-icon.swal2-success {
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.swal2-icon.swal2-error {
+  border-color: #f43f5e !important;
+  color: #f43f5e !important;
+}
+
+.swal2-icon.swal2-info {
+  border-color: #0ea5e9 !important;
+  color: #0ea5e9 !important;
+}

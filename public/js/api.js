@@ -683,6 +683,138 @@ function getWhatsAppLink(phone, message) {
 }
 window.getWhatsAppLink = getWhatsAppLink;
 
+
+// SweetAlert2 Modern Dialog Engine
+function getSwalThemeOptions() {
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+  return {
+    background: isDark ? '#0f172a' : '#ffffff',
+    color: isDark ? '#f8fafc' : '#0f172a',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'swal2-qasetly-popup',
+      title: 'swal2-qasetly-title',
+      htmlContainer: 'swal2-qasetly-html',
+      confirmButton: 'swal2-confirm',
+      cancelButton: 'swal2-cancel',
+      actions: 'swal2-actions'
+    }
+  };
+}
+
+async function showAppConfirm(titleOrOpts, messageText = '', icon = 'warning') {
+  if (typeof window.Swal === 'undefined') {
+    return confirm(typeof titleOrOpts === 'object' ? (titleOrOpts.text || titleOrOpts.title) : (messageText ? `${titleOrOpts}\n${messageText}` : titleOrOpts));
+  }
+
+  const base = getSwalThemeOptions();
+  let title = 'تأكيد الإجراء';
+  let text = '';
+  let html = null;
+  let confirmText = 'تأكيد';
+  let cancelText = 'إلغاء';
+  let isDanger = true;
+  let customIcon = icon;
+
+  if (typeof titleOrOpts === 'object' && titleOrOpts !== null) {
+    title = titleOrOpts.title || title;
+    text = titleOrOpts.text || '';
+    html = titleOrOpts.html || null;
+    confirmText = titleOrOpts.confirmButtonText || confirmText;
+    cancelText = titleOrOpts.cancelButtonText || cancelText;
+    isDanger = titleOrOpts.isDanger !== undefined ? titleOrOpts.isDanger : true;
+    customIcon = titleOrOpts.icon || customIcon;
+  } else if (messageText) {
+    title = titleOrOpts;
+    text = messageText;
+  } else {
+    text = titleOrOpts;
+  }
+
+  if (!html && text && text.includes('\n')) {
+    html = text.split('\n').filter(Boolean).map(line => `<p class="mb-1.5 last:mb-0">${line}</p>`).join('');
+    text = undefined;
+  }
+
+  const confirmClass = isDanger ? 'swal2-confirm swal2-qasetly-danger' : 'swal2-confirm';
+
+  const res = await Swal.fire({
+    ...base,
+    title: title,
+    text: text,
+    html: html,
+    icon: customIcon,
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    focusCancel: true,
+    customClass: {
+      ...base.customClass,
+      confirmButton: confirmClass
+    }
+  });
+
+  return res.isConfirmed;
+}
+
+async function showAppAlert(titleOrText, textOrType = '', type = 'info') {
+  if (typeof window.Swal === 'undefined') {
+    alert(typeof textOrType === 'string' && textOrType && !['info', 'success', 'error', 'warning'].includes(textOrType) ? `${titleOrText}\n${textOrType}` : titleOrText);
+    return;
+  }
+
+  const base = getSwalThemeOptions();
+  let title = '';
+  let text = '';
+  let html = null;
+  let icon = 'info';
+
+  if (arguments.length === 1) {
+    text = titleOrText;
+  } else if (arguments.length === 2) {
+    if (['info', 'success', 'error', 'warning', 'question'].includes(textOrType)) {
+      text = titleOrText;
+      icon = textOrType;
+    } else {
+      title = titleOrText;
+      text = textOrType;
+    }
+  } else {
+    title = titleOrText;
+    text = textOrType;
+    icon = type;
+  }
+
+  if (text && text.includes('\n')) {
+    html = text.split('\n').filter(Boolean).map(line => `<p class="mb-1.5 last:mb-0">${line}</p>`).join('');
+    text = undefined;
+  }
+
+  return Swal.fire({
+    ...base,
+    title: title || undefined,
+    text: text,
+    html: html,
+    icon: icon,
+    confirmButtonText: 'حسناً'
+  });
+}
+
+// Hook native alert so any unexpected alert() call renders as SweetAlert2
+if (typeof window !== 'undefined') {
+  window.showAppConfirm = showAppConfirm;
+  window.showAppAlert = showAppAlert;
+  const _nativeAlert = window.alert;
+  window.alert = function(msg) {
+    if (typeof window.Swal !== 'undefined') {
+      window.showAppAlert(msg);
+    } else {
+      _nativeAlert(msg);
+    }
+  };
+}
+
 // UI Notification Toast
 function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toast-container');

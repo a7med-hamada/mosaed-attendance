@@ -3032,7 +3032,7 @@ const EmployeeUI = {
   },
 
   async cancelLeaveRequest(id) {
-    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب الإجازة هذا؟')) return;
+    if (!(await showAppConfirm('إلغاء طلب الإجازة', 'هل أنت متأكد من رغبتك في إلغاء طلب الإجازة هذا؟', 'warning'))) return;
     try {
       const res = await API.deleteLeave(id);
       if (res.success) {
@@ -3170,7 +3170,7 @@ const EmployeeUI = {
   },
 
   async cancelPermissionRequest(id) {
-    if (!confirm('هل أنت متأكد من رغبتك في إلغاء طلب الإذن هذا؟')) return;
+    if (!(await showAppConfirm('إلغاء طلب الإذن', 'هل أنت متأكد من رغبتك في إلغاء طلب الإذن هذا؟', 'warning'))) return;
     try {
       const res = await API.deletePermission(id);
       if (res.success) {
@@ -3642,7 +3642,7 @@ const EmployeeUI = {
   },
 
   async cancelAdvanceRequest(advanceId, month) {
-    if (!confirm('هل تريد بالتأكيد إلغاء طلب السلفة؟')) return;
+    if (!(await showAppConfirm('إلغاء طلب السلفة', 'هل تريد بالتأكيد إلغاء طلب السلفة؟', 'warning'))) return;
     try {
       const res = await API.deleteAdvance(advanceId);
       showToast(res.message || 'تم إلغاء طلب السلفة بنجاح', 'success');

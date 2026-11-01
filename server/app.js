@@ -96,7 +96,7 @@ app.use((req, res, next) => {
 
 // Dedicated routes for Register Page
 app.get(['/register', '/signup'], (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+  res.sendFile('index.html', { root: publicDir });
 });
 
 // Prevent stale caching of HTML and Service Worker

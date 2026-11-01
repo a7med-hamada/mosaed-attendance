@@ -167,8 +167,8 @@ function isManagedResource(table, managerId, resourceId) {
 // POST /api/auth/register-manager (New Manager Registration)
 router.post('/register-manager', registrationRateLimiter, (req, res) => {
   try {
-    // Security Lockdown: Prevent open unauthorized manager registration from the internet
-    const allowRegistration = process.env.ALLOW_PUBLIC_REGISTRATION === 'true' || process.env.NODE_ENV === 'test';
+    // Allow public manager registration unless explicitly disabled
+    const allowRegistration = process.env.ALLOW_PUBLIC_REGISTRATION !== 'false';
     const registrationSecret = process.env.REGISTRATION_SECRET_PIN || '';
 
     if (!allowRegistration) {
@@ -176,7 +176,7 @@ router.post('/register-manager', registrationRateLimiter, (req, res) => {
       if (!registrationSecret || providedPin !== registrationSecret) {
         return res.status(403).json({
           success: false,
-          error: 'التسجيل العام لمدراء جدد مغلق لأسباب أمنية. إنشاء الحسابات متاح فقط من قِبل إدارة النظام.'
+          error: 'التسجيل العام لمدراء جدد مغلق مؤقتاً لأسباب أمنية. يرجى التواصل مع إدارة المنظومة.'
         });
       }
     }
@@ -222,6 +222,12 @@ router.post('/register-manager', registrationRateLimiter, (req, res) => {
       INSERT INTO schedules (name, start_time, end_time, grace_period_minutes, half_day_threshold, absence_threshold, working_days, manager_id, is_configured, is_default)
       VALUES ('الدوام الرسمي العام', '09:00', '17:00', 15, '12:00', '13:00', '0,1,2,3,4', ?, 0, 1)
     `).run(newManagerId);
+
+    // Create default department placeholder for this new manager
+    db.prepare(`
+      INSERT INTO departments (name, description, manager_name, manager_id)
+      VALUES ('الإدارة العامة', 'القسم الافتراضي للشركة', ?, ?)
+    `).run(full_name.trim(), newManagerId);
 
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logAudit(newManagerId, full_name, 'CREATE_MANAGER_ACCOUNT', 'users', newManagerId, null, { email }, 'إنشاء حساب مدير جديد مستقل', clientIp);

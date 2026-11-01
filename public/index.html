@@ -169,7 +169,14 @@
           <i data-lucide="arrow-left" class="w-4 h-4"></i>
         </button>
 
-        <!-- Public registration disabled for security -->
+        <!-- New Company Registration Link -->
+        <div class="pt-2">
+          <button type="button" onclick="App.openRegisterManagerModal()"
+            class="w-full py-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer">
+            <i data-lucide="building-2" class="w-4 h-4 text-emerald-500"></i>
+            <span>إنشاء حساب شركة جديد (تجربة مجانية 14 يوماً)</span>
+          </button>
+        </div>
 
         <div class="pt-3 mt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
           <button type="button" onclick="App.openSupportModal()" class="hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-1.5 transition-colors">
@@ -1163,6 +1170,102 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+
+  <!-- Register Manager / New Company Modal -->
+  <div id="register-manager-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 modal-enter text-xs max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+            <i data-lucide="building-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white">إنشاء حساب شركة أو منشأة جديدة</h3>
+            <p class="text-[11px] text-slate-400">فترة تجريبية مجانية 14 يوماً بكافة الصلاحيات</p>
+          </div>
+        </div>
+        <button type="button" onclick="App.closeRegisterManagerModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form onsubmit="App.handleRegisterManager(event)" class="space-y-3.5 pt-4">
+        <div>
+          <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم المؤسسة أو الشركة *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i data-lucide="building" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="reg-mgr-company" required placeholder="مثال: شركة الحلول المبتكرة"
+              class="w-full pr-9 pl-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم المدير المسؤول الكامل *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i data-lucide="user" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="reg-mgr-name" required placeholder="مثال: أحمد عبد الله"
+              class="w-full pr-9 pl-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">البريد الإلكتروني للمدير (لتسجيل الدخول) *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+            </span>
+            <input type="email" id="reg-mgr-email" required placeholder="manager@company.com" dir="ltr"
+              class="w-full pr-9 pl-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-right font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم الهاتف أو الواتساب (اختياري)</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i data-lucide="phone" class="w-4 h-4"></i>
+            </span>
+            <input type="tel" id="reg-mgr-phone" placeholder="01XXXXXXXXX" dir="ltr"
+              class="w-full pr-9 pl-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-right font-mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">كلمة المرور *</label>
+            <input type="password" id="reg-mgr-pass" required placeholder="••••••••" minlength="6"
+              class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
+          </div>
+          <div>
+            <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">تأكيد كلمة المرور *</label>
+            <input type="password" id="reg-mgr-confirm-pass" required placeholder="••••••••" minlength="6"
+              class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all" />
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-800 dark:text-teal-300 text-[11px] leading-relaxed">
+          سيبدأ حساب شركتك مستقلاً تماماً؛ وستتمكن فور الدخول من إضافة الفروع، وتحديد نطاق الـ GPS، وإضافة الموظفين وتعيين مواعيد العمل.
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="App.closeRegisterManagerModal()"
+            class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition-all">
+            إلغاء
+          </button>
+          <button type="submit" id="reg-mgr-btn"
+            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2 shadow-md shadow-emerald-500/20 transition-all cursor-pointer">
+            <span>إنشاء الحساب وبدء التجربة</span>
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

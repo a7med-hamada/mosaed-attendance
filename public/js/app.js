@@ -191,7 +191,17 @@ const App = {
       API.setCurrentUser(res.user);
       this.currentUser = res.user;
       this.closeRegisterManagerModal();
-      showToast('تم إنشاء حساب المدير بنجاح! يبدأ حسابك فارغاً، ابدأ بإعداد المنظومة وإضافة الموظفين.', 'success');
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'success',
+          title: 'تم إنشاء حساب الشركة بنجاح',
+          text: 'مرحباً بك في منظومة وقتي! تم تفعيل فترة تجريبية مجانية لمدة 14 يوماً. يمكنك الآن إضافة الفروع ومواعيد العمل وموظفيك.',
+          confirmButtonText: 'ابدأ الآن',
+          confirmButtonColor: '#0d9488'
+        });
+      } else {
+        showToast('تم إنشاء حساب الشركة بنجاح! ابدأ الآن بإعداد المنظومة.', 'success');
+      }
       this.showAppView();
     } catch (err) {
       showToast(err.message, 'danger');

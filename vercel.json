@@ -6,15 +6,53 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/api", "destination": "/api/index.js" },
-    { "source": "/api/(.*)", "destination": "/api/[...all].js" },
-    { "source": "/super-admin", "destination": "/super-admin/index.html" },
-    { "source": "/super-admin/(.*)", "destination": "/super-admin/index.html" },
-    { "source": "/owner", "destination": "/super-admin/index.html" },
-    { "source": "/owner/(.*)", "destination": "/super-admin/index.html" },
-    { "source": "/owner-portal", "destination": "/super-admin/index.html" },
-    { "source": "/owner-portal/(.*)", "destination": "/super-admin/index.html" },
-    { "source": "/admin-portal", "destination": "/super-admin/index.html" },
-    { "source": "/admin-portal/(.*)", "destination": "/super-admin/index.html" }
+    {
+      "source": "/register",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/signup",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[...all].js"
+    },
+    {
+      "source": "/super-admin",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/super-admin/(.*)",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/owner",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/owner/(.*)",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/owner-portal",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/owner-portal/(.*)",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/admin-portal",
+      "destination": "/super-admin/index.html"
+    },
+    {
+      "source": "/admin-portal/(.*)",
+      "destination": "/super-admin/index.html"
+    }
   ]
 }

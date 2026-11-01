@@ -65,12 +65,26 @@ const App = {
     if (loginForm) {
       loginForm.addEventListener('submit', (e) => this.handleLogin(e));
     }
+    window.addEventListener('popstate', () => {
+      if (!API.getToken()) {
+        if (window.location.hash === '#register' || window.location.pathname.includes('/register')) {
+          this.showRegisterView();
+        } else {
+          this.showLoginView();
+        }
+      }
+    });
   },
 
   async checkAuth() {
     const token = API.getToken();
     if (!token) {
-      this.showLoginView();
+      const isReg = window.location.hash === '#register' || window.location.pathname.includes('/register') || window.location.pathname.includes('/signup');
+      if (isReg) {
+        this.showRegisterView();
+      } else {
+        this.showLoginView();
+      }
       return;
     }
 
@@ -270,12 +284,34 @@ const App = {
   },
 
   showLoginView() {
+    const regView = document.getElementById('register-view');
+    if (regView) regView.classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
     document.getElementById('app-view').classList.add('hidden');
+    if (window.location.hash === '#register') {
+      history.pushState(null, '', window.location.pathname);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.lucide) lucide.createIcons();
+  },
+
+  showRegisterView() {
+    const loginView = document.getElementById('login-view');
+    if (loginView) loginView.classList.add('hidden');
+    const appView = document.getElementById('app-view');
+    if (appView) appView.classList.add('hidden');
+    const regView = document.getElementById('register-view');
+    if (regView) regView.classList.remove('hidden');
+    if (window.location.hash !== '#register') {
+      history.pushState(null, '', '#register');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.lucide) lucide.createIcons();
   },
 
   showAppView() {
+    const regView = document.getElementById('register-view');
+    if (regView) regView.classList.add('hidden');
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
 

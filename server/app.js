@@ -94,6 +94,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Dedicated routes for Register Page
+app.get(['/register', '/signup'], (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
 // Prevent stale caching of HTML and Service Worker
 app.use((req, res, next) => {
   if (req.path === '/' || req.path.endsWith('.html') || req.path === '/sw.js') {

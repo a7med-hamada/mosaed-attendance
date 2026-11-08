@@ -7,6 +7,7 @@ let isLiveAutoRefresh = true;
 
 const ManagerUI = {
   activeSection: 'dashboard',
+  employeeViewMode: 'cards',
 
   async init() {
     this.renderSidebar();
@@ -724,20 +725,38 @@ const ManagerUI = {
           </button>
         </div>
 
-        <!-- Role Filter Tabs -->
-        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-          <button id="emp-filter-all" onclick="ManagerUI.filterEmployeeRole('all')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all">
-            الكل (<span id="emp-count-all">0</span>)
-          </button>
-          <button id="emp-filter-employee" onclick="ManagerUI.filterEmployeeRole('employee')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-            الموظفون (<span id="emp-count-emp">0</span>)
-          </button>
-          <button id="emp-filter-manager" onclick="ManagerUI.filterEmployeeRole('manager')"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-            فريق الإدارة والمديرون (<span id="emp-count-mgr">0</span>)
-          </button>
+        <!-- Role Filter Tabs & Layout Toggle -->
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2 flex-wrap">
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="emp-filter-all" onclick="ManagerUI.filterEmployeeRole('all')"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all">
+              الكل (<span id="emp-count-all">0</span>)
+            </button>
+            <button id="emp-filter-employee" onclick="ManagerUI.filterEmployeeRole('employee')"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+              الموظفون (<span id="emp-count-emp">0</span>)
+            </button>
+            <button id="emp-filter-manager" onclick="ManagerUI.filterEmployeeRole('manager')"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+              فريق الإدارة والمديرون (<span id="emp-count-mgr">0</span>)
+            </button>
+          </div>
+
+          <!-- View Mode Toggle (Cards by default) -->
+          <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button type="button" id="emp-view-cards-btn" onclick="ManagerUI.setEmployeeViewMode('cards')"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
+              title="عرض الكروت (مناسب للهواتف والشاشات الصغيرة)">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+              <span>كروت</span>
+            </button>
+            <button type="button" id="emp-view-table-btn" onclick="ManagerUI.setEmployeeViewMode('table')"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              title="عرض الجدول الكامل">
+              <i data-lucide="table" class="w-3.5 h-3.5"></i>
+              <span>جدول</span>
+            </button>
+          </div>
         </div>
 
         <div id="mgr-employees-table-container" class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -748,6 +767,17 @@ const ManagerUI = {
 
     if (window.lucide) lucide.createIcons();
     await this.loadEmployeesTable();
+  },
+
+  setEmployeeViewMode(mode) {
+    this.employeeViewMode = mode;
+    const cardsBtn = document.getElementById('emp-view-cards-btn');
+    const tableBtn = document.getElementById('emp-view-table-btn');
+    const activeBtnCls = 'px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs';
+    const inactiveBtnCls = 'px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+    if (cardsBtn) cardsBtn.className = mode === 'cards' ? activeBtnCls : inactiveBtnCls;
+    if (tableBtn) tableBtn.className = mode === 'table' ? activeBtnCls : inactiveBtnCls;
+    this.renderEmployeesTableRows();
   },
 
   filterEmployeeRole(role) {
@@ -824,6 +854,185 @@ const ManagerUI = {
       return;
     }
 
+    // 1. CARDS VIEW (Modern responsive cards for mobile and desktop)
+    if (this.employeeViewMode !== 'table') {
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-3.5 sm:p-5 bg-slate-50/40 dark:bg-slate-950/30">
+          ${employees.map(e => `
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
+              <!-- Top accent bar based on role & active status -->
+              <div class="absolute top-0 inset-x-0 h-1.5 ${e.is_active ? (e.role === 'manager' ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500') : 'bg-slate-300 dark:bg-slate-700'}"></div>
+
+              <!-- Header: Avatar, Name, Code, Badges -->
+              <div class="flex items-start justify-between gap-3 pt-1">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="relative flex-shrink-0">
+                    <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800 ring-2 ${e.is_active ? 'ring-emerald-500/30' : 'ring-slate-300 dark:ring-slate-700'}" />
+                    ${e.has_face_enrolled ? `
+                      <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900" title="بصمة الوجه مسجلة">
+                        <i data-lucide="scan-face" class="w-3 h-3"></i>
+                      </span>
+                    ` : ''}
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <h3 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${e.full_name}</h3>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span class="text-[11px] font-mono text-slate-400 font-semibold">${e.employee_code}</span>
+                      ${e.role === 'manager' ? `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
+                          <i data-lucide="shield" class="w-3 h-3"></i>
+                          <span>مدير مساعد</span>
+                        </span>
+                      ` : `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                          <i data-lucide="user" class="w-3 h-3"></i>
+                          <span>موظف</span>
+                        </span>
+                      `}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Active / Inactive Pill -->
+                <div class="flex-shrink-0">
+                  <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold ${e.is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25'}">
+                    ${e.is_active ? 'نشط' : 'معطل'}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Information Grid -->
+              <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 space-y-2.5 border border-slate-100 dark:border-slate-800/80 text-xs">
+                <!-- Job title & Department -->
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <i data-lucide="briefcase" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                    <span class="font-bold text-slate-800 dark:text-slate-200 truncate">${e.job_title || (e.role === 'manager' ? 'مدير مساعد' : 'موظف')}</span>
+                  </div>
+                  <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex-shrink-0">
+                    ${e.department_name || 'عام'}
+                  </span>
+                </div>
+
+                <!-- Shift / Work Hours -->
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <div class="flex items-center gap-1.5">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                    <span class="text-slate-500 text-[11px]">الوردية / الدوام:</span>
+                  </div>
+                  <div>
+                    ${e.role === 'manager' ? `
+                      <span class="text-[11px] text-purple-600 dark:text-purple-400 font-bold">صلاحيات إدارة كاملة</span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'}">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>${e.shift_name ? e.shift_name : 'مرن (جميع الورديات)'}</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+
+                <!-- Base Salary -->
+                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <div class="flex items-center gap-1.5">
+                    <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+                    <span class="text-slate-500 text-[11px]">المرتب الأساسي:</span>
+                  </div>
+                  <span class="font-extrabold font-mono text-emerald-600 dark:text-emerald-400 text-xs">
+                    ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
+                  </span>
+                </div>
+
+                <!-- Contacts: Email & Phone -->
+                <div class="grid grid-cols-1 gap-1 pt-1 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px]">
+                  <div class="flex items-center gap-1.5 text-slate-500 truncate" title="${e.email}">
+                    <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                    <span class="font-mono truncate select-all">${e.email}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-slate-500 font-mono">
+                    <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                    <span class="select-all">${e.phone || '—'}</span>
+                  </div>
+                </div>
+
+                <!-- Live Status & Face ID Badges -->
+                <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 flex-wrap">
+                  <div>
+                    ${(e.today_check_in && !e.today_check_out) ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span>على رأس العمل الآن</span>
+                      </span>
+                    ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 text-[11px]">لم يسجل اليوم بعد</span>'))}
+                  </div>
+                  <div>
+                    ${e.has_face_enrolled ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
+                        <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                        <span>بصمة مسجلة</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                        <span>بدون بصمة</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Toolbar -->
+              <div class="flex items-center justify-between gap-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
+                  class="flex-1 py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="إحصائيات الأداء والحضور">
+                  <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+                  <span>إحصائيات</span>
+                </button>
+
+                <button onclick="ManagerUI.openEditEmployeeModal(${e.id})"
+                  class="flex-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="تعديل البيانات">
+                  <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                  <span>تعديل</span>
+                </button>
+
+                <div class="flex items-center gap-1">
+                  <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})"
+                    class="p-2 rounded-xl ${e.is_active ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300'} transition-colors"
+                    title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+                    <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-3.5 h-3.5"></i>
+                  </button>
+
+                  ${e.has_face_enrolled ? `
+                    <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
+                      class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors"
+                      title="إعادة تعيين بصمة الوجه">
+                      <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+
+                  <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}', '${e.role}')"
+                    class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                    title="حذف الحساب نهائياً">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    // 2. TABLE VIEW (Legacy dense table for large screens)
     container.innerHTML = `
       <div class="overflow-x-auto w-full custom-table-scroll">
         <table class="w-full text-right text-xs min-w-[1100px]">

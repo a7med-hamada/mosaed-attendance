@@ -85,7 +85,7 @@ const EmployeeUI = {
     if (mobileNav) {
       mobileNav.innerHTML = tabs.map(tab => `
         <li>
-          <button onclick="EmployeeUI.switchTab('${tab.id}'); if (window.App && App.closeMobileMenu) App.closeMobileMenu();"
+          <button onclick="if (typeof App !== 'undefined' && App.closeMobileMenu) App.closeMobileMenu(); EmployeeUI.switchTab('${tab.id}');"
             class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all w-full text-right ${
               this.activeTab === tab.id
                 ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border-r-4 border-r-teal-500'
@@ -102,7 +102,7 @@ const EmployeeUI = {
   },
 
   switchTab(tabId) {
-    if (window.App && typeof App.closeMobileMenu === 'function') {
+    if (typeof App !== 'undefined' && typeof App.closeMobileMenu === 'function') {
       App.closeMobileMenu();
     }
     this.activeTab = tabId;

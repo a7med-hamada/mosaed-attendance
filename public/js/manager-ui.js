@@ -68,7 +68,7 @@ const ManagerUI = {
     if (mobileNav) {
       mobileNav.innerHTML = sections.map(s => `
         <li>
-          <button onclick="ManagerUI.switchSection('${s.id}'); if (window.App && App.closeMobileMenu) App.closeMobileMenu();"
+          <button onclick="if (typeof App !== 'undefined' && App.closeMobileMenu) App.closeMobileMenu(); ManagerUI.switchSection('${s.id}');"
             class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all w-full text-right ${
               this.activeSection === s.id
                 ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold border-r-4 border-r-teal-500'
@@ -85,7 +85,7 @@ const ManagerUI = {
   },
 
   async switchSection(sectionId) {
-    if (window.App && typeof App.closeMobileMenu === 'function') {
+    if (typeof App !== 'undefined' && typeof App.closeMobileMenu === 'function') {
       App.closeMobileMenu();
     }
     const user = App.currentUser || API.getCurrentUser() || {};
@@ -1082,45 +1082,7 @@ const ManagerUI = {
             </div>
 
             
-            <!-- Payout & E-Wallet Information -->
-            <div class="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 space-y-3">
-              <div class="flex items-center gap-1.5 text-teal-700 dark:text-teal-300 font-bold text-xs">
-                <i data-lucide="wallet" class="w-4 h-4"></i>
-                <span>بيانات صرف الراتب والمحافظ الإلكترونية (اختياري)</span>
-              </div>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                حدد طريقة تحويل مستحقات وسلف الموظف لتسهيل التحويل المباشر عبر المحافظ أو إنستاباي.
-              </p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">طريقة الصرف المفضلة</label>
-                  <select name="payout_method" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
-                    <option value="cash" ${emp.payout_method === 'cash' ? 'selected' : ''}>استلام نقدي (كاش من الخزينة)</option>
-                    <option value="vodafone_cash" ${emp.payout_method === 'vodafone_cash' ? 'selected' : ''}>فودافون كاش (Vodafone Cash)</option>
-                    <option value="instapay" ${emp.payout_method === 'instapay' ? 'selected' : ''}>إنستاباي (InstaPay)</option>
-                    <option value="orange_cash" ${emp.payout_method === 'orange_cash' ? 'selected' : ''}>أورنج كاش (Orange Cash)</option>
-                    <option value="etisalat_cash" ${emp.payout_method === 'etisalat_cash' ? 'selected' : ''}>إي آند كاش (اتصالات كاش)</option>
-                    <option value="we_pay" ${emp.payout_method === 'we_pay' ? 'selected' : ''}>وي باي (WE Pay)</option>
-                    <option value="bank_account" ${emp.payout_method === 'bank_account' ? 'selected' : ''}>تحويل بنكي / آيبان (Bank / IBAN)</option>
-                    <option value="other_wallet" ${emp.payout_method === 'other_wallet' ? 'selected' : ''}>محفظة ذكية أخرى</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">رقم المحفظة / معرف إنستاباي / الآيبان</label>
-                  <input type="text" name="payout_account_number" value="${(emp.payout_account_number || '').replace(/"/g, '&quot;')}" placeholder="010... أو name@instapay أو رقم الحساب" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono" />
-                </div>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">اسم البنك / مزود الخدمة (اختياري)</label>
-                  <input type="text" name="payout_provider_name" value="${(emp.payout_provider_name || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: البنك الأهلي، CIB، فودافون" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
-                </div>
-                <div>
-                  <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">ملاحظات التحويل (اختياري)</label>
-                  <input type="text" name="payout_notes" value="${(emp.payout_notes || '').replace(/"/g, '&quot;')}" placeholder="مثلاً: المحفظة باسم الوالد" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs" />
-                </div>
-              </div>
-            </div>
+            
 
             <div>
               <label class="block text-slate-700 dark:text-slate-300 font-bold mb-1">حالة الحساب</label>

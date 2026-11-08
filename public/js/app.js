@@ -282,12 +282,15 @@ const App = {
   closeMobileMenu() {
     const drawer = document.getElementById('mobile-drawer');
     const backdrop = document.getElementById('mobile-drawer-backdrop');
-    if (!drawer || !backdrop) return;
-    drawer.classList.add('translate-x-full');
-    backdrop.classList.add('opacity-0');
-    setTimeout(() => {
-      backdrop.classList.add('hidden');
-    }, 300);
+    if (drawer) {
+      drawer.classList.add('translate-x-full');
+    }
+    if (backdrop) {
+      backdrop.classList.add('opacity-0');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+      }, 300);
+    }
     document.body.classList.remove('overflow-hidden');
   },
 

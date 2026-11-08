@@ -1033,6 +1033,7 @@ const EmployeeUI = {
       faceStatusEl.classList.add('hidden');
       faceStatusEl.innerHTML = '';
     }
+    this.setCameraVerificationOverlay('hide');
 
     // Update modal title and confirm text based on action
     const titleEl = document.querySelector('#camera-modal [data-i18n="camera_title"]');
@@ -1059,6 +1060,7 @@ const EmployeeUI = {
   closeCameraModal() {
     const modal = document.getElementById('camera-modal');
     if (modal) modal.classList.add('hidden');
+    this.setCameraVerificationOverlay('hide');
     this.stopCameraStream();
   },
 
@@ -1149,6 +1151,7 @@ const EmployeeUI = {
   retakeSnapshot() {
     capturedPhotoData = null;
     this.currentAttendanceDescriptor = null;
+    this.setCameraVerificationOverlay('hide');
     const faceStatusEl = document.getElementById('camera-face-status');
     if (faceStatusEl) {
       faceStatusEl.classList.add('hidden');
@@ -1221,6 +1224,65 @@ const EmployeeUI = {
     reader.readAsDataURL(file);
   },
 
+  setCameraVerificationOverlay(type, text = '') {
+    const overlay = document.getElementById('camera-verification-overlay');
+    const badge = document.getElementById('camera-overlay-badge');
+    const label = document.getElementById('camera-overlay-text');
+    if (!overlay || !badge) return;
+
+    if (!type || type === 'hide') {
+      overlay.classList.add('hidden');
+      overlay.className = 'absolute inset-0 flex flex-col items-center justify-center hidden z-20 pointer-events-none transition-all duration-300';
+      badge.innerHTML = '';
+      badge.className = 'w-20 h-20 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300';
+      if (label) {
+        label.classList.add('hidden');
+        label.textContent = '';
+      }
+      return;
+    }
+
+    overlay.classList.remove('hidden');
+
+    if (type === 'loading') {
+      overlay.className = 'absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none transition-all duration-300 bg-black/40 backdrop-blur-[1px]';
+      badge.className = 'w-16 h-16 rounded-full bg-slate-900/80 border border-white/20 flex items-center justify-center shadow-xl';
+      badge.innerHTML = `<div class="w-8 h-8 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>`;
+      if (label) {
+        label.classList.remove('hidden');
+        label.textContent = text || 'جاري التحقق من ملامح الوجه...';
+      }
+    } else if (type === 'success') {
+      // أوفرلاي أخضر شفاف في كامل الصورة مع علامة صح بيضاء داخل دائرة خضراء في منتصف الصورة
+      overlay.className = 'absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none transition-all duration-300 verification-overlay-green';
+      badge.className = 'w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xl ring-4 ring-white animate-pop-in';
+      badge.innerHTML = `
+        <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 13l4 4L19 7" />
+        </svg>
+      `;
+      if (label) {
+        label.classList.add('hidden');
+        label.textContent = '';
+      }
+    } else if (type === 'error') {
+      // أوفرلاي أحمر شفاف في كامل الصورة مع علامة خطأ بيضاء داخل دائرة حمراء في منتصف الصورة
+      overlay.className = 'absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none transition-all duration-300 verification-overlay-red';
+      badge.className = 'w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-2xl ring-4 ring-white animate-pop-in';
+      badge.innerHTML = `
+        <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      `;
+      if (label && text) {
+        label.classList.remove('hidden');
+        label.textContent = text;
+      } else if (label) {
+        label.classList.add('hidden');
+      }
+    }
+  },
+
   async verifyFaceForAttendance(canvas) {
     const user = API.getCurrentUser() || {};
     const faceStatusEl = document.getElementById('camera-face-status');
@@ -1229,6 +1291,7 @@ const EmployeeUI = {
     if (!faceStatusEl) return true;
 
     if (!user.has_face_enrolled || !user.face_descriptor) {
+      this.setCameraVerificationOverlay('hide');
       faceStatusEl.classList.remove('hidden');
       faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300';
       faceStatusEl.innerHTML = `
@@ -1245,17 +1308,18 @@ const EmployeeUI = {
       return false;
     }
 
-    faceStatusEl.classList.remove('hidden');
-    faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300';
-    faceStatusEl.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div><span>جاري التحقق البيومتري من ملامح الوجه...</span>`;
+    this.setCameraVerificationOverlay('loading');
+    faceStatusEl.classList.add('hidden');
+    faceStatusEl.innerHTML = '';
     if (confirmBtn) confirmBtn.disabled = true;
 
     try {
       const detected = await FaceService.detectSingleFaceWithValidation(canvas);
       if (!detected || !detected.valid) {
         const msg = detected ? detected.message : 'لم يتم العثور على وجه واضح بالصورة. يرجى توجيه الكاميرا إلى وجهك مباشرة.';
-        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300';
-        faceStatusEl.innerHTML = `<i data-lucide="alert-octagon" class="w-4 h-4 shrink-0 text-rose-500"></i><span>${msg}</span>`;
+        this.setCameraVerificationOverlay('error', msg);
+        faceStatusEl.classList.add('hidden');
+        faceStatusEl.innerHTML = '';
         if (confirmBtn) confirmBtn.disabled = true;
         if (window.lucide) lucide.createIcons();
         return false;
@@ -1265,21 +1329,24 @@ const EmployeeUI = {
       const cmp = FaceService.compare(detected.descriptor, user.face_descriptor);
       if (cmp.match) {
         this.currentAttendanceDescriptor = detected.descriptor;
-        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300';
-        faceStatusEl.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 shrink-0 text-emerald-500"></i><span>تم التحقق من بصمة الوجه بنجاح (تطابق ${cmp.similarity}%)</span>`;
+        this.setCameraVerificationOverlay('success');
+        faceStatusEl.classList.add('hidden');
+        faceStatusEl.innerHTML = '';
         if (confirmBtn) confirmBtn.disabled = false;
         if (window.lucide) lucide.createIcons();
         return true;
       } else {
         this.currentAttendanceDescriptor = null;
-        faceStatusEl.className = 'mb-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300';
-        faceStatusEl.innerHTML = `<i data-lucide="alert-octagon" class="w-4 h-4 shrink-0 text-rose-500"></i><span>بصمة الوجه لا تتطابق مع صاحب الحساب (${cmp.similarity}% تطابق). لا يمكن تسجيل الحضور نيابة عن شخص آخر.</span>`;
+        this.setCameraVerificationOverlay('error', `بصمة الوجه لا تتطابق مع صاحب الحساب (${cmp.similarity}% تطابق)`);
+        faceStatusEl.classList.add('hidden');
+        faceStatusEl.innerHTML = '';
         if (confirmBtn) confirmBtn.disabled = true;
         if (window.lucide) lucide.createIcons();
         return false;
       }
     } catch (err) {
       console.warn('Face verification error:', err);
+      this.setCameraVerificationOverlay('hide');
       if (confirmBtn) confirmBtn.disabled = false;
       return true;
     }
@@ -1783,9 +1850,9 @@ const EmployeeUI = {
               <!-- Circular Commitment Indicator -->
               <div class="relative inline-flex items-center justify-center w-14 h-14 flex-shrink-0">
                 <svg class="transform -rotate-90 w-14 h-14" viewBox="0 0 36 36">
-                  <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                  <path class="text-slate-200 dark:text-slate-800" stroke-width="4" stroke="currentColor" fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path stroke="${circleStroke}" stroke-dasharray="${score}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                  <path stroke="${circleStroke}" stroke-dasharray="${score}, 100" stroke-width="4" stroke-linecap="round" fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <span class="absolute font-mono font-bold text-xs ${circleText}">${score}%</span>
@@ -1918,9 +1985,9 @@ const EmployeeUI = {
             <div class="flex items-center gap-4">
               <div class="relative inline-flex items-center justify-center w-16 h-16 flex-shrink-0">
                 <svg class="transform -rotate-90 w-16 h-16" viewBox="0 0 36 36">
-                  <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                  <path class="text-slate-200 dark:text-slate-800" stroke-width="4" stroke="currentColor" fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path stroke="${myCircleStroke}" stroke-dasharray="${myScore}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                  <path stroke="${myCircleStroke}" stroke-dasharray="${myScore}, 100" stroke-width="4" stroke-linecap="round" fill="none"
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <span class="absolute font-mono font-bold text-sm ${myCircleText}">${myScore}%</span>
@@ -2081,9 +2148,9 @@ const EmployeeUI = {
                         <div class="inline-flex items-center justify-center">
                           <div class="relative inline-flex items-center justify-center w-11 h-11 flex-shrink-0">
                             <svg class="transform -rotate-90 w-11 h-11" viewBox="0 0 36 36">
-                              <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                              <path class="text-slate-200 dark:text-slate-800" stroke-width="4" stroke="currentColor" fill="none"
                                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="4" stroke-linecap="round" fill="none"
                                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                             </svg>
                             <span class="absolute font-mono font-bold text-[11px] ${circleText}">${s}%</span>

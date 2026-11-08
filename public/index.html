@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl" class="min-h-screen dark">
 <head>
   <meta charset="UTF-8" />
@@ -87,7 +87,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet with Cache Buster -->
-  <link rel="stylesheet" href="/css/style.css?v=20261028_qasetly_saas_v1" />
+  <link rel="stylesheet" href="/css/style.css?v=20261108_overlay_v1" />
 </head>
 <body class="min-h-screen bg-[#f8fafc] dark:bg-[#0b132b] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -557,6 +557,12 @@
 
         <!-- Preview Image after capture -->
         <img id="camera-preview-img" class="w-full h-full object-cover hidden" />
+
+        <!-- Verification Overlay (Transparent Green with white checkmark in green circle / Transparent Red with white X in red circle) -->
+        <div id="camera-verification-overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-20 pointer-events-none transition-all duration-300">
+          <div id="camera-overlay-badge" class="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300"></div>
+          <div id="camera-overlay-text" class="mt-2.5 px-3 py-1 rounded-full text-xs font-semibold text-white bg-black/60 backdrop-blur-sm shadow hidden"></div>
+        </div>
 
         <!-- Fallback File Input if webcam is unavailable -->
         <div id="camera-fallback-input" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-white hidden">
@@ -1310,15 +1316,15 @@
   <!-- Scripts with Cache Busters -->
   <!-- SweetAlert2 UI Modal & Notification Engine -->
   <script src="/js/sweetalert2.all.min.js"></script>
-  <script src="/js/i18n.js?v=20261019_1530"></script>
-  <script src="/js/api.js?v=20261019_1530"></script>
-  <script src="/js/tafqeet.js?v=20261019_1530"></script>
-  <script src="/js/map.js?v=20261019_1530"></script>
+  <script src="/js/i18n.js?v=20261108_overlay_v1"></script>
+  <script src="/js/api.js?v=20261108_overlay_v1"></script>
+  <script src="/js/tafqeet.js?v=20261108_overlay_v1"></script>
+  <script src="/js/map.js?v=20261108_overlay_v1"></script>
   <script src="/js/face-api.min.js"></script>
-  <script src="/js/face-service.js?v=20261019_1530"></script>
-  <script src="/js/employee-ui.js?v=20261019_1530"></script>
-  <script src="/js/manager-ui.js?v=20261019_1530"></script>
-  <script src="/js/app.js?v=20261019_1530"></script>
+  <script src="/js/face-service.js?v=20261108_overlay_v1"></script>
+  <script src="/js/employee-ui.js?v=20261108_overlay_v1"></script>
+  <script src="/js/manager-ui.js?v=20261108_overlay_v1"></script>
+  <script src="/js/app.js?v=20261108_overlay_v1"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>

@@ -61,6 +61,14 @@ const App = {
 
   setupListeners() {
     this.setupSupportPasteListener();
+    const mobileNav = document.getElementById('mobile-drawer-nav-list');
+    if (mobileNav) {
+      mobileNav.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('a')) {
+          this.closeMobileMenu();
+        }
+      });
+    }
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
       loginForm.addEventListener('submit', (e) => this.handleLogin(e));
@@ -781,6 +789,8 @@ window.renderCurrentView = function () {
     EmployeeUI.switchTab(EmployeeUI.activeTab);
   }
 };
+
+window.App = App;
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();

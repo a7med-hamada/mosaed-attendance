@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
@@ -42,6 +43,7 @@ const allowedOrigins = new Set(
 );
 
 app.disable('x-powered-by');
+app.use(compression({ threshold: 1024 }));
 const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || '0', 10);
 if (Number.isInteger(proxyHops) && proxyHops >= 0) {
   app.set('trust proxy', proxyHops);

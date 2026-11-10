@@ -1,4 +1,4 @@
-const CACHE_NAME = 'waqty-qasetly-v12';
+const CACHE_NAME = 'waqty-qasetly-v13';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

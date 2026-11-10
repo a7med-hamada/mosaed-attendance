@@ -583,112 +583,134 @@ const ManagerUI = {
     }
 
     container.innerHTML = `
-      <div class="overflow-x-auto w-full custom-table-scroll">
-        <table class="w-full text-right text-xs min-w-[650px]">
-          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
-            <tr>
-              <th class="py-3 px-4">الموظف</th>
-              <th class="py-3 px-4">الوردية</th>
-              <th class="py-3 px-4">الحضور والموقع</th>
-              <th class="py-3 px-4">الانصراف والموقع</th>
-              <th class="py-3 px-4">الحالة</th>
-              <th class="py-3 px-4 text-center">التوثيق والمعاينة</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-            ${records.map(r => `
-              <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3 px-4">
-                  <div class="flex items-center gap-3">
-                    <img src="${r.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800" />
-                    <div>
-                      <span class="font-bold text-slate-800 dark:text-slate-200 block">${r.full_name}</span>
-                      <span class="text-[10px] text-slate-400 font-mono">${r.employee_code}</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-3 px-4">
-                  ${r.shift_name ? `
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-bold text-[11px] border border-purple-500/20">
-                      <i data-lucide="layers" class="w-3.5 h-3.5 text-purple-500"></i>
-                      <span>${r.shift_name}</span>
-                    </span>
-                    <span class="block text-[10px] font-mono text-slate-400 mt-0.5">${formatTime12(r.scheduled_start || '09:00')} - ${formatTime12(r.scheduled_end || '17:00')}</span>
-                  ` : `
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium text-[11px]">
-                      دوام عام
-                    </span>
-                    <span class="block text-[10px] font-mono text-slate-400 mt-0.5">${formatTime12(r.scheduled_start || '09:00')} - ${formatTime12(r.scheduled_end || '17:00')}</span>
-                  `}
-                </td>
-                <td class="py-3 px-4">
-                  ${r.check_in_time ? `
-                    <div>
-                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_in_time)}</span>
-                      ${r.check_in_distance !== null && r.check_in_distance !== undefined ? `
-                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          داخل المقر (${r.check_in_distance}م)
-                        </span>
-                      ` : (r.check_in_lat ? `
-                        <a href="https://www.google.com/maps?q=${r.check_in_lat},${r.check_in_lng}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline font-mono">
-                          فتح الخريطة
-                        </a>
-                      ` : '')}
-                    </div>
-                  ` : '<span class="text-slate-400 font-medium">—</span>'}
-                </td>
-                <td class="py-3 px-4">
-                  ${r.check_out_time ? `
-                    <div>
-                      <span class="font-mono font-bold text-slate-900 dark:text-white block">${formatTime12(r.check_out_time)}</span>
-                      ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? `
-                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 mt-1">
-                          تم الانصراف التلقائي
-                        </span>
-                      ` : (r.check_out_distance !== null && r.check_out_distance !== undefined ? `
-                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                          من المقر (${r.check_out_distance}م)
-                        </span>
-                      ` : (r.check_out_lat ? `
-                        <a href="https://www.google.com/maps?q=${r.check_out_lat},${r.check_out_lng}" target="_blank" class="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline font-mono">
-                          خريطة الانصراف
-                        </a>
-                      ` : '<span class="text-[11px] text-slate-400">موقع مسجل</span>'))}
-                      ${r.early_leave_minutes > 0 ? `
-                        <span class="text-[10px] text-purple-400 font-bold block mt-0.5">انصراف مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>
-                      ` : ''}
-                    </div>
-                  ` : (r.check_in_time ? `
-                    <span class="px-2.5 py-1 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400 text-[11px] font-bold inline-flex items-center gap-2 border border-teal-500/25">
-                      <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        ${records.map(r => `
+          <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
+            <!-- Top accent bar based on presence status -->
+            <div class="absolute top-0 inset-x-0 h-1.5 ${r.check_in_time && !r.check_out_time ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : r.check_out_time ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}"></div>
+
+            <!-- Header: Avatar, Name, Code, Shift Badge & Live Status Pill -->
+            <div class="flex items-start justify-between gap-3 pt-1">
+              <div class="flex items-center gap-3 min-w-0">
+                <img src="${r.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800 ring-2 ${r.check_in_time && !r.check_out_time ? 'ring-emerald-500/30' : 'ring-slate-300 dark:ring-slate-700'} flex-shrink-0" />
+                <div class="min-w-0">
+                  <h4 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${r.full_name}</h4>
+                  <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <span class="text-[11px] font-mono text-slate-400 font-semibold">${r.employee_code}</span>
+                    ${r.shift_name ? `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                        <i data-lucide="layers" class="w-3 h-3 text-purple-500"></i>
+                        <span>${r.shift_name}</span>
                       </span>
-                      <span>على رأس العمل</span>
+                    ` : `
+                      <span class="text-[10px] text-slate-400 font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800">دوام عام</span>
+                    `}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Status Pill -->
+              <div class="flex-shrink-0">
+                ${(r.check_in_time && !r.check_out_time) ? `
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                  ` : `
-                    <span class="text-slate-400 font-medium">—</span>
-                  `)}
-                </td>
-                <td class="py-3 px-4">
-                  ${r.status ? getStatusBadge(r.status) : '<span class="text-slate-400 font-medium">لم يحضر بعد</span>'}
-                  ${r.late_minutes > 0 ? `<span class="text-[10px] text-amber-500 font-bold block mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
-                </td>
-                <td class="py-3 px-4 text-center">
-                  ${(r.check_in_photo || r.check_out_photo || r.check_in_time) ? `
-                    <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 font-bold text-xs inline-flex items-center gap-1.5 border border-blue-200/50 dark:border-blue-900/50 transition-all shadow-xs">
-                      <i data-lucide="eye" class="w-3.5 h-3.5"></i> معاينة التوثيق
-                    </button>
-                  ` : '<span class="text-slate-400">—</span>'}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+                    <span>على رأس العمل</span>
+                  </span>
+                ` : (r.status ? getStatusBadge(r.status) : '<span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 text-[11px] font-bold">لم يحضر بعد</span>')}
+              </div>
+            </div>
+
+            <!-- Attendance Times & Location Grid -->
+            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 space-y-2.5 border border-slate-100 dark:border-slate-800/80 text-xs">
+              <!-- Shift scheduled hours -->
+              <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                  <span class="text-slate-500 text-[11px]">مواعيد العمل:</span>
+                </div>
+                <span class="font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                  ${formatTime12(r.scheduled_start || '09:00')} — ${formatTime12(r.scheduled_end || '17:00')}
+                </span>
+              </div>
+
+              <!-- Check in details -->
+              <div class="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="log-in" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+                  <span class="text-slate-500 text-[11px]">الحضور والموقع:</span>
+                </div>
+                <div class="text-left">
+                  ${r.check_in_time ? `
+                    <span class="font-mono font-bold text-slate-900 dark:text-white text-xs block">${formatTime12(r.check_in_time)}</span>
+                    ${r.check_in_distance !== null && r.check_in_distance !== undefined ? `
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        داخل المقر (${r.check_in_distance}م)
+                      </span>
+                    ` : (r.check_in_lat ? `
+                      <a href="https://www.google.com/maps?q=${r.check_in_lat},${r.check_in_lng}" target="_blank" class="text-[10px] text-blue-500 hover:underline font-mono">
+                        فتح الخريطة
+                      </a>
+                    ` : '')}
+                  ` : '<span class="text-slate-400 text-xs font-medium">—</span>'}
+                </div>
+              </div>
+
+              <!-- Check out details -->
+              <div class="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="log-out" class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"></i>
+                  <span class="text-slate-500 text-[11px]">الانصراف والموقع:</span>
+                </div>
+                <div class="text-left">
+                  ${r.check_out_time ? `
+                    <span class="font-mono font-bold text-slate-900 dark:text-white text-xs block">${formatTime12(r.check_out_time)}</span>
+                    ${(r.verification_status === 'system_auto_checkout' || (r.notes && r.notes.includes('تلقائي'))) ? `
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        انصراف تلقائي
+                      </span>
+                    ` : (r.check_out_distance !== null && r.check_out_distance !== undefined ? `
+                      <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        من المقر (${r.check_out_distance}م)
+                      </span>
+                    ` : '<span class="text-[10px] text-slate-400">موقع مسجل</span>')}
+                    ${r.early_leave_minutes > 0 ? `<span class="text-[10px] text-purple-400 font-bold block">مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>` : ''}
+                  ` : (r.check_in_time ? `
+                    <span class="text-teal-600 dark:text-teal-400 text-[11px] font-bold">على رأس العمل</span>
+                  ` : '<span class="text-slate-400 text-xs font-medium">—</span>')}
+                </div>
+              </div>
+
+              <!-- Status & Late Notes if any -->
+              ${r.late_minutes > 0 ? `
+                <div class="pt-1 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
+                  <span class="text-amber-600 font-semibold">تأخير الحضور:</span>
+                  <span class="font-bold text-amber-600 font-mono">${formatMinutesArabic(r.late_minutes)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Card Bottom: Inspection Button (زرار معاينة التوثيق كما طلب المستخدم تماماً) -->
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+              ${(r.check_in_photo || r.check_out_photo || r.check_in_time) ? `
+                <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                  class="w-full py-2.5 px-4 rounded-2xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-2 border border-blue-200/60 dark:border-blue-800/60 transition-all shadow-xs">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                  <span>معاينة التوثيق</span>
+                </button>
+              ` : `
+                <div class="w-full py-2.5 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 text-slate-400 text-xs font-medium text-center">
+                  بانتظار تسجيل الحضور
+                </div>
+              `}
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
-
-    if (window.lucide) lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
   },
 
   filterLiveTable() {
@@ -725,38 +747,20 @@ const ManagerUI = {
           </button>
         </div>
 
-        <!-- Role Filter Tabs & Layout Toggle -->
-        <div class="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2 flex-wrap">
-          <div class="flex items-center gap-2 flex-wrap">
-            <button id="emp-filter-all" onclick="ManagerUI.filterEmployeeRole('all')"
-              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all">
-              الكل (<span id="emp-count-all">0</span>)
-            </button>
-            <button id="emp-filter-employee" onclick="ManagerUI.filterEmployeeRole('employee')"
-              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-              الموظفون (<span id="emp-count-emp">0</span>)
-            </button>
-            <button id="emp-filter-manager" onclick="ManagerUI.filterEmployeeRole('manager')"
-              class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
-              فريق الإدارة والمديرون (<span id="emp-count-mgr">0</span>)
-            </button>
-          </div>
-
-          <!-- View Mode Toggle (Cards by default) -->
-          <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-            <button type="button" id="emp-view-cards-btn" onclick="ManagerUI.setEmployeeViewMode('cards')"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
-              title="عرض الكروت (مناسب للهواتف والشاشات الصغيرة)">
-              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
-              <span>كروت</span>
-            </button>
-            <button type="button" id="emp-view-table-btn" onclick="ManagerUI.setEmployeeViewMode('table')"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              title="عرض الجدول الكامل">
-              <i data-lucide="table" class="w-3.5 h-3.5"></i>
-              <span>جدول</span>
-            </button>
-          </div>
+        <!-- Role Filter Tabs -->
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 flex-wrap">
+          <button id="emp-filter-all" onclick="ManagerUI.filterEmployeeRole('all')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs transition-all">
+            الكل (<span id="emp-count-all">0</span>)
+          </button>
+          <button id="emp-filter-employee" onclick="ManagerUI.filterEmployeeRole('employee')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            الموظفون (<span id="emp-count-emp">0</span>)
+          </button>
+          <button id="emp-filter-manager" onclick="ManagerUI.filterEmployeeRole('manager')"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            فريق الإدارة والمديرون (<span id="emp-count-mgr">0</span>)
+          </button>
         </div>
 
         <div id="mgr-employees-table-container" class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -854,295 +858,176 @@ const ManagerUI = {
       return;
     }
 
-    // 1. CARDS VIEW (Modern responsive cards for mobile and desktop)
-    if (this.employeeViewMode !== 'table') {
-      container.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-3.5 sm:p-5 bg-slate-50/40 dark:bg-slate-950/30">
-          ${employees.map(e => `
-            <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
-              <!-- Top accent bar based on role & active status -->
-              <div class="absolute top-0 inset-x-0 h-1.5 ${e.is_active ? (e.role === 'manager' ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500') : 'bg-slate-300 dark:bg-slate-700'}"></div>
+    container.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-3.5 sm:p-5 bg-slate-50/40 dark:bg-slate-950/30">
+        ${employees.map(e => `
+          <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
+            <!-- Top accent bar based on role & active status -->
+            <div class="absolute top-0 inset-x-0 h-1.5 ${e.is_active ? (e.role === 'manager' ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500') : 'bg-slate-300 dark:bg-slate-700'}"></div>
 
-              <!-- Header: Avatar, Name, Code, Badges -->
-              <div class="flex items-start justify-between gap-3 pt-1">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="relative flex-shrink-0">
-                    <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800 ring-2 ${e.is_active ? 'ring-emerald-500/30' : 'ring-slate-300 dark:ring-slate-700'}" />
-                    ${e.has_face_enrolled ? `
-                      <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900" title="بصمة الوجه مسجلة">
-                        <i data-lucide="scan-face" class="w-3 h-3"></i>
-                      </span>
-                    ` : ''}
-                  </div>
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <h3 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${e.full_name}</h3>
-                    </div>
-                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span class="text-[11px] font-mono text-slate-400 font-semibold">${e.employee_code}</span>
-                      ${e.role === 'manager' ? `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
-                          <i data-lucide="shield" class="w-3 h-3"></i>
-                          <span>مدير مساعد</span>
-                        </span>
-                      ` : `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                          <i data-lucide="user" class="w-3 h-3"></i>
-                          <span>موظف</span>
-                        </span>
-                      `}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Active / Inactive Pill -->
-                <div class="flex-shrink-0">
-                  <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold ${e.is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25'}">
-                    ${e.is_active ? 'نشط' : 'معطل'}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Information Grid -->
-              <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 space-y-2.5 border border-slate-100 dark:border-slate-800/80 text-xs">
-                <!-- Job title & Department -->
-                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <div class="flex items-center gap-1.5 min-w-0">
-                    <i data-lucide="briefcase" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                    <span class="font-bold text-slate-800 dark:text-slate-200 truncate">${e.job_title || (e.role === 'manager' ? 'مدير مساعد' : 'موظف')}</span>
-                  </div>
-                  <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex-shrink-0">
-                    ${e.department_name || 'عام'}
-                  </span>
-                </div>
-
-                <!-- Shift / Work Hours -->
-                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                    <span class="text-slate-500 text-[11px]">الوردية / الدوام:</span>
-                  </div>
-                  <div>
-                    ${e.role === 'manager' ? `
-                      <span class="text-[11px] text-purple-600 dark:text-purple-400 font-bold">صلاحيات إدارة كاملة</span>
-                    ` : `
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'}">
-                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-                        <span>${e.shift_name ? e.shift_name : 'مرن (جميع الورديات)'}</span>
-                      </span>
-                    `}
-                  </div>
-                </div>
-
-                <!-- Base Salary -->
-                <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                  <div class="flex items-center gap-1.5">
-                    <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
-                    <span class="text-slate-500 text-[11px]">المرتب الأساسي:</span>
-                  </div>
-                  <span class="font-extrabold font-mono text-emerald-600 dark:text-emerald-400 text-xs">
-                    ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
-                  </span>
-                </div>
-
-                <!-- Contacts: Email & Phone -->
-                <div class="grid grid-cols-1 gap-1 pt-1 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px]">
-                  <div class="flex items-center gap-1.5 text-slate-500 truncate" title="${e.email}">
-                    <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                    <span class="font-mono truncate select-all">${e.email}</span>
-                  </div>
-                  <div class="flex items-center gap-1.5 text-slate-500 font-mono">
-                    <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
-                    <span class="select-all">${e.phone || '—'}</span>
-                  </div>
-                </div>
-
-                <!-- Live Status & Face ID Badges -->
-                <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 flex-wrap">
-                  <div>
-                    ${(e.today_check_in && !e.today_check_out) ? `
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span>على رأس العمل الآن</span>
-                      </span>
-                    ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 text-[11px]">لم يسجل اليوم بعد</span>'))}
-                  </div>
-                  <div>
-                    ${e.has_face_enrolled ? `
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
-                        <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
-                        <span>بصمة مسجلة</span>
-                      </span>
-                    ` : `
-                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
-                        <span>بدون بصمة</span>
-                      </span>
-                    `}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Action Toolbar -->
-              <div class="flex items-center justify-between gap-1 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
-                  class="flex-1 py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  title="إحصائيات الأداء والحضور">
-                  <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
-                  <span>إحصائيات</span>
-                </button>
-
-                <button onclick="ManagerUI.openEditEmployeeModal(${e.id})"
-                  class="flex-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  title="تعديل البيانات">
-                  <i data-lucide="edit" class="w-3.5 h-3.5"></i>
-                  <span>تعديل</span>
-                </button>
-
-                <div class="flex items-center gap-1">
-                  <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})"
-                    class="p-2 rounded-xl ${e.is_active ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300'} transition-colors"
-                    title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
-                    <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-3.5 h-3.5"></i>
-                  </button>
-
+            <!-- Header: Avatar, Name, Code, Badges -->
+            <div class="flex items-start justify-between gap-3 pt-1">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="relative flex-shrink-0">
+                  <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800 ring-2 ${e.is_active ? 'ring-emerald-500/30' : 'ring-slate-300 dark:ring-slate-700'}" />
                   ${e.has_face_enrolled ? `
-                    <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
-                      class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors"
-                      title="إعادة تعيين بصمة الوجه">
-                      <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
-                    </button>
+                    <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900" title="بصمة الوجه مسجلة">
+                      <i data-lucide="scan-face" class="w-3 h-3"></i>
+                    </span>
                   ` : ''}
-
-                  <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}', '${e.role}')"
-                    class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
-                    title="حذف الحساب نهائياً">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
                 </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h3 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${e.full_name}</h3>
+                  </div>
+                  <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span class="text-[11px] font-mono text-slate-400 font-semibold">${e.employee_code}</span>
+                    ${e.role === 'manager' ? `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
+                        <i data-lucide="shield" class="w-3 h-3"></i>
+                        <span>مدير مساعد</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <i data-lucide="user" class="w-3 h-3"></i>
+                        <span>موظف</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Active / Inactive Pill -->
+              <div class="flex-shrink-0">
+                <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold ${e.is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25'}">
+                  ${e.is_active ? 'نشط' : 'معطل'}
+                </span>
               </div>
             </div>
-          `).join('')}
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-      return;
-    }
 
-    // 2. TABLE VIEW (Legacy dense table for large screens)
-    container.innerHTML = `
-      <div class="overflow-x-auto w-full custom-table-scroll">
-        <table class="w-full text-right text-xs min-w-[1100px]">
-          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
-            <tr>
-              <th class="py-3.5 px-4">الاسم والدور</th>
-              <th class="py-3.5 px-4">البريد الإلكتروني</th>
-              <th class="py-3.5 px-4">رقم الهاتف</th>
-              <th class="py-3.5 px-4">القسم</th>
-              <th class="py-3.5 px-4">المسمى الوظيفي / الوردية</th>
-              <th class="py-3.5 px-4 text-center">المرتب الأساسي</th>
-              <th class="py-3.5 px-4 text-center">بصمة الوجه (Face ID)</th>
-              <th class="py-3.5 px-4 text-center">حالة الحساب</th>
-              <th class="py-3.5 px-4 text-center">حضور اليوم</th>
-              <th class="py-3.5 px-4 text-center min-w-[180px] whitespace-nowrap sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.06)] border-r border-slate-200/80 dark:border-slate-700/80">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-            ${employees.map(e => `
-              <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3.5 px-4 whitespace-nowrap">
-                  <div class="flex items-center gap-3">
-                    <img src="${e.profile_photo || '/uploads/avatar.svg'}" class="w-9 h-9 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
-                    <div>
-                      <div class="flex items-center gap-1.5">
-                        <span class="font-bold text-slate-800 dark:text-slate-200 block text-xs">${e.full_name}</span>
-                        ${e.role === 'manager' ? `
-                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
-                            <i data-lucide="shield" class="w-3 h-3"></i>
-                            <span>مدير مساعد</span>
-                          </span>
-                        ` : ''}
-                      </div>
-                      <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${e.employee_code}</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.email}</td>
-                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono">${e.phone || '—'}</td>
-                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">${e.department_name || 'عام'}</td>
-                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                  <span class="block font-medium text-slate-800 dark:text-slate-200">${e.job_title || (e.role === 'manager' ? 'مدير مساعد' : 'موظف')}</span>
+            <!-- Information Grid -->
+            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 space-y-2.5 border border-slate-100 dark:border-slate-800/80 text-xs">
+              <!-- Job title & Department -->
+              <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <i data-lucide="briefcase" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                  <span class="font-bold text-slate-800 dark:text-slate-200 truncate">${e.job_title || (e.role === 'manager' ? 'مدير مساعد' : 'موظف')}</span>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex-shrink-0">
+                  ${e.department_name || 'عام'}
+                </span>
+              </div>
+
+              <!-- Shift / Work Hours -->
+              <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                  <span class="text-slate-500 text-[11px]">الوردية / الدوام:</span>
+                </div>
+                <div>
                   ${e.role === 'manager' ? `
-                    <span class="text-[10px] text-purple-500 font-semibold block mt-0.5">صلاحيات إدارة كاملة</span>
+                    <span class="text-[11px] text-purple-600 dark:text-purple-400 font-bold">صلاحيات إدارة كاملة</span>
                   ` : `
-                    <span class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}">
-                      <i data-lucide="layers" class="w-3 h-3"></i>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${e.shift_name ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300'}">
+                      <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                       <span>${e.shift_name ? e.shift_name : 'مرن (جميع الورديات)'}</span>
                     </span>
                   `}
-                </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs border border-emerald-500/20 whitespace-nowrap shadow-2xs">
-                    ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
-                  </span>
-                </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  ${e.has_face_enrolled ? `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
-                      <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
-                      <span>مسجلة</span>
-                    </span>
-                  ` : `
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                      <i data-lucide="scan" class="w-3.5 h-3.5"></i>
-                      <span>غير مسجلة</span>
-                    </span>
-                  `}
-                </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                  <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${e.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
-                    ${e.is_active ? 'نشط' : 'معطل'}
-                  </span>
-                </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                </div>
+              </div>
+
+              <!-- Base Salary -->
+              <div class="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+                  <span class="text-slate-500 text-[11px]">المرتب الأساسي:</span>
+                </div>
+                <span class="font-extrabold font-mono text-emerald-600 dark:text-emerald-400 text-xs">
+                  ${(e.base_salary || 3000).toLocaleString('en-US')} ج.م
+                </span>
+              </div>
+
+              <!-- Contacts: Email & Phone -->
+              <div class="grid grid-cols-1 gap-1 pt-1 border-t border-slate-200/50 dark:border-slate-700/50 text-[11px]">
+                <div class="flex items-center gap-1.5 text-slate-500 truncate" title="${e.email}">
+                  <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                  <span class="font-mono truncate select-all">${e.email}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-slate-500 font-mono">
+                  <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                  <span class="select-all">${e.phone || '—'}</span>
+                </div>
+              </div>
+
+              <!-- Live Status & Face ID Badges -->
+              <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 flex-wrap">
+                <div>
                   ${(e.today_check_in && !e.today_check_out) ? `
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 shadow-xs shadow-emerald-500/10">
                       <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                       </span>
-                      <span>على رأس العمل</span>
+                      <span>على رأس العمل الآن</span>
                     </span>
-                  ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 whitespace-nowrap">لم يسجل بعد</span>'))}
-                </td>
-                <td class="py-3.5 px-4 text-center whitespace-nowrap min-w-[180px] sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/60 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.06)] border-r border-slate-100 dark:border-slate-800">
-                  <div class="flex items-center justify-center gap-1.5 min-w-[160px]">
-                    <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')" class="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40" title="إحصائيات (تأخير، خروج مبكر، غياب)">
-                      <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="ManagerUI.openEditEmployeeModal(${e.id})" class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="تعديل البيانات">
-                      <i data-lucide="edit" class="w-4 h-4"></i>
-                    </button>
-                    <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})" class="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
-                      <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-4 h-4"></i>
-                    </button>
-                    ${e.has_face_enrolled ? `
-                      <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')" class="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="إعادة تعيين بصمة الوجه">
-                        <i data-lucide="scan-face" class="w-4 h-4"></i>
-                      </button>
-                    ` : ''}
-                    <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}', '${e.role}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800" title="حذف نهائي">
-                      <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+                  ` : (e.today_status ? getStatusBadge(e.today_status) : (e.role === 'manager' ? '<span class="text-purple-500 font-semibold text-[11px]">فريق الإدارة</span>' : '<span class="text-slate-400 text-[11px]">لم يسجل اليوم بعد</span>'))}
+                </div>
+                <div>
+                  ${e.has_face_enrolled ? `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="تم تسجيل بصمة الوجه في: ${e.face_enrolled_at || ''}">
+                      <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                      <span>بصمة مسجلة</span>
+                    </span>
+                  ` : `
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+                      <span>بدون بصمة</span>
+                    </span>
+                  `}
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Toolbar -->
+            <div class="flex items-center justify-between gap-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button onclick="ManagerUI.openEmployeeStatsModal(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
+                class="flex-1 py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                title="إحصائيات الأداء والحضور">
+                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+                <span>إحصائيات</span>
+              </button>
+
+              <button onclick="ManagerUI.openEditEmployeeModal(${e.id})"
+                class="flex-1 py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                title="تعديل البيانات">
+                <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                <span>تعديل</span>
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button onclick="ManagerUI.toggleEmployeeActive(${e.id}, ${e.is_active ? 0 : 1})"
+                  class="p-2 rounded-xl ${e.is_active ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300'} transition-colors"
+                  title="${e.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+                  <i data-lucide="${e.is_active ? 'user-x' : 'user-check'}" class="w-3.5 h-3.5"></i>
+                </button>
+
+                ${e.has_face_enrolled ? `
+                  <button onclick="ManagerUI.resetEmployeeFace(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}')"
+                    class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors"
+                    title="إعادة تعيين بصمة الوجه">
+                    <i data-lucide="scan-face" class="w-3.5 h-3.5"></i>
+                  </button>
+                ` : ''}
+
+                <button onclick="ManagerUI.deleteEmployee(${e.id}, '${e.full_name ? e.full_name.replace(/'/g, "\\'") : ''}', '${e.role}')"
+                  class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors"
+                  title="حذف الحساب نهائياً">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -2270,92 +2155,93 @@ const ManagerUI = {
             <span class="text-xs font-bold text-slate-400 font-mono">${list.length} موظف</span>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-right text-xs">
-              <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
-                <tr>
-                  <th class="py-3 px-3">الموظف</th>
-                  <th class="py-3 px-3 text-center">نسبة الالتزام</th>
-                  <th class="py-3 px-3 text-center">الحالة</th>
-                  <th class="py-3 px-3 text-center">في الموعد</th>
-                  <th class="py-3 px-3 text-center">التأخير</th>
-                  <th class="py-3 px-3 text-center">الغياب</th>
-                  <th class="py-3 px-3 text-center">مكافأة التميز</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
-                ${list.map(item => {
-                  const emp = item.employee;
-                  const tier = item.tier || {};
-                  const s = Math.round(item.score || 0);
-                  const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
-                  const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            ${list.map(item => {
+              const emp = item.employee;
+              const tier = item.tier || {};
+              const s = Math.round(item.score || 0);
+              const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
+              const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+              const topAccent = s >= 90 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : s >= 75 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : s >= 60 ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-rose-500';
 
-                  return `
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td class="py-3 px-3">
-                        <div class="flex items-center gap-3">
-                          <div class="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                            ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500">${emp.full_name.charAt(0)}</div>`}
-                          </div>
-                          <div class="min-w-0">
-                            <span class="font-bold text-slate-900 dark:text-white block truncate">
-                              ${emp.full_name}
-                            </span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${emp.employee_code} • ${emp.job_title || 'موظف'} • ${emp.department_name || ''}</span>
-                          </div>
+              return `
+                <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
+                  <!-- Top accent bar -->
+                  <div class="absolute top-0 inset-x-0 h-1.5 ${topAccent}"></div>
+
+                  <!-- Header: Avatar, Name, Code, and Score Circular Gauge -->
+                  <div class="flex items-start justify-between gap-3 pt-1">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 ring-2 ring-slate-200 dark:ring-slate-700">
+                        ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500 text-sm">${emp.full_name.charAt(0)}</div>`}
+                      </div>
+                      <div class="min-w-0">
+                        <h4 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${emp.full_name}</h4>
+                        <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span class="text-[11px] font-mono text-slate-400 font-semibold">${emp.employee_code}</span>
+                          <span class="text-[11px] text-slate-500 dark:text-slate-400">• ${emp.job_title || emp.department_name || 'موظف'}</span>
                         </div>
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <div class="inline-flex items-center justify-center">
-                          <div class="relative inline-flex items-center justify-center w-11 h-11 flex-shrink-0">
-                            <svg class="transform -rotate-90 w-11 h-11" viewBox="0 0 36 36">
-                              <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                            <span class="absolute font-mono font-bold text-[11px] ${circleText}">${s}%</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
-                          tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
-                          tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
-                          'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
-                        }">
-                          ${tier.name || 'ملتزم'}
-                        </span>
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                        ${item.onTimeDays} يوم
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        ${item.lateDays > 0 ? `
-                          <span class="font-bold text-amber-600 dark:text-amber-400 font-mono text-[11px]">${item.lateDays} يوم (${item.totalLateMinutes}د)</span>
-                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        ${item.absentDays > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold font-mono text-[11px]">${item.absentDays} يوم</span>
-                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        ${s >= 90 ? `
-                          <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${targetMonth}', 'مكافأة تميز في الالتزام', 300)"
-                            class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
-                            <i data-lucide="gift" class="w-3.5 h-3.5"></i>
-                            <span>منح مكافأة تميز</span>
-                          </button>
-                        ` : '<span class="text-slate-300 dark:text-slate-700 text-xs font-bold">—</span>'}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+
+                    <!-- Circular Progress Gauge -->
+                    <div class="relative inline-flex items-center justify-center w-12 h-12 flex-shrink-0">
+                      <svg class="transform -rotate-90 w-12 h-12" viewBox="0 0 36 36">
+                        <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      </svg>
+                      <span class="absolute font-mono font-black text-xs ${circleText}">${s}%</span>
+                    </div>
+                  </div>
+
+                  <!-- Tier Status Pill -->
+                  <div class="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs">
+                    <div class="flex items-center gap-1.5">
+                      <i data-lucide="shield-check" class="w-4 h-4 ${s >= 90 ? 'text-emerald-500' : 'text-blue-500'}"></i>
+                      <span class="font-bold text-slate-800 dark:text-slate-200">مستوى الالتزام:</span>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                      tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
+                      tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
+                      tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
+                      'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+                    }">
+                      ${tier.name || 'ملتزم'}
+                    </span>
+                  </div>
+
+                  <!-- 3-Box Breakdown: On-Time, Late, Absent -->
+                  <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div class="bg-emerald-50/60 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/15">
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">في الموعد</span>
+                      <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-xs block mt-0.5">${item.onTimeDays || 0} يوم</span>
+                    </div>
+                    <div class="bg-amber-50/60 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-500/15">
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">التأخير</span>
+                      <span class="font-extrabold text-amber-600 dark:text-amber-400 font-mono text-xs block mt-0.5">${item.lateDays || 0} يوم</span>
+                      ${item.totalLateMinutes > 0 ? `<span class="text-[9px] text-slate-400 block font-mono mt-0.5">(${item.totalLateMinutes}د)</span>` : ''}
+                    </div>
+                    <div class="bg-rose-50/60 dark:bg-rose-950/30 p-2.5 rounded-xl border border-rose-500/15">
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">الغياب</span>
+                      <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-xs block mt-0.5">${item.absentDays || 0} يوم</span>
+                    </div>
+                  </div>
+
+                  <!-- Excellence Reward Button (if >= 90%) -->
+                  ${s >= 90 ? `
+                    <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <button onclick="ManagerUI.openAddBonusModal(${emp.id}, '${targetMonth}', 'مكافأة تميز في الالتزام', 300)"
+                        class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-sm transition-all whitespace-nowrap">
+                        <i data-lucide="gift" class="w-3.5 h-3.5"></i>
+                        <span>منح مكافأة تميز</span>
+                      </button>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -3928,7 +3814,74 @@ const ManagerUI = {
       }
 
       container.innerHTML = `
-        <div class="overflow-x-auto">
+        <!-- 1. MOBILE RESPONSIVE CARDS (No horizontal scrolling on phone screens) -->
+        <div class="block md:hidden space-y-3">
+          ${records.map(r => `
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+              <!-- Header: Date, Employee Name & Code, Status Badge -->
+              <div class="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <span class="font-extrabold text-slate-900 dark:text-white text-xs block truncate">${r.full_name}</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${r.employee_code} • ${r.date}</span>
+                  </div>
+                </div>
+                <div class="flex-shrink-0">
+                  ${getStatusBadge(r.status)}
+                </div>
+              </div>
+
+              <!-- Times & Metrics Grid -->
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <!-- Check in -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                  <span class="text-[10px] text-slate-400 block font-semibold">الحضور:</span>
+                  <span class="font-bold font-mono text-slate-800 dark:text-slate-200 text-xs block mt-0.5">${formatTime12(r.check_in_time)}</span>
+                  ${r.check_in_distance ? `<span class="text-[10px] text-emerald-600 dark:text-emerald-400 block font-semibold mt-0.5">${r.check_in_distance}م من المقر</span>` : ''}
+                </div>
+
+                <!-- Check out -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                  <span class="text-[10px] text-slate-400 block font-semibold">الانصراف:</span>
+                  <span class="font-bold font-mono text-slate-800 dark:text-slate-200 text-xs block mt-0.5">${formatTime12(r.check_out_time)}</span>
+                  ${r.early_leave_minutes > 0 ? `<span class="text-[10px] text-purple-500 block font-semibold mt-0.5">مبكر: ${formatMinutesArabic(r.early_leave_minutes)}</span>` : ''}
+                </div>
+
+                <!-- Hours Worked -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                  <span class="text-[10px] text-slate-400 block font-semibold">ساعات العمل:</span>
+                  <span class="font-extrabold font-mono text-blue-600 dark:text-blue-400 text-xs block mt-0.5">${r.worked_hours || 0} س</span>
+                </div>
+
+                <!-- Deductions -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60">
+                  <span class="text-[10px] text-slate-400 block font-semibold">الخصم والتأخير:</span>
+                  ${r.estimated_deduction > 0 ? `
+                    <span class="font-extrabold font-mono text-rose-500 text-xs block mt-0.5">-${r.estimated_deduction} ج.م</span>
+                  ` : `<span class="font-bold text-emerald-500 text-xs block mt-0.5">لا يوجد خصم</span>`}
+                  ${r.late_minutes > 0 ? `<span class="text-[10px] text-amber-500 block font-semibold mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Inspection Button -->
+              ${(r.check_in_photo || r.check_out_photo || r.check_in_time) ? `
+                <div class="pt-1">
+                  <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})"
+                    class="w-full py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-blue-200/50 dark:border-blue-900/50 transition-colors">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    <span>معاينة التوثيق والصورة</span>
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- 2. DESKTOP CLEAN DATA TABLE (For larger tablet and desktop screens) -->
+        <div class="hidden md:block overflow-x-auto">
           <table class="w-full text-right text-xs">
             <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -3940,7 +3893,7 @@ const ManagerUI = {
                 <th class="py-3 px-4 text-center">الخصم</th>
                 <th class="py-3 px-4">ساعات العمل</th>
                 <th class="py-3 px-4">المسافة</th>
-                <th class="py-3 px-4">الصورة</th>
+                <th class="py-3 px-4 text-center">التوثيق</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3962,10 +3915,11 @@ const ManagerUI = {
                   </td>
                   <td class="py-3 px-4 font-bold">${r.worked_hours || 0} س</td>
                   <td class="py-3 px-4">${r.check_in_distance ? `${r.check_in_distance}م` : '—'}</td>
-                  <td class="py-3 px-4">
-                    ${r.check_in_photo ? `
-                      <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="text-blue-600 font-bold text-xs flex items-center gap-1">
-                        عرض
+                  <td class="py-3 px-4 text-center">
+                    ${(r.check_in_photo || r.check_out_photo || r.check_in_time) ? `
+                      <button onclick="ManagerUI.openRecordInspectionModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" class="text-blue-600 font-bold text-xs inline-flex items-center gap-1 hover:underline">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>عرض</span>
                       </button>
                     ` : '—'}
                   </td>
@@ -3975,6 +3929,7 @@ const ManagerUI = {
           </table>
         </div>
       `;
+      if (window.lucide) lucide.createIcons();
     } catch (err) {
       container.innerHTML = `<div class="p-8 text-center text-rose-500">${err.message}</div>`;
     }
@@ -5488,120 +5443,139 @@ const ManagerUI = {
           ${summaries.length === 0 ? `
             <div class="p-12 text-center text-slate-500 text-xs">لا توجد سجلات للموظفين في هذا الشهر.</div>
           ` : `
-            <div class="overflow-x-auto w-full custom-table-scroll">
-              <table class="w-full text-right text-xs min-w-[850px]">
-                <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800">
-                  <tr>
-                    <th class="py-3 px-3">الموظف</th>
-                    <th class="py-3 px-2 text-center">المرتب الأساسي</th>
-                    <th class="py-3 px-2 text-center">الحضور</th>
-                    <th class="py-3 px-2.5">التأخير (الشرائح)</th>
-                    <th class="py-3 px-2 text-center">الغياب</th>
-                    <th class="py-3 px-2 text-center">المكافآت (+)</th>
-                    <th class="py-3 px-2 text-center">الخصومات / الجزاءات (-)</th>
-                    <th class="py-3 px-2 text-center">السلف (-)</th>
-                    <th class="py-3 px-2 text-center">صافي القبض</th>
-                    <th class="py-3 px-3 text-center">الإجراءات والطباعة</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  ${summaries.map(s => {
-                    const baseSal = s.baseSalary || 3000;
-                    const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
-                    return `
-                    <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <td class="py-3 px-3">
-                        <div class="flex items-center gap-2.5">
-                          <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-8 h-8 rounded-full object-cover bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
-                          <div class="min-w-0">
-                            <span class="font-bold text-slate-800 dark:text-slate-200 block truncate">${s.employee.full_name}</span>
-                            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <span class="text-[10px] text-slate-400 font-mono">${s.employee.employee_code} • ${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
-                              ${window.renderPayoutBadge ? window.renderPayoutBadge(s.employee.payout_method, s.employee.payout_account_number, s.employee.payout_provider_name) : ''}
-                            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-5 bg-slate-50/40 dark:bg-slate-950/30">
+              ${summaries.map(s => {
+                const baseSal = s.baseSalary || 3000;
+                const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
+                return `
+                  <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
+                    <!-- Top accent bar -->
+                    <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+
+                    <!-- Header: Avatar, Name, Code & Payout Method -->
+                    <div class="flex items-start justify-between gap-3 pt-1">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <img src="${s.employee.profile_photo || '/uploads/avatar.svg'}" class="w-12 h-12 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800 ring-2 ring-emerald-500/20 flex-shrink-0" />
+                        <div class="min-w-0">
+                          <h4 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug">${s.employee.full_name}</h4>
+                          <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span class="text-[11px] font-mono text-slate-400 font-semibold">${s.employee.employee_code}</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">${s.employee.job_title || s.employee.department_name || 'موظف'}</span>
                           </div>
                         </div>
-                      </td>
-                      <td class="py-3 px-2 text-center font-bold text-slate-700 dark:text-slate-300 font-mono whitespace-nowrap">
-                        ${baseSal.toLocaleString('ar-EG')} ج.م
-                      </td>
-                      <td class="py-3 px-2 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono whitespace-nowrap">
-                        ${s.presentDays || s.onTimeDays} يوم
-                      </td>
-                      <td class="py-3 px-2.5">
-                        ${s.lateDays > 0 ? `
-                          <div>
-                            <span class="font-bold text-amber-500 block text-[11px]">${s.lateDays}ي (${formatMinutesArabic(s.totalLateMinutes)})</span>
-                            <span class="text-[10px] text-rose-500 font-semibold font-mono">خصم: ${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
-                          </div>
-                        ` : '<span class="text-emerald-500 font-bold text-[11px]">لا يوجد</span>'}
-                      </td>
-                      <td class="py-3 px-2 text-center">
-                        ${s.absentDays > 0 ? `
-                          <div>
-                            <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold font-mono text-[11px]">${s.absentDays} يوم</span>
-                            ${s.totalAbsenceDeductions > 0 ? `<span class="text-[10px] text-rose-400 block font-mono mt-0.5">-${(s.totalAbsenceDeductions).toLocaleString('ar-EG')} ج.م</span>` : ''}
-                          </div>
-                        ` : '<span class="text-emerald-500 font-bold text-[11px]">0</span>'}
-                      </td>
-                      <td class="py-3 px-2 text-center whitespace-nowrap">
-                        ${(s.totalBonuses || 0) > 0 ? `
-                          <button type="button" onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
-                            class="px-2 py-0.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف مكافآت الموظفين">
-                            +${s.totalBonuses.toLocaleString('ar-EG')} ج.م
-                          </button>
-                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-2 text-center whitespace-nowrap">
-                        ${(s.totalManualDeductions || 0) > 0 ? `
-                          <button type="button" onclick="ManagerUI.openDeductionsManagementModal('${targetMonth}')"
-                            class="px-2 py-0.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف خصومات وجزاءات الموظفين">
-                            -${s.totalManualDeductions.toLocaleString('ar-EG')} ج.م
-                          </button>
-                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-2 text-center whitespace-nowrap">
-                        ${(s.totalAdvances || 0) > 0 ? `
-                          <button type="button" onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
-                            class="px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono text-[11px] transition-all cursor-pointer" title="عرض وحذف سلف الموظفين">
-                            -${s.totalAdvances.toLocaleString('ar-EG')} ج.م
-                          </button>
-                        ` : `<span class="text-slate-400 font-mono text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-2 text-center whitespace-nowrap">
-                        <span class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-black font-mono text-xs sm:text-sm border border-emerald-500/25 inline-block">
+                      </div>
+                      <div class="flex-shrink-0">
+                        ${window.renderPayoutBadge ? window.renderPayoutBadge(s.employee.payout_method, s.employee.payout_account_number, s.employee.payout_provider_name) : ''}
+                      </div>
+                    </div>
+
+                    <!-- Net Salary Hero Box -->
+                    <div class="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/40 dark:via-teal-950/20 rounded-2xl p-3.5 border border-emerald-500/25 flex items-center justify-between">
+                      <div>
+                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">صافي القبض المستحق</span>
+                        <span class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono block mt-0.5">
                           ${netSal.toLocaleString('ar-EG')} ج.م
                         </span>
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <div class="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700">
-                          
-                          <button onclick="ManagerUI.triggerSalaryPayout(${s.employee.id})"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold text-xs border border-teal-500/30 transition-all shadow-xs" title="تحويل الراتب لمحفظة / حساب الموظف">
-                            <i data-lucide="send" class="w-3.5 h-3.5 text-teal-500"></i>
-                            <span>تحويل الراتب</span>
-                          </button>
+                      </div>
+                      <div class="text-left border-r border-emerald-500/20 pr-4">
+                        <span class="text-[10px] text-slate-400 block font-semibold">المرتب الأساسي</span>
+                        <span class="text-xs sm:text-sm font-extrabold text-slate-700 dark:text-slate-300 font-mono block mt-0.5">
+                          ${baseSal.toLocaleString('ar-EG')} ج.م
+                        </span>
+                      </div>
+                    </div>
 
-                          <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
-                            class="px-2 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center gap-1" title="كشف الحساب وسجل الأيام">
-                            <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-500"></i>
-                            <span>كشف الحساب</span>
+                    <!-- 6-Box Financial & Attendance Breakdown -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                      <!-- Present Days -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">أيام الحضور</span>
+                        <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-xs block mt-0.5">
+                          ${s.presentDays || s.onTimeDays || 0} يوم
+                        </span>
+                      </div>
+
+                      <!-- Late -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">التأخير</span>
+                        ${s.lateDays > 0 ? `
+                          <span class="font-bold text-amber-500 text-[11px] block mt-0.5">${s.lateDays}ي (${formatMinutesArabic(s.totalLateMinutes)})</span>
+                          <span class="text-[10px] text-rose-500 font-mono font-bold block">-${(s.totalLateDeductions || 0).toLocaleString('ar-EG')} ج.م</span>
+                        ` : `<span class="font-bold text-emerald-500 text-[11px] block mt-0.5">لا يوجد</span>`}
+                      </div>
+
+                      <!-- Absence -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">الغياب</span>
+                        ${s.absentDays > 0 ? `
+                          <span class="font-bold text-rose-500 text-[11px] block mt-0.5">${s.absentDays} يوم</span>
+                          ${s.totalAbsenceDeductions > 0 ? `<span class="text-[10px] text-rose-400 font-mono block">-${(s.totalAbsenceDeductions).toLocaleString('ar-EG')} ج.م</span>` : ''}
+                        ` : `<span class="font-bold text-emerald-500 text-[11px] block mt-0.5">0</span>`}
+                      </div>
+
+                      <!-- Bonuses -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">المكافآت (+)</span>
+                        ${(s.totalBonuses || 0) > 0 ? `
+                          <button type="button" onclick="ManagerUI.openBonusesManagementModal('${targetMonth}')"
+                            class="font-extrabold text-purple-600 dark:text-purple-400 font-mono text-xs block mt-0.5 hover:underline">
+                            +${s.totalBonuses.toLocaleString('ar-EG')} ج.م
                           </button>
-                          <button onclick="ManagerUI.printPayslip(${s.employee.id}, '${targetMonth}')"
-                            class="px-2 py-1 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs transition-all flex items-center gap-1" title="طباعة قسيمة الراتب ومفردات المرتب">
-                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                            <span>قسيمة الراتب</span>
+                        ` : `<span class="font-mono text-slate-400 text-xs block mt-0.5">0</span>`}
+                      </div>
+
+                      <!-- Deductions -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">الخصومات (-)</span>
+                        ${(s.totalManualDeductions || 0) > 0 ? `
+                          <button type="button" onclick="ManagerUI.openDeductionsManagementModal('${targetMonth}')"
+                            class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-xs block mt-0.5 hover:underline">
+                            -${s.totalManualDeductions.toLocaleString('ar-EG')} ج.م
                           </button>
-                          <button onclick="ManagerUI.sendPayslipWhatsApp(${s.employee.id}, '${targetMonth}')"
-                            class="p-1 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-white dark:hover:bg-slate-900 transition-all flex items-center justify-center" title="إرسال كشف الراتب للموظف عبر واتساب">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        ` : `<span class="font-mono text-slate-400 text-xs block mt-0.5">0</span>`}
+                      </div>
+
+                      <!-- Advances -->
+                      <div class="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        <span class="text-[10px] text-slate-400 block font-semibold">السلف (-)</span>
+                        ${(s.totalAdvances || 0) > 0 ? `
+                          <button type="button" onclick="ManagerUI.openAdvancesManagementModal('${targetMonth}')"
+                            class="font-extrabold text-amber-600 dark:text-amber-400 font-mono text-xs block mt-0.5 hover:underline">
+                            -${s.totalAdvances.toLocaleString('ar-EG')} ج.م
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  `}).join('')}
-                </tbody>
-              </table>
+                        ` : `<span class="font-mono text-slate-400 text-xs block mt-0.5">0</span>`}
+                      </div>
+                    </div>
+
+                    <!-- Action Toolbar -->
+                    <div class="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap">
+                      <button onclick="ManagerUI.triggerSalaryPayout(${s.employee.id})"
+                        class="flex-1 py-2 px-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold text-xs border border-teal-500/30 transition-all flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap">
+                        <i data-lucide="send" class="w-3.5 h-3.5 text-teal-500"></i>
+                        <span>تحويل الراتب</span>
+                      </button>
+
+                      <button onclick="ManagerUI.openEmployeeMonthDetailsModal(${s.employee.id}, '${targetMonth}')"
+                        class="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
+                        <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>كشف الحساب</span>
+                      </button>
+
+                      <button onclick="ManagerUI.printPayslip(${s.employee.id}, '${targetMonth}')"
+                        class="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 whitespace-nowrap">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span>قسيمة</span>
+                      </button>
+
+                      <button onclick="ManagerUI.sendPayslipWhatsApp(${s.employee.id}, '${targetMonth}')"
+                        class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 transition-all flex items-center justify-center border border-emerald-500/20"
+                        title="إرسال عبر واتساب">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
           `}
         </div>

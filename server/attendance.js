@@ -20,6 +20,75 @@ function timeToMinutes(timeStr) {
   return parts[0] * 60 + (parts[1] || 0);
 }
 
+// Helper to retrieve company settings map
+function getCompanySettingsMap() {
+  try {
+    const settingsRows = db.prepare(`SELECT key, value FROM company_settings`).all();
+    const map = {};
+    settingsRows.forEach(r => { map[r.key] = r.value; });
+    return map;
+  } catch (err) {
+    return {};
+  }
+}
+
+// Calculate overtime minutes and proportional amount based on company policy
+function calculateOvertime(checkInTime, checkOutTime, schedStart, schedEnd, settings) {
+  if (!settings) {
+    settings = getCompanySettingsMap();
+  }
+  if (!settings || settings.overtime_enabled !== '1') {
+    return { overtimeMinutes: 0, overtimeAmount: 0 };
+  }
+  if (!checkInTime || !checkOutTime) {
+    return { overtimeMinutes: 0, overtimeAmount: 0 };
+  }
+
+  const rateMinutes = Math.max(1, parseInt(settings.overtime_rate_minutes, 10) || 60);
+  const rateAmount = Math.max(0, parseFloat(settings.overtime_rate_amount) || 0);
+  const timingMode = settings.overtime_timing_mode || 'after_shift';
+  const minThreshold = Math.max(0, parseInt(settings.overtime_min_minutes, 10) || 0);
+
+  const inMins = timeToMinutes(checkInTime);
+  const outMins = timeToMinutes(checkOutTime);
+  const startMins = timeToMinutes(schedStart || '09:00');
+  const endMins = timeToMinutes(schedEnd || '17:00');
+
+  let beforeShiftOvertime = 0;
+  let afterShiftOvertime = 0;
+
+  // 1. Before shift: employee checked in before scheduled start
+  if (timingMode === 'before_shift' || timingMode === 'both') {
+    if (inMins < startMins) {
+      beforeShiftOvertime = startMins - inMins;
+    }
+  }
+
+  // 2. After shift: employee checked out after scheduled end
+  if (timingMode === 'after_shift' || timingMode === 'both') {
+    if (outMins > endMins) {
+      afterShiftOvertime = outMins - endMins;
+    }
+  }
+
+  let totalOvertimeMinutes = beforeShiftOvertime + afterShiftOvertime;
+
+  // Minimum threshold check
+  if (totalOvertimeMinutes < minThreshold) {
+    totalOvertimeMinutes = 0;
+  }
+
+  let overtimeAmount = 0;
+  if (totalOvertimeMinutes > 0 && rateMinutes > 0 && rateAmount > 0) {
+    overtimeAmount = parseFloat(((totalOvertimeMinutes / rateMinutes) * rateAmount).toFixed(2));
+  }
+
+  return {
+    overtimeMinutes: totalOvertimeMinutes,
+    overtimeAmount: overtimeAmount
+  };
+}
+
 // Save base64 photo (returns data URI for cloud persistence and optionally saves to disk locally)
 function saveBase64Image(base64Data, prefix = 'att') {
   if (!base64Data) return null;
@@ -234,11 +303,17 @@ function checkAndApplyAutoCheckouts() {
         const autoNote = 'تم الانصراف التلقائي بنهاية مواعيد العمل الرسمية';
         const finalNotes = rec.notes ? `${rec.notes} | ${autoNote}` : autoNote;
 
+        const autoSchedStart = matchedShift ? matchedShift.start_time : (rec.scheduled_start || '09:00');
+        const autoSchedEnd = matchedShift ? matchedShift.end_time : (rec.scheduled_end || effectiveEnd);
+        const autoOvt = calculateOvertime(rec.check_in_time, checkOutTime, autoSchedStart, autoSchedEnd);
+
         db.prepare(`
           UPDATE attendance_records SET
             check_out_time = ?,
             worked_hours = ?,
             early_leave_minutes = 0,
+            overtime_minutes = ?,
+            overtime_amount = ?,
             verification_status = 'system_auto_checkout',
             notes = ?,
             scheduled_start = COALESCE(?, scheduled_start),
@@ -248,7 +323,7 @@ function checkAndApplyAutoCheckouts() {
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(
-          checkOutTime, workedHours, finalNotes,
+          checkOutTime, workedHours, autoOvt.overtimeMinutes, autoOvt.overtimeAmount, finalNotes,
           matchedShift ? matchedShift.start_time : null,
           matchedShift ? matchedShift.end_time : null,
           matchedShift ? matchedShift.id : null,
@@ -288,15 +363,18 @@ function checkAndApplyAutoCheckouts() {
       const autoNote = 'تم الانصراف التلقائي بنهاية مواعيد العمل الرسمية';
       const finalNotes = rec.notes ? `${rec.notes} | ${autoNote}` : autoNote;
 
+      const pastOvt = calculateOvertime(rec.check_in_time, checkOutTime, rec.scheduled_start || '09:00', rec.scheduled_end || '17:00');
       db.prepare(`
         UPDATE attendance_records SET
           check_out_time = ?,
           worked_hours = ?,
+          overtime_minutes = ?,
+          overtime_amount = ?,
           verification_status = 'system_auto_checkout',
           notes = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(checkOutTime, workedHours, finalNotes, rec.id);
+      `).run(checkOutTime, workedHours, pastOvt.overtimeMinutes, pastOvt.overtimeAmount, finalNotes, rec.id);
     }
   } catch (err) {
     console.error('Auto checkout check error:', err);
@@ -924,12 +1002,17 @@ router.post('/check-out', authenticateToken, (req, res) => {
       }
     }
 
+    const effectiveSchedStart = matchedShift ? matchedShift.start_time : (record.scheduled_start || '09:00');
+    const effectiveSchedEnd = matchedShift ? matchedShift.end_time : scheduledEnd;
+    const overtimeResult = calculateOvertime(record.check_in_time, currentTime, effectiveSchedStart, effectiveSchedEnd);
+
     // Update attendance record
     db.prepare(`
       UPDATE attendance_records SET
         check_out_time = ?, check_out_lat = ?, check_out_lng = ?, check_out_distance = ?,
         check_out_accuracy = ?, check_out_photo = ?, worked_hours = ?,
         early_leave_minutes = ?, status = ?, estimated_deduction = ?,
+        overtime_minutes = ?, overtime_amount = ?,
         scheduled_start = COALESCE(?, scheduled_start),
         scheduled_end = COALESCE(?, scheduled_end),
         shift_id = COALESCE(?, shift_id),
@@ -939,6 +1022,7 @@ router.post('/check-out', authenticateToken, (req, res) => {
     `).run(
       currentTime, latitude || null, longitude || null, distanceMeters,
       clientAccuracy, photoUrl, workedHours, earlyLeaveMinutes, status, deduction,
+      overtimeResult.overtimeMinutes, overtimeResult.overtimeAmount,
       matchedShift ? matchedShift.start_time : null,
       matchedShift ? matchedShift.end_time : null,
       matchedShift ? matchedShift.id : null,
@@ -969,6 +1053,8 @@ router.post('/check-out', authenticateToken, (req, res) => {
         check_out_time: currentTime,
         worked_hours: workedHours,
         early_leave_minutes: earlyLeaveMinutes,
+        overtime_minutes: overtimeResult.overtimeMinutes,
+        overtime_amount: overtimeResult.overtimeAmount,
         status
       }
     });
@@ -1481,6 +1567,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
 
     const verificationStatus = finalCheckOut ? 'manual_override' : 'verified';
 
+    const editOvt = calculateOvertime(finalCheckIn, finalCheckOut, schedStart, schedEnd);
     const newValues = {
       check_in_time: finalCheckIn,
       check_out_time: finalCheckOut,
@@ -1488,6 +1575,8 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       worked_hours: workedHours,
       late_minutes: evalResult.lateMinutes,
       estimated_deduction: evalResult.deduction,
+      overtime_minutes: editOvt.overtimeMinutes,
+      overtime_amount: editOvt.overtimeAmount,
       notes: notes !== undefined ? notes : oldRecord.notes,
       verification_status: verificationStatus,
       shift_id: newShiftId,
@@ -1500,6 +1589,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       UPDATE attendance_records SET
         check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
         late_minutes = ?, estimated_deduction = ?,
+        overtime_minutes = ?, overtime_amount = ?,
         notes = ?, verification_status = ?,
         shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
         updated_at = CURRENT_TIMESTAMP
@@ -1507,6 +1597,7 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
     `).run(
       newValues.check_in_time, newValues.check_out_time, newValues.status,
       newValues.worked_hours, newValues.late_minutes, newValues.estimated_deduction,
+      newValues.overtime_minutes, newValues.overtime_amount,
       newValues.notes, newValues.verification_status,
       newValues.shift_id, newValues.shift_name, newValues.scheduled_start, newValues.scheduled_end,
       recordId
@@ -1618,6 +1709,7 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
     // Automatically determine status & late minutes & deduction
     const evalResult = evaluateAttendanceStatusAndDeduction(check_in_time, schedStart, graceMins, waive_deductions);
 
+    const manualOvt = calculateOvertime(check_in_time, effectiveCheckOut, schedStart, schedEnd);
     // Check if record exists for this date and employee
     const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(employee_id, date);
 
@@ -1627,13 +1719,17 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
       db.prepare(`
         UPDATE attendance_records SET
           check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
-          late_minutes = ?, estimated_deduction = ?, verification_status = ?,
+          late_minutes = ?, estimated_deduction = ?,
+          overtime_minutes = ?, overtime_amount = ?,
+          verification_status = ?,
           notes = ?, shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
         check_in_time || null, effectiveCheckOut, evalResult.status, workedHours,
-        evalResult.lateMinutes, evalResult.deduction, effectiveCheckOut ? 'manual_admin' : 'verified',
+        evalResult.lateMinutes, evalResult.deduction,
+        manualOvt.overtimeMinutes, manualOvt.overtimeAmount,
+        effectiveCheckOut ? 'manual_admin' : 'verified',
         cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, recordId
       );
     } else {
@@ -1641,11 +1737,13 @@ router.post('/manual-record', authenticateToken, requireManager, (req, res) => {
         INSERT INTO attendance_records (
           employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
           status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
+          overtime_minutes, overtime_amount,
           verification_status, notes, shift_id, shift_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         employee_id, date, check_in_time || null, effectiveCheckOut, schedStart, schedEnd,
         evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
+        manualOvt.overtimeMinutes, manualOvt.overtimeAmount,
         effectiveCheckOut ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
       );
       recordId = info.lastInsertRowid;
@@ -1864,24 +1962,28 @@ router.post('/bulk-manual-records', authenticateToken, requireManager, (req, res
 
         const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(emp.id, d);
 
+        const bulkOvt = calculateOvertime(inTime, effectiveOut, emp.start_time, emp.end_time);
         if (existing) {
           db.prepare(`
             UPDATE attendance_records SET
               check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
-              late_minutes = ?, estimated_deduction = ?, verification_status = 'manual_admin',
+              late_minutes = ?, estimated_deduction = ?,
+              overtime_minutes = ?, overtime_amount = ?,
+              verification_status = 'manual_admin',
               notes = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-          `).run(inTime, effectiveOut, finalStatus, workedHours, lateMinutes, deduction, reason, existing.id);
+          `).run(inTime, effectiveOut, finalStatus, workedHours, lateMinutes, deduction, bulkOvt.overtimeMinutes, bulkOvt.overtimeAmount, reason, existing.id);
         } else {
           db.prepare(`
             INSERT INTO attendance_records (
               employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
               status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
+              overtime_minutes, overtime_amount,
               verification_status, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'manual_admin', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'manual_admin', ?)
           `).run(
             emp.id, d, inTime, effectiveOut, emp.start_time, emp.end_time,
-            finalStatus, workedHours, lateMinutes, deduction, reason
+            finalStatus, workedHours, lateMinutes, deduction, bulkOvt.overtimeMinutes, bulkOvt.overtimeAmount, reason
           );
         }
         insertedOrUpdated++;
@@ -2010,29 +2112,36 @@ router.post('/batch-manual-records', authenticateToken, requireManager, (req, re
       // Upsert record
       const existing = db.prepare(`SELECT id FROM attendance_records WHERE employee_id = ? AND date = ?`).get(empId, date);
 
+      const corrOvt = calculateOvertime(inTime, effectiveOut, schedStart, schedEnd);
       if (existing) {
         db.prepare(`
           UPDATE attendance_records SET
             check_in_time = ?, check_out_time = ?, status = ?, worked_hours = ?,
-            late_minutes = ?, estimated_deduction = ?, verification_status = ?,
+            late_minutes = ?, estimated_deduction = ?,
+            overtime_minutes = ?, overtime_amount = ?,
+            verification_status = ?,
             notes = ?, shift_id = ?, shift_name = ?, scheduled_start = ?, scheduled_end = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(
           inTime, effectiveOut, evalResult.status, workedHours,
-          evalResult.lateMinutes, evalResult.deduction, effectiveOut ? 'manual_admin' : 'verified',
+          evalResult.lateMinutes, evalResult.deduction,
+          corrOvt.overtimeMinutes, corrOvt.overtimeAmount,
+          effectiveOut ? 'manual_admin' : 'verified',
           cleanReason, targetShiftId, targetShiftName, schedStart, schedEnd, existing.id
         );
       } else {
-        db.prepare(`
+        const info = db.prepare(`
           INSERT INTO attendance_records (
             employee_id, date, check_in_time, check_out_time, scheduled_start, scheduled_end,
             status, worked_hours, late_minutes, early_leave_minutes, estimated_deduction,
+            overtime_minutes, overtime_amount,
             verification_status, notes, shift_id, shift_name
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           empId, date, inTime, effectiveOut, schedStart, schedEnd,
           evalResult.status, workedHours, evalResult.lateMinutes, evalResult.deduction,
+          corrOvt.overtimeMinutes, corrOvt.overtimeAmount,
           effectiveOut ? 'manual_admin' : 'verified', cleanReason, targetShiftId, targetShiftName
         );
       }
@@ -2309,5 +2418,7 @@ router.put('/face-reset-requests/:id/review', authenticateToken, requireManager,
 
 router.evaluateAttendanceStatusAndDeduction = evaluateAttendanceStatusAndDeduction;
 router.timeToMinutes = timeToMinutes;
+router.calculateOvertime = calculateOvertime;
+router.getCompanySettingsMap = getCompanySettingsMap;
 
 module.exports = router;

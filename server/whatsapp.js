@@ -267,6 +267,7 @@ function buildPayslipMessage(companyName, month, emp) {
     `💰 *الراتب الأساسي:* ${emp.baseSalary} ج.م\n` +
     `📅 *أيام الحضور:* ${emp.presentDays} يوم\n` +
     `🎁 *المكافآت والحوافز:* +${emp.bonuses} ج.م\n` +
+    (emp.overtimeAmount ? `⏰ *عمل إضافي (Over Time):* +${emp.overtimeAmount} ج.م (${emp.overtimeHours || '0'} س)\n` : '') +
     `⚠️ *الخصومات وجزاءات التأخير:* -${emp.deductions} ج.م\n` +
     `💳 *السلف المستقطعة:* -${emp.advances} ج.م\n` +
     `══════════════════\n` +
@@ -562,14 +563,20 @@ router.post('/send-payslip', authenticateToken, requireManager, async (req, res)
 
     // Attendance stats for month
     const attRecords = db.prepare(`
-      SELECT status, estimated_deduction
+      SELECT status, estimated_deduction, overtime_minutes, overtime_amount
       FROM attendance_records
       WHERE employee_id = ? AND date LIKE ?
     `).all(employee_id, `${month}-%`);
 
     const presentDays = attRecords.filter(r => r.status !== 'Absent').length;
     let totalDeductions = 0;
-    attRecords.forEach(r => totalDeductions += (r.estimated_deduction || 0));
+    let totalOvertimeAmount = 0;
+    let totalOvertimeMinutes = 0;
+    attRecords.forEach(r => {
+      totalDeductions += (r.estimated_deduction || 0);
+      totalOvertimeAmount += (r.overtime_amount || 0);
+      totalOvertimeMinutes += (r.overtime_minutes || 0);
+    });
 
     // Advances
     const advRow = db.prepare(`
@@ -593,7 +600,7 @@ router.post('/send-payslip', authenticateToken, requireManager, async (req, res)
     const totalManualDeductions = dedRow && dedRow.total ? parseFloat(dedRow.total) : 0;
 
     const baseSalary = parseFloat(emp.base_salary || 0);
-    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses + totalOvertimeAmount - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     const settings = getWhatsAppSettings();
     const messageText = buildPayslipMessage(settings.company_name, month, {
@@ -603,6 +610,8 @@ router.post('/send-payslip', authenticateToken, requireManager, async (req, res)
       baseSalary: baseSalary.toLocaleString('en-US'),
       presentDays,
       bonuses: totalBonuses.toLocaleString('en-US'),
+      overtimeAmount: totalOvertimeAmount > 0 ? totalOvertimeAmount.toLocaleString('en-US') : null,
+      overtimeHours: parseFloat((totalOvertimeMinutes / 60).toFixed(1)),
       deductions: (totalDeductions + totalManualDeductions).toLocaleString('en-US'),
       advances: totalAdvances.toLocaleString('en-US'),
       netSalary: netSalary.toLocaleString('en-US'),
@@ -653,14 +662,20 @@ router.post('/send-all-payslips', authenticateToken, requireManager, async (req,
       }
 
       const attRecords = db.prepare(`
-        SELECT status, estimated_deduction
+        SELECT status, estimated_deduction, overtime_minutes, overtime_amount
         FROM attendance_records
         WHERE employee_id = ? AND date LIKE ?
       `).all(emp.id, `${month}-%`);
 
       const presentDays = attRecords.filter(r => r.status !== 'Absent').length;
       let totalDeductions = 0;
-      attRecords.forEach(r => totalDeductions += (r.estimated_deduction || 0));
+      let totalOvertimeAmount = 0;
+      let totalOvertimeMinutes = 0;
+      attRecords.forEach(r => {
+        totalDeductions += (r.estimated_deduction || 0);
+        totalOvertimeAmount += (r.overtime_amount || 0);
+        totalOvertimeMinutes += (r.overtime_minutes || 0);
+      });
 
       const advRow = db.prepare(`
         SELECT SUM(amount) as total FROM salary_advances
@@ -681,7 +696,7 @@ router.post('/send-all-payslips', authenticateToken, requireManager, async (req,
       const totalManualDeductions = dedRow && dedRow.total ? parseFloat(dedRow.total) : 0;
 
       const baseSalary = parseFloat(emp.base_salary || 0);
-      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
+      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses + totalOvertimeAmount - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
       const messageText = buildPayslipMessage(settings.company_name, month, {
         name: emp.full_name,
@@ -690,6 +705,8 @@ router.post('/send-all-payslips', authenticateToken, requireManager, async (req,
         baseSalary: baseSalary.toLocaleString('en-US'),
         presentDays,
         bonuses: totalBonuses.toLocaleString('en-US'),
+        overtimeAmount: totalOvertimeAmount > 0 ? totalOvertimeAmount.toLocaleString('en-US') : null,
+        overtimeHours: parseFloat((totalOvertimeMinutes / 60).toFixed(1)),
         deductions: (totalDeductions + totalManualDeductions).toLocaleString('en-US'),
         advances: totalAdvances.toLocaleString('en-US'),
         netSalary: netSalary.toLocaleString('en-US')

@@ -148,12 +148,15 @@
 
     const baseSalary = stats.baseSalary || parseFloat(emp.base_salary || 3000);
     const totalBonuses = stats.totalBonuses !== undefined ? stats.totalBonuses : bonuses.reduce((s, b) => s + parseFloat(b.amount || 0), 0);
+    const totalOvertimeAmount = stats.totalOvertimeAmount !== undefined ? stats.totalOvertimeAmount : (data.records || []).reduce((s, r) => s + parseFloat(r.overtime_amount || 0), 0);
+    const totalOvertimeMinutes = stats.totalOvertimeMinutes !== undefined ? stats.totalOvertimeMinutes : (data.records || []).reduce((s, r) => s + parseInt(r.overtime_minutes || 0, 10), 0);
+    const totalOvertimeHours = stats.totalOvertimeHours !== undefined ? stats.totalOvertimeHours : parseFloat((totalOvertimeMinutes / 60).toFixed(1));
     const totalLateDeductions = stats.totalLateDeductions || 0;
     const totalAbsenceDeductions = stats.totalAbsenceDeductions || 0;
     const totalAdvances = stats.totalAdvances !== undefined ? stats.totalAdvances : advances.reduce((s, a) => s + parseFloat(a.amount || 0), 0);
     const totalManualDeductions = stats.totalManualDeductions !== undefined ? stats.totalManualDeductions : deductions.reduce((s, d) => s + parseFloat(d.amount || 0), 0);
 
-    const totalEarnings = parseFloat((baseSalary + totalBonuses).toFixed(2));
+    const totalEarnings = parseFloat((baseSalary + totalBonuses + totalOvertimeAmount).toFixed(2));
     const totalDeductions = parseFloat((totalLateDeductions + totalAbsenceDeductions + totalAdvances + totalManualDeductions).toFixed(2));
     const netSalary = Math.max(0, parseFloat((totalEarnings - totalDeductions).toFixed(2)));
 
@@ -307,6 +310,16 @@
                       <span class="font-mono font-black text-emerald-700">+${parseFloat(b.amount).toLocaleString('ar-EG')} ج.م</span>
                     </div>
                   `).join('')}
+
+                  ${totalOvertimeAmount > 0 ? `
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-100">
+                      <div>
+                        <span class="font-bold text-indigo-700 block">عمل إضافي معتمد (Over Time)</span>
+                        <span class="text-[10px] text-slate-500 font-mono">${totalOvertimeHours} ساعة (${totalOvertimeMinutes} دقيقة)</span>
+                      </div>
+                      <span class="font-mono font-black text-indigo-700">+${totalOvertimeAmount.toLocaleString('ar-EG')} ج.م</span>
+                    </div>
+                  ` : ''}
 
                   <div class="pt-2 flex items-center justify-between font-black text-sm text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
                     <span>إجمالي الاستحقاقات:</span>

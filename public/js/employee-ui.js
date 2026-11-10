@@ -681,6 +681,7 @@ const EmployeeUI = {
                 <div>
                   <span class="text-slate-500 block">ساعات العمل</span>
                   <strong class="text-blue-600 dark:text-blue-400 text-sm">${todayRecord.worked_hours} ساعة</strong>
+                  ${todayRecord.overtime_minutes > 0 ? `<span class="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] block mt-0.5">+${todayRecord.overtime_amount} ج.م إضافي (${todayRecord.overtime_minutes} د)</span>` : ''}
                 </div>
               </div>
             </div>
@@ -2264,7 +2265,8 @@ const EmployeeUI = {
                     ${r.late_minutes > 0 ? `${r.late_minutes} د` : '-'}
                   </td>
                   <td class="py-3.5 px-4 font-bold text-slate-700 dark:text-slate-300">
-                    ${r.worked_hours > 0 ? `${r.worked_hours} س` : '-'}
+                    <span>${r.worked_hours > 0 ? `${r.worked_hours} س` : '-'}</span>
+                    ${r.overtime_minutes > 0 ? `<span class="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] block mt-0.5">+${r.overtime_amount} ج.م إضافي (${r.overtime_minutes} د)</span>` : ''}
                   </td>
                   <td class="py-3.5 px-4 text-xs text-slate-500">
                     ${r.check_in_distance ? `${r.check_in_distance}م` : '-'}
@@ -3409,12 +3411,14 @@ const EmployeeUI = {
 
       const baseSalary = stats.baseSalary || parseFloat(emp.base_salary || 3000);
       const totalBonuses = stats.totalBonuses || 0;
+      const totalOvertimeAmount = stats.totalOvertimeAmount || 0;
+      const totalOvertimeHours = stats.totalOvertimeHours || 0;
       const totalLateDeductions = stats.totalLateDeductions || 0;
       const totalAbsenceDeductions = stats.totalAbsenceDeductions || 0;
       const totalDeductions = stats.totalDeductions || (totalLateDeductions + totalAbsenceDeductions);
       const totalAdvances = stats.totalAdvances || 0;
       const totalManualDeductions = stats.totalManualDeductions || manualDeductions.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
-      const netSalary = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions);
+      const netSalary = stats.netSalary !== undefined ? stats.netSalary : Math.max(0, baseSalary + totalBonuses + totalOvertimeAmount - totalDeductions - totalAdvances - totalManualDeductions);
 
       const mainContainer = document.getElementById('emp-finances-main-container');
       if (!mainContainer) return;
@@ -3434,6 +3438,14 @@ const EmployeeUI = {
               <span class="text-xl font-black text-purple-600 dark:text-purple-400 mt-1 block font-mono">+${totalBonuses.toLocaleString('ar-EG')} ج.م</span>
               <span class="text-[10px] text-purple-400 mt-0.5 block font-semibold">${bonuses.length} مكافأة معتمدة</span>
             </div>
+
+            ${totalOvertimeAmount > 0 ? `
+              <div class="p-4 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 shadow-sm text-right">
+                <span class="text-xs text-indigo-600 dark:text-indigo-400 font-bold block">عمل إضافي (Over Time)</span>
+                <span class="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block font-mono">+${totalOvertimeAmount.toLocaleString('ar-EG')} ج.م</span>
+                <span class="text-[10px] text-indigo-400 mt-0.5 block font-semibold">${totalOvertimeHours} ساعة إضافية</span>
+              </div>
+            ` : ''}
 
             <div class="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/20 shadow-sm text-right">
               <span class="text-xs text-rose-500 font-bold block">خصم (تأخير+غياب)</span>

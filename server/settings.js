@@ -1,7 +1,7 @@
 const express = require('express');
 const { db, logAudit, getCurrentMonthString } = require('./database');
 const { authenticateToken, requireManager } = require('./auth');
-const { evaluateAttendanceStatusAndDeduction } = require('./attendance');
+const { evaluateAttendanceStatusAndDeduction, calculateOvertime } = require('./attendance');
 
 function getWorkdaysFromWeekendDays(weekendDaysStr) {
   if (!weekendDaysStr || weekendDaysStr === 'none' || weekendDaysStr === 'null') {
@@ -69,14 +69,24 @@ function recalculateMonthAttendance(managerId) {
           false
         );
 
+        let ovtMins = 0;
+        let ovtAmt = 0;
+        if (typeof calculateOvertime === 'function' && r.check_out_time) {
+          const ovt = calculateOvertime(r.check_in_time, r.check_out_time, r.sched_start, r.sched_end, settings);
+          ovtMins = ovt.overtimeMinutes;
+          ovtAmt = ovt.overtimeAmount;
+        }
+
         db.prepare(`
           UPDATE attendance_records SET
             status = ?,
             late_minutes = ?,
             estimated_deduction = ?,
+            overtime_minutes = ?,
+            overtime_amount = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(evalResult.status, evalResult.lateMinutes, evalResult.deduction, r.id);
+        `).run(evalResult.status, evalResult.lateMinutes, evalResult.deduction, ovtMins, ovtAmt, r.id);
       } else if (r.status === 'Absent') {
         const absenceRate = parseFloat(settings['deduction_absence_rate'] || '100');
         db.prepare(`

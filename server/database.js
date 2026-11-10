@@ -122,6 +122,8 @@ db.exec(`
     early_leave_minutes INTEGER DEFAULT 0,
     worked_hours REAL DEFAULT 0,
     estimated_deduction REAL DEFAULT 0,
+    overtime_minutes INTEGER DEFAULT 0,
+    overtime_amount REAL DEFAULT 0,
     verification_status TEXT DEFAULT 'verified', -- 'verified', 'outside_radius', 'poor_gps', 'suspicious', 'manual_override'
     ip_address TEXT,
     user_agent TEXT,
@@ -505,6 +507,12 @@ try {
   if (!attCols.includes('shift_name')) {
     db.exec(`ALTER TABLE attendance_records ADD COLUMN shift_name TEXT;`);
   }
+  if (!attCols.includes('overtime_minutes')) {
+    db.exec(`ALTER TABLE attendance_records ADD COLUMN overtime_minutes INTEGER DEFAULT 0;`);
+  }
+  if (!attCols.includes('overtime_amount')) {
+    db.exec(`ALTER TABLE attendance_records ADD COLUMN overtime_amount REAL DEFAULT 0;`);
+  }
 } catch (migErr) {
   console.error('Migration error:', migErr);
 }
@@ -539,7 +547,12 @@ try {
     { key: 'whatsapp_api_token', value: '', category: 'whatsapp', description: 'رمز المصادقة API Token' },
     { key: 'whatsapp_manager_phone', value: '01227580963', category: 'whatsapp', description: 'رقم واتساب المدير لتقرير الصباح' },
     { key: 'whatsapp_auto_late_alert', value: '1', category: 'whatsapp', description: 'إرسال إشعار فوري للموظف عند التأخير' },
-    { key: 'time_format_12h', value: '1', category: 'general', description: 'عرض الوقت بنظام 12 ساعة' }
+    { key: 'time_format_12h', value: '1', category: 'general', description: 'عرض الوقت بنظام 12 ساعة' },
+    { key: 'overtime_enabled', value: '0', category: 'overtime', description: 'تفعيل نظام احتساب العمل الإضافي (Over Time)' },
+    { key: 'overtime_rate_minutes', value: '60', category: 'overtime', description: 'معدل دقائق العمل الإضافي لكل شريحة' },
+    { key: 'overtime_rate_amount', value: '50', category: 'overtime', description: 'المبلغ المستحق لكل شريحة عمل إضافي' },
+    { key: 'overtime_timing_mode', value: 'after_shift', category: 'overtime', description: 'وقت احتساب الإضافي: after_shift, before_shift, both' },
+    { key: 'overtime_min_minutes', value: '15', category: 'overtime', description: 'الحد الأدنى بالدقائق لبدء احتساب الإضافي' }
   ];
 
   const insertSettingStmt = db.prepare(`

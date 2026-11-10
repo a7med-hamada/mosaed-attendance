@@ -74,8 +74,12 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       let totalDeductions = 0;
       let totalLateDeductions = 0;
       let totalAbsenceDeductions = 0;
+      let totalOvertimeMinutes = 0;
+      let totalOvertimeAmount = 0;
 
       records.forEach(r => {
+        totalOvertimeMinutes += (r.overtime_minutes || 0);
+        totalOvertimeAmount += (r.overtime_amount || 0);
         if (r.check_in_time) {
           presentDays++;
           if (r.status === 'On Time') onTimeDays++;
@@ -121,7 +125,7 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
       const totalManualDeductions = parseFloat(((deductionsSum && deductionsSum.total) || 0).toFixed(2));
 
       const baseSalary = parseFloat(emp.base_salary !== undefined && emp.base_salary !== null && emp.base_salary > 0 ? emp.base_salary : (emp.role === 'manager' ? 5000 : 3000));
-      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
+      const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses + totalOvertimeAmount - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
       return {
         employee: emp,
@@ -143,6 +147,9 @@ router.get('/monthly-summary', authenticateToken, (req, res) => {
         totalBonuses,
         totalAdvances,
         totalManualDeductions,
+        totalOvertimeMinutes,
+        totalOvertimeHours: parseFloat((totalOvertimeMinutes / 60).toFixed(1)),
+        totalOvertimeAmount: parseFloat(totalOvertimeAmount.toFixed(2)),
         netSalary
       };
     });
@@ -250,12 +257,16 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     let totalDeductions = 0;
     let totalLateDeductions = 0;
     let totalAbsenceDeductions = 0;
+    let totalOvertimeMinutes = 0;
+    let totalOvertimeAmount = 0;
 
     const absentDaysList = [];
     const lateDaysList = [];
     const onTimeDaysList = [];
 
     records.forEach(r => {
+      totalOvertimeMinutes += (r.overtime_minutes || 0);
+      totalOvertimeAmount += (r.overtime_amount || 0);
       const ded = parseFloat(r.estimated_deduction || 0);
       if (r.check_in_time) {
         presentDays++;
@@ -352,7 +363,7 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
     totalManualDeductions = parseFloat(totalManualDeductions.toFixed(2));
 
     const baseSalary = parseFloat(employee.base_salary !== undefined && employee.base_salary !== null && employee.base_salary > 0 ? employee.base_salary : (employee.role === 'manager' ? 5000 : 3000));
-    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
+    const netSalary = Math.max(0, parseFloat((baseSalary + totalBonuses + totalOvertimeAmount - totalDeductions - totalAdvances - totalManualDeductions).toFixed(2)));
 
     res.json({
       success: true,
@@ -375,6 +386,9 @@ router.get('/employee-month-details', authenticateToken, (req, res) => {
         totalBonuses: parseFloat(totalBonuses.toFixed(2)),
         totalAdvances: parseFloat(totalAdvances.toFixed(2)),
         totalManualDeductions,
+        totalOvertimeMinutes,
+        totalOvertimeHours: parseFloat((totalOvertimeMinutes / 60).toFixed(1)),
+        totalOvertimeAmount: parseFloat(totalOvertimeAmount.toFixed(2)),
         netSalary,
         absentDaysList,
         lateDaysList,
@@ -525,6 +539,8 @@ router.get('/export/csv', authenticateToken, (req, res) => {
       'دقائق التأخير',
       'دقائق الانصراف المبكر',
       'ساعات العمل',
+      'دقائق العمل الإضافي',
+      'مبلغ العمل الإضافي',
       'الخصم التقديري',
       'المسافة عن المقر (متر)',
       'حالة التحقق الجغرافي',
@@ -554,6 +570,8 @@ router.get('/export/csv', authenticateToken, (req, res) => {
         row.late_minutes,
         row.early_leave_minutes,
         row.worked_hours,
+        row.overtime_minutes || 0,
+        row.overtime_amount || 0,
         row.estimated_deduction,
         row.distance_meters,
         row.verification_status,

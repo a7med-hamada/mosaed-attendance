@@ -690,6 +690,18 @@ const ManagerUI = {
                   <span class="font-bold text-amber-600 font-mono">${formatMinutesArabic(r.late_minutes)}</span>
                 </div>
               ` : ''}
+
+              ${r.overtime_minutes > 0 ? `
+                <div class="pt-1 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between text-[11px]">
+                  <span class="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-500"></i>
+                    <span>عمل إضافي (Over Time):</span>
+                  </span>
+                  <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                    ${formatMinutesArabic(r.overtime_minutes)} (+${(r.overtime_amount || 0).toLocaleString('ar-EG')} ج.م)
+                  </span>
+                </div>
+              ` : ''}
             </div>
 
             <!-- Card Bottom: Inspection Button (زرار معاينة التوثيق كما طلب المستخدم تماماً) -->
@@ -3864,6 +3876,17 @@ const ManagerUI = {
                   ` : `<span class="font-bold text-emerald-500 text-xs block mt-0.5">لا يوجد خصم</span>`}
                   ${r.late_minutes > 0 ? `<span class="text-[10px] text-amber-500 block font-semibold mt-0.5">تأخير: ${formatMinutesArabic(r.late_minutes)}</span>` : ''}
                 </div>
+
+                ${r.overtime_minutes > 0 ? `
+                  <div class="col-span-2 bg-indigo-50/70 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-between text-xs">
+                    <span class="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1">
+                      <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-500"></i> عمل إضافي (Over Time):
+                    </span>
+                    <span class="font-extrabold font-mono text-indigo-600 dark:text-indigo-400">
+                      +${(r.overtime_amount || 0).toLocaleString('ar-EG')} ج.م (${formatMinutesArabic(r.overtime_minutes)})
+                    </span>
+                  </div>
+                ` : ''}
               </div>
 
               <!-- Inspection Button -->
@@ -3913,7 +3936,10 @@ const ManagerUI = {
                   <td class="py-3 px-4 text-center font-bold font-mono">
                     ${r.estimated_deduction > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-500 text-[11px]">-${r.estimated_deduction} ج.م</span>` : `<span class="text-emerald-500 text-[11px]">0</span>`}
                   </td>
-                  <td class="py-3 px-4 font-bold">${r.worked_hours || 0} س</td>
+                  <td class="py-3 px-4 font-bold">
+                    <span>${r.worked_hours || 0} س</span>
+                    ${r.overtime_minutes > 0 ? `<span class="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] block mt-0.5">+${r.overtime_amount} ج.م إضافي (${formatMinutesArabic(r.overtime_minutes)})</span>` : ''}
+                  </td>
                   <td class="py-3 px-4">${r.check_in_distance ? `${r.check_in_distance}م` : '—'}</td>
                   <td class="py-3 px-4 text-center">
                     ${(r.check_in_photo || r.check_out_photo || r.check_in_time) ? `
@@ -3998,6 +4024,7 @@ const ManagerUI = {
         'المسمى الوظيفي',
         'المرتب الأساسي',
         'المكافآت',
+        'عمل إضافي (Overtime)',
         'خصم التأخير والغياب',
         'الجزاءات والخصومات',
         'السلف المعتمدة',
@@ -4024,6 +4051,7 @@ const ManagerUI = {
           `"${(emp.job_title || '').replace(/"/g, '""')}"`,
           baseSal,
           s.totalBonuses || 0,
+          s.totalOvertimeAmount || 0,
           s.totalDeductions || 0,
           s.totalManualDeductions || 0,
           s.totalAdvances || 0,
@@ -4375,6 +4403,69 @@ const ManagerUI = {
             </div>
           </div>
 
+          <!-- Overtime (العمل الإضافي) Configuration -->
+          <div class="pt-5 mt-5 border-t border-slate-100 dark:border-slate-800">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="clock" class="w-4 h-4 text-indigo-500"></i> نظام احتساب العمل الإضافي (Over Time)
+                </h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">تحديد معدل الدقائق والمبلغ المستحق ووقت احتساب الإضافي</p>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer font-normal text-xs text-indigo-600">
+                <input type="checkbox" id="rule-overtime-enabled" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                <span class="font-bold">تفعيل احتساب العمل الإضافي</span>
+              </label>
+            </div>
+
+            <!-- Overtime Explanation Notice -->
+            <div class="mt-4 p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs flex items-start gap-2.5">
+              <i data-lucide="info" class="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5"></i>
+              <p class="leading-relaxed">
+                <strong>حساب نسبي دقيق:</strong> الشركات التي ترغب في تفعيل العمل الإضافي تحدد المعدل (مثال: كل 60 دقيقة بـ 50 جنيه). إذا بقي الموظف 3 ساعات إضافية (180 دقيقة)، يُصرف له تلقائياً <strong>150 ج.م</strong> تُضاف إلى صافي الراتب تحت بند <strong>عمل إضافي (Over Time)</strong>.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 mt-2">
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">معدل الوقت (بالدقائق)</label>
+                <div class="relative">
+                  <input type="number" step="1" min="1" id="rule-overtime-rate-mins" placeholder="60" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">دقيقة</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">مثال: 60 دقيقة لكل ساعة إضافية</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">المبلغ المقابل (جنيه مصري)</label>
+                <div class="relative">
+                  <input type="number" step="1" min="0" id="rule-overtime-rate-amount" placeholder="50" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-indigo-600 dark:text-indigo-400" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">ج.م</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">المبلغ المستحق للشريحة المحددة</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">توقيت احتساب الإضافي</label>
+                <select id="rule-overtime-timing-mode" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs">
+                  <option value="after_shift">بعد نهاية الدوام الرسمي فقط</option>
+                  <option value="before_shift">قبل بداية الدوام الرسمي فقط</option>
+                  <option value="both">قبل بداية الدوام وبعد نهايته معاً</option>
+                </select>
+                <span class="text-[10px] text-slate-400 mt-1 block">الفترة المعتمدة لاحتساب الساعات الإضافية</span>
+              </div>
+
+              <div>
+                <label class="block text-slate-500 mb-1 font-semibold">الحد الأدنى للاحتساب</label>
+                <div class="relative">
+                  <input type="number" step="1" min="0" id="rule-overtime-min-mins" placeholder="15" class="w-full pl-12 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">دقيقة</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">أقل مدة ليبدأ النظام في حساب الإضافي</span>
+              </div>
+            </div>
+          </div>
+
           <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button type="submit" class="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5">
               <i data-lucide="check" class="w-4 h-4"></i>
@@ -4567,6 +4658,17 @@ const ManagerUI = {
       document.getElementById('rule-absence-rate').value = s.deduction_absence_rate || '100';
       document.getElementById('rule-half-day-rate').value = s.deduction_half_day_rate || '50';
 
+      const otEnabledEl = document.getElementById('rule-overtime-enabled');
+      if (otEnabledEl) otEnabledEl.checked = s.overtime_enabled === '1';
+      const otMinsEl = document.getElementById('rule-overtime-rate-mins');
+      if (otMinsEl) otMinsEl.value = s.overtime_rate_minutes || '60';
+      const otAmtEl = document.getElementById('rule-overtime-rate-amount');
+      if (otAmtEl) otAmtEl.value = s.overtime_rate_amount || '50';
+      const otModeEl = document.getElementById('rule-overtime-timing-mode');
+      if (otModeEl) otModeEl.value = s.overtime_timing_mode || 'after_shift';
+      const otMinEl = document.getElementById('rule-overtime-min-mins');
+      if (otMinEl) otMinEl.value = s.overtime_min_minutes || '15';
+
       // Load Manager Attendance Config
       const mc = res.manager_config || {};
       const trackMgrEl = document.getElementById('rule-manager-track-attendance');
@@ -4723,6 +4825,11 @@ const ManagerUI = {
       deduction_absence_rate: document.getElementById('rule-absence-rate').value || '100',
       deduction_half_day_rate: document.getElementById('rule-half-day-rate').value || '50',
       delay_deduction_tiers: JSON.stringify(tiers),
+      overtime_enabled: document.getElementById('rule-overtime-enabled') && document.getElementById('rule-overtime-enabled').checked ? '1' : '0',
+      overtime_rate_minutes: document.getElementById('rule-overtime-rate-mins') ? document.getElementById('rule-overtime-rate-mins').value || '60' : '60',
+      overtime_rate_amount: document.getElementById('rule-overtime-rate-amount') ? document.getElementById('rule-overtime-rate-amount').value || '50' : '50',
+      overtime_timing_mode: document.getElementById('rule-overtime-timing-mode') ? document.getElementById('rule-overtime-timing-mode').value || 'after_shift' : 'after_shift',
+      overtime_min_minutes: document.getElementById('rule-overtime-min-mins') ? document.getElementById('rule-overtime-min-mins').value || '15' : '15',
       currency_symbol: 'ج.م'
     };
 
@@ -5360,7 +5467,7 @@ const ManagerUI = {
         totalBonusesCompany += (s.totalBonuses || 0);
         totalAdvancesCompany += (s.totalAdvances || 0);
         totalManualDeductionsCompany += (s.totalManualDeductions || 0);
-        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0)));
+        totalNetSalariesCompany += (s.netSalary !== undefined ? s.netSalary : Math.max(0, (s.baseSalary || 3000) + (s.totalBonuses || 0) + (s.totalOvertimeAmount || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0)));
       });
 
       const mainContainer = document.getElementById('mgr-archive-main-container');
@@ -5416,7 +5523,7 @@ const ManagerUI = {
         <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-between text-xs font-semibold">
           <div class="flex items-center gap-2.5">
             <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
-            <span>نظام الرواتب الذكي: يتم احتساب صافي القبض وفق المعادلة: <strong>(المرتب الأساسي + المكافآت - خصومات التأخير والغياب - الجزاءات والخصومات - السلف المعتمدة)</strong>.</span>
+            <span>نظام الرواتب الذكي: يتم احتساب صافي القبض وفق المعادلة: <strong>(المرتب الأساسي + المكافآت + العمل الإضافي - خصومات التأخير والغياب - الجزاءات والخصومات - السلف المعتمدة)</strong>.</span>
           </div>
         </div>
 
@@ -5446,7 +5553,7 @@ const ManagerUI = {
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-5 bg-slate-50/40 dark:bg-slate-950/30">
               ${summaries.map(s => {
                 const baseSal = s.baseSalary || 3000;
-                const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
+                const netSal = s.netSalary !== undefined ? s.netSalary : Math.max(0, baseSal + (s.totalBonuses || 0) + (s.totalOvertimeAmount || 0) - (s.totalDeductions || 0) - (s.totalAdvances || 0) - (s.totalManualDeductions || 0));
                 return `
                   <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-4 relative overflow-hidden group">
                     <!-- Top accent bar -->
@@ -5521,6 +5628,17 @@ const ManagerUI = {
                             class="font-extrabold text-purple-600 dark:text-purple-400 font-mono text-xs block mt-0.5 hover:underline">
                             +${s.totalBonuses.toLocaleString('ar-EG')} ج.م
                           </button>
+                        ` : `<span class="font-mono text-slate-400 text-xs block mt-0.5">0</span>`}
+                      </div>
+
+                      <!-- Overtime (+) -->
+                      <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800/80">
+                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 block font-bold">عمل إضافي (+)</span>
+                        ${(s.totalOvertimeAmount || 0) > 0 ? `
+                          <span class="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono text-xs block mt-0.5">
+                            +${s.totalOvertimeAmount.toLocaleString('ar-EG')} ج.م
+                          </span>
+                          <span class="text-[10px] text-slate-400 block mt-0.5">${s.totalOvertimeHours || (s.totalOvertimeMinutes / 60).toFixed(1)} س إضافية</span>
                         ` : `<span class="font-mono text-slate-400 text-xs block mt-0.5">0</span>`}
                       </div>
 

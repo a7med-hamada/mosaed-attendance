@@ -720,6 +720,16 @@ html:not(.dark) #notif-modal {
     margin: auto 0.5rem;
     max-height: 92vh;
   }
+  #register-view .modal-enter,
+  #login-view .modal-enter {
+    max-height: none !important;
+    margin: auto !important;
+  }
+}
+
+#register-view {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ========================================================

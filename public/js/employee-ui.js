@@ -2099,7 +2099,7 @@ const EmployeeUI = {
           </div>
         </div>
 
-        <!-- Full List of Colleagues (Calm & Professional) -->
+        <!-- Full List of Colleagues (Responsive Cards System) -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -2108,85 +2108,91 @@ const EmployeeUI = {
             <span class="text-xs font-bold text-slate-400 font-mono">${list.length} زميل</span>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-right text-xs">
-              <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase font-semibold">
-                <tr>
-                  <th class="py-3 px-3">الزميل</th>
-                  <th class="py-3 px-3 text-center">نسبة الالتزام</th>
-                  <th class="py-3 px-3 text-center">الحالة</th>
-                  <th class="py-3 px-3 text-center">في الموعد</th>
-                  <th class="py-3 px-3 text-center">التأخير</th>
-                  <th class="py-3 px-3 text-center">الغياب</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-sans">
-                ${list.map(item => {
-                  const emp = item.employee;
-                  const tier = item.tier || {};
-                  const isMe = emp.id === currentUserId;
-                  const s = Math.round(item.score || 0);
-                  const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
-                  const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+          ${list.length === 0 ? `
+            <div class="p-8 text-center text-slate-400 text-xs">لا توجد بيانات مسجلة للزملاء في شهر ${targetMonth}.</div>
+          ` : `
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+              ${list.map(item => {
+                const emp = item.employee;
+                const tier = item.tier || {};
+                const isMe = emp.id === currentUserId;
+                const s = Math.round(item.score || 0);
+                const circleStroke = s >= 90 ? '#10b981' : s >= 75 ? '#3b82f6' : s >= 60 ? '#f59e0b' : '#ef4444';
+                const circleText = s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 75 ? 'text-blue-600 dark:text-blue-400' : s >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+                const topAccent = isMe ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : (s >= 90 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : s >= 75 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : s >= 60 ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-rose-500');
 
-                  return `
-                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isMe ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}">
-                      <td class="py-3 px-3">
-                        <div class="flex items-center gap-3">
-                          <div class="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                            ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500">${emp.full_name.charAt(0)}</div>`}
-                          </div>
-                          <div class="min-w-0">
-                            <span class="font-bold text-slate-900 dark:text-white block truncate flex items-center gap-1.5">
-                              ${emp.full_name}
-                              ${isMe ? '<span class="px-1.5 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold">أنت</span>' : ''}
-                            </span>
-                            <span class="text-[10px] text-slate-400 font-mono block">${emp.job_title || 'موظف'} • ${emp.department_name || ''}</span>
+                return `
+                  <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border ${isMe ? 'border-blue-500/50 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 dark:border-slate-800'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between gap-3.5 relative overflow-hidden group">
+                    <!-- Top accent bar -->
+                    <div class="absolute top-0 inset-x-0 h-1.5 ${topAccent}"></div>
+
+                    <!-- Header: Avatar, Name, Code, and Score Circular Gauge -->
+                    <div class="flex items-start justify-between gap-3 pt-1">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 ring-2 ${isMe ? 'ring-blue-500/30' : 'ring-slate-200 dark:ring-slate-700'}">
+                          ${emp.profile_photo ? `<img src="${emp.profile_photo}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center font-bold text-slate-500 text-sm">${emp.full_name.charAt(0)}</div>`}
+                        </div>
+                        <div class="min-w-0">
+                          <h4 class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate leading-snug flex items-center gap-1.5">
+                            <span class="truncate">${emp.full_name}</span>
+                            ${isMe ? '<span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex-shrink-0">أنت</span>' : ''}
+                          </h4>
+                          <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span class="text-[11px] font-mono text-slate-400 font-semibold">${emp.employee_code || ''}</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400">• ${emp.job_title || emp.department_name || 'موظف'}</span>
                           </div>
                         </div>
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <div class="inline-flex items-center justify-center">
-                          <div class="relative inline-flex items-center justify-center w-11 h-11 flex-shrink-0">
-                            <svg class="transform -rotate-90 w-11 h-11" viewBox="0 0 36 36">
-                              <path class="text-slate-200 dark:text-slate-800" stroke-width="4" stroke="currentColor" fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                              <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="4" stroke-linecap="round" fill="none"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                            <span class="absolute font-mono font-bold text-[11px] ${circleText}">${s}%</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
-                          tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
-                          tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
-                          'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
-                        }">
-                          ${tier.name || 'ملتزم'}
-                        </span>
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                        ${item.onTimeDays} يوم
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        ${item.lateDays > 0 ? `
-                          <span class="font-bold text-amber-600 dark:text-amber-400 font-mono text-[11px]">${item.lateDays} يوم (${item.totalLateMinutes}د)</span>
-                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
-                      </td>
-                      <td class="py-3 px-3 text-center whitespace-nowrap">
-                        ${item.absentDays > 0 ? `
-                          <span class="px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold font-mono text-[11px]">${item.absentDays} يوم</span>
-                        ` : `<span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">0</span>`}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+
+                      <!-- Circular Progress Gauge -->
+                      <div class="relative inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0">
+                        <svg class="transform -rotate-90 w-11 h-11 sm:w-12 sm:h-12" viewBox="0 0 36 36">
+                          <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <path stroke="${circleStroke}" stroke-dasharray="${s}, 100" stroke-width="3.5" stroke-linecap="round" fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <span class="absolute font-mono font-black text-xs ${circleText}">${s}%</span>
+                      </div>
+                    </div>
+
+                    <!-- Tier Status Pill -->
+                    <div class="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800/80 text-xs">
+                      <div class="flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 ${s >= 90 ? 'text-emerald-500' : 'text-blue-500'}"></i>
+                        <span class="font-bold text-slate-800 dark:text-slate-200">مستوى الالتزام:</span>
+                      </div>
+                      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        tier.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20' :
+                        tier.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-500/20' :
+                        tier.color === 'amber' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-500/20' :
+                        'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+                      }">
+                        ${tier.name || 'ملتزم'}
+                      </span>
+                    </div>
+
+                    <!-- 3-Box Breakdown: On-Time, Late, Absent -->
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div class="bg-emerald-50/60 dark:bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/15">
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">في الموعد</span>
+                        <span class="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-xs block mt-0.5">${item.onTimeDays || 0} يوم</span>
+                      </div>
+                      <div class="bg-amber-50/60 dark:bg-amber-950/30 p-2 rounded-xl border border-amber-500/15">
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">التأخير</span>
+                        <span class="font-extrabold text-amber-600 dark:text-amber-400 font-mono text-xs block mt-0.5">${item.lateDays || 0} يوم</span>
+                        ${item.totalLateMinutes > 0 ? `<span class="text-[9px] text-slate-400 block font-mono mt-0.5">(${item.totalLateMinutes}د)</span>` : ''}
+                      </div>
+                      <div class="bg-rose-50/60 dark:bg-rose-950/30 p-2 rounded-xl border border-rose-500/15">
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">الغياب</span>
+                        <span class="font-extrabold text-rose-600 dark:text-rose-400 font-mono text-xs block mt-0.5">${item.absentDays || 0} يوم</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
         </div>
       `;
 

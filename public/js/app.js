@@ -193,8 +193,8 @@ const App = {
       showToast('كلمة المرور وتأكيدها غير متطابقين', 'danger');
       return;
     }
-    if (pass.length < 6) {
-      showToast('كلمة المرور يجب أن لا تقل عن 6 أحرف', 'warning');
+    if (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || (!/[0-9]/.test(pass) && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pass))) {
+      showToast('يجب أن تتكون كلمة المرور من 8 خانات على الأقل، وتتضمن أحرفاً كبيرة وصغيرة وأرقاماً', 'warning');
       return;
     }
 
@@ -243,8 +243,11 @@ const App = {
     }
   },
 
-  logout() {
+  async logout() {
     this.closeMobileMenu();
+    try {
+      await API.logout();
+    } catch (_) {}
     API.setToken(null);
     API.setCurrentUser(null);
     this.currentUser = null;

@@ -49,6 +49,7 @@ const API = {
       const timeoutId = setTimeout(() => controller.abort(), 25000);
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
+        credentials: 'same-origin',
         headers,
         signal: options.signal || controller.signal
       });
@@ -94,6 +95,12 @@ const API = {
       method: 'POST',
       body: { identifier, password }
     });
+  },
+
+  logout() {
+    return this.request('/auth/logout', {
+      method: 'POST'
+    }).catch(() => ({}));
   },
 
   getMe() {

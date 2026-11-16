@@ -341,6 +341,16 @@ try {
   }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_parent_mgr ON users(parent_manager_id);`);
 
+  if (!userCols.includes('last_login_ip')) {
+    db.exec(`ALTER TABLE users ADD COLUMN last_login_ip TEXT DEFAULT NULL;`);
+  }
+  if (!userCols.includes('last_login_at')) {
+    db.exec(`ALTER TABLE users ADD COLUMN last_login_at TEXT DEFAULT NULL;`);
+  }
+  if (!userCols.includes('last_login_device')) {
+    db.exec(`ALTER TABLE users ADD COLUMN last_login_device TEXT DEFAULT NULL;`);
+  }
+
   // Support Tickets table for technical support from website to super admin
   db.exec(`
     CREATE TABLE IF NOT EXISTS support_tickets (

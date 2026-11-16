@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db, logAudit, uploadsDir, getTodayString, getCurrentMonthString, getCairoNowParts } = require('./database');
 const { authenticateToken, requireManager, isManagedUser, isManagedEmployee, isManagedResource } = require('./auth');
+const { validatePasswordStrength } = require('./security-config');
 const fs = require('fs');
 const path = require('path');
 const { saveToCloud } = require('./cloud-sync');
@@ -342,8 +343,9 @@ router.post('/', authenticateToken, requireManager, (req, res) => {
       return res.status(400).json({ success: false, error: 'كلمتا المرور غير متطابقتين' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'يجب أن لا تقل كلمة المرور عن 6 خانات' });
+    const passCheck = validatePasswordStrength(password);
+    if (!passCheck.valid) {
+      return res.status(400).json({ success: false, error: passCheck.error });
     }
 
     // Auto-generate unique employee_code if not provided
@@ -575,8 +577,9 @@ router.put('/:id', authenticateToken, requireManager, (req, res) => {
       if (confirm_password && password.trim() !== confirm_password.trim()) {
         return res.status(400).json({ success: false, error: 'كلمتا المرور غير متطابقتين' });
       }
-      if (password.trim().length < 6) {
-        return res.status(400).json({ success: false, error: 'يجب أن لا تقل كلمة المرور عن 6 خانات' });
+      const passCheck = validatePasswordStrength(password.trim());
+      if (!passCheck.valid) {
+        return res.status(400).json({ success: false, error: passCheck.error });
       }
       passHash = bcrypt.hashSync(password.trim(), 10);
     }

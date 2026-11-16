@@ -68,8 +68,10 @@ router.post('/login', loginRateLimiter, (req, res) => {
       audience: 'workforce-admin'
     });
 
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const clientIp = getClientIp(req);
     logAudit(0, 'SuperAdmin', 'SUPERADMIN_LOGIN', 'system', 0, null, null, `تسجيل دخول ناجح إلى لوحة تحكم المالك (${cleanEmail})`, clientIp);
+
+    setAuthCookie(res, token);
 
     res.json({
       success: true,

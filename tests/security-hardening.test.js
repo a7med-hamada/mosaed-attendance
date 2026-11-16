@@ -202,6 +202,52 @@ async function run() {
   });
   assert.equal(unconfiguredOwner.response.status, 401);
 
+    // 1. Password Complexity Verification
+  const weakPassReg = await request('POST', '/api/auth/register-manager', {
+    body: {
+      full_name: 'Weak Pass Mgr',
+      email: 'weak-pass@example.test',
+      password: 'weak',
+      company_name: 'Company Weak'
+    }
+  });
+  assert.equal(weakPassReg.response.status, 400);
+
+  const noNumberReg = await request('POST', '/api/auth/register-manager', {
+    body: {
+      full_name: 'No Number Mgr',
+      email: 'no-number@example.test',
+      password: 'NoNumbersInThisPassword',
+      company_name: 'Company No Number'
+    }
+  });
+  assert.equal(noNumberReg.response.status, 400);
+
+  // 2. HttpOnly Cookie Verification
+  const setCookie = managerA.response.headers.get('set-cookie') || (managerA.response.headers.getSetCookie ? managerA.response.headers.getSetCookie().join('; ') : '');
+  assert.ok(setCookie && setCookie.includes('token='), 'Expected HttpOnly token cookie to be set');
+  assert.ok(setCookie.toLowerCase().includes('httponly'), 'Expected cookie to have HttpOnly flag');
+
+  const cookieMatch = setCookie.match(/token=([^;]+)/);
+  const cookieVal = cookieMatch ? cookieMatch[1] : '';
+  const cookieAuthRes = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: {
+      'Cookie': `token=${cookieVal}`
+    }
+  });
+  assert.equal(cookieAuthRes.status, 200, 'Expected authentication via HttpOnly cookie to succeed');
+
+  // 3. Logout Cookie Cleared Verification
+  const logoutRes = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Cookie': `token=${cookieVal}`
+    }
+  });
+  assert.equal(logoutRes.status, 200);
+  const logoutCookie = logoutRes.headers.get('set-cookie') || (logoutRes.headers.getSetCookie ? logoutRes.headers.getSetCookie().join('; ') : '');
+  assert.ok(logoutCookie && (logoutCookie.includes('token=;') || logoutCookie.includes('Expires=') || logoutCookie.includes('Max-Age=0')));
+
   console.log('Security hardening tests passed.');
 }
 

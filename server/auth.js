@@ -3,9 +3,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const { db, logAudit, uploadsDir } = require('./database');
+const { db, logAudit, uploadsDir, getTodayString, getCurrentTimeString } = require('./database');
 const { PACKAGES, SUPPORT_WHATSAPP } = require('./support');
-const { JWT_SECRET } = require('./security-config');
+const {
+  JWT_SECRET,
+  getClientIp,
+  parseDeviceInfo,
+  validatePasswordStrength,
+  setAuthCookie,
+  clearAuthCookie,
+  extractToken
+} = require('./security-config');
 const { createRateLimiter } = require('./rate-limit');
 
 const router = express.Router();
@@ -74,11 +82,7 @@ function getSubscriptionDetails(managerId) {
 
 // Middleware to authenticate JWT
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (authHeader && authHeader.split(' ')[1]);
-  if (!token && req.query && req.query.token && (req.path.includes('/export') || (req.baseUrl && req.baseUrl.includes('/export')) || (req.originalUrl && req.originalUrl.includes('/export')))) {
-    token = req.query.token;
-  }
+  const token = extractToken(req);
 
   if (!token) {
     return res.status(401).json({ success: false, error: 'غير مصرح: يرجى تسجيل الدخول أولاً' });
@@ -191,8 +195,9 @@ router.post('/register-manager', registrationRateLimiter, (req, res) => {
       return res.status(400).json({ success: false, error: 'كلمتا المرور غير متطابقتين' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'يجب أن لا تقل كلمة المرور عن 6 خانات' });
+    const passStrength = validatePasswordStrength(password);
+    if (!passStrength.valid) {
+      return res.status(400).json({ success: false, error: passStrength.error });
     }
 
     const existing = db.prepare(`SELECT id FROM users WHERE LOWER(email) = LOWER(?)`).get(email.trim());
@@ -246,6 +251,8 @@ router.post('/register-manager', registrationRateLimiter, (req, res) => {
       issuer: 'workforce-attendance',
       audience: 'workforce-api'
     });
+
+    setAuthCookie(res, token);
 
     res.json({
       success: true,
@@ -358,9 +365,51 @@ router.post('/login', loginRateLimiter, (req, res) => {
     }
     safeUser.company_name = (wpLogin && wpLogin.company_name) ? wpLogin.company_name : (user.role === 'manager' ? user.full_name : '');
 
-    // Log login in audit
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logAudit(user.id, user.full_name, 'USER_LOGIN', 'users', user.id, null, null, 'تسجيل دخول ناجح للمنظومة', clientIp);
+    // Set HttpOnly Secure Cookie
+    setAuthCookie(res, token);
+
+    // Track login IP and device, and alert on suspicious / new device login
+    const clientIp = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'غير معروف';
+    const deviceInfo = parseDeviceInfo(userAgent);
+    const isNewDeviceOrIp = user.last_login_ip && (user.last_login_ip !== clientIp || user.last_login_device !== deviceInfo);
+
+    try {
+      db.prepare(`
+        UPDATE users
+        SET last_login_ip = ?, last_login_at = CURRENT_TIMESTAMP, last_login_device = ?
+        WHERE id = ?
+      `).run(clientIp, deviceInfo, user.id);
+    } catch (dbErr) {
+      console.warn('Failed to update login tracking:', dbErr);
+    }
+
+    logAudit(user.id, user.full_name, 'USER_LOGIN', 'users', user.id, null, { ip: clientIp, device: deviceInfo, isNewDevice: isNewDeviceOrIp }, 'تسجيل دخول ناجح للمنظومة', clientIp);
+
+    // If manager and phone exists, send instant WhatsApp security alert for new device/IP or first recorded login
+    if (user.role === 'manager' && user.phone && (isNewDeviceOrIp || !user.last_login_ip)) {
+      try {
+        const { sendWhatsAppMessage } = require('./whatsapp');
+        const cairoTime = getCurrentTimeString ? getCurrentTimeString() : '';
+        const cairoDate = getTodayString ? getTodayString() : '';
+        const waMsg = `تنبيه أمني - وقتي | WAQTY\n` +
+          `مرحباً ${user.full_name}،\n` +
+          `تم تسجيل الدخول إلى حسابك الإداري:\n` +
+          `• التاريخ: ${cairoDate} الساعة ${cairoTime}\n` +
+          `• الجهاز: ${deviceInfo}\n` +
+          `• عنوان الشبكة (IP): ${clientIp}\n\n` +
+          `إذا لم تكن أنت من قام بالدخول، يرجى تغيير كلمة المرور فوراً من داخل المنظومة لحماية بيانات منشأتك.`;
+        sendWhatsAppMessage({
+          phone: user.phone,
+          name: user.full_name,
+          role: 'manager',
+          type: 'security_alert',
+          message: waMsg
+        }).catch(err => console.warn('Security WhatsApp alert error:', err));
+      } catch (waErr) {
+        console.warn('WhatsApp alert trigger warning:', waErr);
+      }
+    }
 
     res.json({
       success: true,
@@ -600,6 +649,12 @@ router.post('/face-enroll', authenticateToken, (req, res) => {
     console.error('Face enroll error:', err);
     res.status(500).json({ success: false, error: 'حدث خطأ أثناء حفظ بصمة الوجه' });
   }
+});
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true, message: 'تم تسجيل الخروج بنجاح' });
 });
 
 module.exports = {

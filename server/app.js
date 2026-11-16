@@ -44,10 +44,8 @@ const allowedOrigins = new Set(
 
 app.disable('x-powered-by');
 app.use(compression({ threshold: 1024 }));
-const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || '0', 10);
-if (Number.isInteger(proxyHops) && proxyHops >= 0) {
-  app.set('trust proxy', proxyHops);
-}
+const proxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || '1', 10);
+app.set('trust proxy', (Number.isInteger(proxyHops) && proxyHops >= 0) ? proxyHops : 1);
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -56,6 +54,11 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  // Cloudflare trace reflection (useful for debugging WAF blocks and incident tracking)
+  const cfRay = req.headers['cf-ray'];
+  if (cfRay) {
+    res.setHeader('CF-Ray', String(cfRay));
   }
   next();
 });

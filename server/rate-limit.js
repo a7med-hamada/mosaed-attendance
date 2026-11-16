@@ -1,9 +1,11 @@
+const { getClientIp } = require('./security-config');
+
 function createRateLimiter({ windowMs, max, message }) {
   const requests = new Map();
 
   return function rateLimiter(req, res, next) {
     const now = Date.now();
-    const key = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = getClientIp(req);
     let entry = requests.get(key);
 
     if (!entry || entry.resetAt <= now) {

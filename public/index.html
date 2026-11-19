@@ -87,7 +87,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet with Cache Buster -->
-  <link rel="stylesheet" href="/css/style.css?v=20261119_landing_page_v1" />
+  <link rel="stylesheet" href="/css/style.css?v=20261119_width95_v1" />
 </head>
 <body class="min-h-screen bg-[#f8fafc] dark:bg-[#0b132b] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -121,9 +121,9 @@
 
     <!-- 0.1 Top Navigation Bar -->
     <header class="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#070d1e]/85 border-b border-slate-200/80 dark:border-slate-800/80 transition-all">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="w-[95%] max-w-[98%] mx-auto px-2 sm:px-4 h-20 flex items-center justify-between gap-4">
         <!-- Brand Logo -->
-        <div class="flex items-center gap-3 cursor-pointer select-none" onclick="App.showLandingView()">
+        <div class="flex items-center gap-3 cursor-pointer select-none flex-shrink-0" onclick="App.showLandingView()">
           <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-12 sm:h-14 w-auto object-contain drop-shadow-sm" />
           <div class="hidden sm:block">
             <span class="text-[11px] font-bold text-slate-400 block leading-tight">نظام الحضور والرواتب الذكي</span>
@@ -132,7 +132,7 @@
         </div>
 
         <!-- Desktop Navigation Links -->
-        <nav class="hidden lg:flex items-center gap-7 text-xs font-bold text-slate-600 dark:text-slate-300">
+        <nav class="hidden lg:flex items-center gap-4 xl:gap-8 text-xs xl:text-sm font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
           <a href="#about" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">عن المنظومة</a>
           <a href="#comparison" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">مقارنة مع جهاز البصمة</a>
           <a href="#features" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">المميزات</a>
@@ -142,7 +142,7 @@
         </nav>
 
         <!-- Header Actions: Theme Toggle, Login Button, Register Button -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <!-- Theme Toggle -->
           <button type="button" onclick="App.toggleTheme()" aria-label="تبديل الوضع"
             class="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer">
@@ -169,7 +169,7 @@
 
     <!-- 0.2 Hero Section -->
     <section class="relative pt-12 sm:pt-20 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden text-center">
-      <div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+      <div class="w-[95%] max-w-5xl mx-auto space-y-6 sm:space-y-8">
         <!-- Trust Pill -->
         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-xs">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -213,7 +213,7 @@
         </div>
 
         <!-- 3 Quick KPI Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 max-w-3xl mx-auto text-right">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 w-full max-w-4xl mx-auto text-right">
           <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
             <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
               <i data-lucide="badge-dollar-sign" class="w-5 h-5"></i>
@@ -243,7 +243,7 @@
 
     <!-- 0.3 Comparison Section: WAQTY vs Traditional Biometric Devices -->
     <section id="comparison" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-6xl mx-auto space-y-12">
+      <div class="w-[95%] max-w-[1500px] mx-auto space-y-12">
         <div class="text-center space-y-3 max-w-2xl mx-auto">
           <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">مقارنة شاملة وصريحة</span>
           <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -365,7 +365,7 @@
 
     <!-- 0.4 System Features Showcase -->
     <section id="features" class="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-6xl mx-auto space-y-12">
+      <div class="w-[95%] max-w-[1500px] mx-auto space-y-12">
         <div class="text-center space-y-3 max-w-2xl mx-auto">
           <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">قدرات المنظومة</span>
           <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -448,7 +448,7 @@
 
     <!-- 0.5 Subscription Packages & Pricing Section -->
     <section id="packages" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-6xl mx-auto space-y-12">
+      <div class="w-[95%] max-w-[1550px] mx-auto space-y-12">
         <div class="text-center space-y-3 max-w-2xl mx-auto">
           <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">أسعار شفافة وبسيطة</span>
           <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -569,7 +569,7 @@
 
     <!-- 0.6 How It Works Section -->
     <section id="how-it-works" class="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-5xl mx-auto space-y-12">
+      <div class="w-[95%] max-w-[1400px] mx-auto space-y-12">
         <div class="text-center space-y-3 max-w-2xl mx-auto">
           <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">سهولة الاستخدام</span>
           <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -619,7 +619,7 @@
 
     <!-- 0.7 FAQ Section -->
     <section id="faq" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-4xl mx-auto space-y-8">
+      <div class="w-[95%] max-w-4xl mx-auto space-y-8">
         <div class="text-center space-y-3">
           <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">إجابات واضحة</span>
           <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -677,7 +677,7 @@
 
     <!-- 0.8 Call To Action Bottom Banner -->
     <section class="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
-      <div class="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 text-white shadow-2xl space-y-6 relative">
+      <div class="w-[95%] max-w-5xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 text-white shadow-2xl space-y-6 relative">
         <h2 class="text-2xl sm:text-4xl font-black tracking-tight leading-snug">
           جاهز لتنظيم حضور موظفيك وتوفير آلاف الجنيهات؟
         </h2>
@@ -700,7 +700,7 @@
 
     <!-- 0.9 Footer -->
     <footer class="mt-auto py-10 bg-white dark:bg-[#070d1e] border-t border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
-      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="w-[95%] max-w-[98%] mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
         <div class="flex items-center gap-3">
           <img src="/waqty-logo.png" alt="وقتي" class="h-8 w-auto object-contain" />
           <span class="font-bold text-slate-700 dark:text-slate-300">وقتي | WAQTY - نظام الحضور الذكي</span>
@@ -1946,15 +1946,15 @@
   <!-- Scripts with Cache Busters -->
   <!-- SweetAlert2 UI Modal & Notification Engine -->
   <script src="/js/sweetalert2.all.min.js"></script>
-  <script src="/js/i18n.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/api.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/tafqeet.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/map.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/i18n.js?v=20261119_width95_v1"></script>
+  <script src="/js/api.js?v=20261119_width95_v1"></script>
+  <script src="/js/tafqeet.js?v=20261119_width95_v1"></script>
+  <script src="/js/map.js?v=20261119_width95_v1"></script>
   <script src="/js/face-api.min.js"></script>
-  <script src="/js/face-service.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/employee-ui.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/manager-ui.js?v=20261119_landing_page_v1"></script>
-  <script src="/js/app.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/face-service.js?v=20261119_width95_v1"></script>
+  <script src="/js/employee-ui.js?v=20261119_width95_v1"></script>
+  <script src="/js/manager-ui.js?v=20261119_width95_v1"></script>
+  <script src="/js/app.js?v=20261119_width95_v1"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>

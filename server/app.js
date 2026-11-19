@@ -100,7 +100,7 @@ app.use((req, res, next) => {
 });
 
 // Dedicated routes for Register Page
-app.get(['/register', '/signup'], (req, res) => {
+app.get(['/register', '/signup', '/login'], (req, res) => {
   res.sendFile('index.html', { root: publicDir });
 });
 

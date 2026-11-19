@@ -87,7 +87,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Custom Stylesheet with Cache Buster -->
-  <link rel="stylesheet" href="/css/style.css?v=20261116_security_cookies_v1" />
+  <link rel="stylesheet" href="/css/style.css?v=20261119_landing_page_v1" />
 </head>
 <body class="min-h-screen bg-[#f8fafc] dark:bg-[#0b132b] text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
@@ -110,16 +110,636 @@
   <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- ========================================== -->
+    <!-- ========================================== -->
+  <!-- 0. LANDING PAGE VIEW (HOMEPAGE) -->
+  <!-- ========================================== -->
+  <div id="landing-view" class="min-h-screen w-full relative bg-[#f8fafc] dark:bg-[#070d1e] text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-200">
+    <!-- Ambient Glowing Highlights -->
+    <div class="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute top-96 left-10 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-96 right-10 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+
+    <!-- 0.1 Top Navigation Bar -->
+    <header class="sticky top-0 z-40 w-full backdrop-blur-xl bg-white/85 dark:bg-[#070d1e]/85 border-b border-slate-200/80 dark:border-slate-800/80 transition-all">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3 cursor-pointer select-none" onclick="App.showLandingView()">
+          <img src="/waqty-logo.png" alt="وقتي - WAQTY" class="h-12 sm:h-14 w-auto object-contain drop-shadow-sm" />
+          <div class="hidden sm:block">
+            <span class="text-[11px] font-bold text-slate-400 block leading-tight">نظام الحضور والرواتب الذكي</span>
+            <span class="text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-wide">وقتي | WAQTY</span>
+          </div>
+        </div>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden lg:flex items-center gap-7 text-xs font-bold text-slate-600 dark:text-slate-300">
+          <a href="#about" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">عن المنظومة</a>
+          <a href="#comparison" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">مقارنة مع جهاز البصمة</a>
+          <a href="#features" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">المميزات</a>
+          <a href="#packages" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">الباقات والأسعار</a>
+          <a href="#how-it-works" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">كيف تبدأ</a>
+          <a href="#faq" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">الأسئلة الشائعة</a>
+        </nav>
+
+        <!-- Header Actions: Theme Toggle, Login Button, Register Button -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Theme Toggle -->
+          <button type="button" onclick="App.toggleTheme()" aria-label="تبديل الوضع"
+            class="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer">
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          </button>
+
+          <!-- Login Button -->
+          <button type="button" onclick="App.showLoginView()"
+            class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 dark:border-slate-700">
+            <i data-lucide="log-in" class="w-4 h-4 text-emerald-500"></i>
+            <span>تسجيل الدخول</span>
+          </button>
+
+          <!-- Register Activity Button -->
+          <button type="button" onclick="App.showRegisterView()"
+            class="px-4 sm:px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer transform active:scale-98">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            <span>تسجيل نشاط جديد</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 0.2 Hero Section -->
+    <section class="relative pt-12 sm:pt-20 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden text-center">
+      <div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+        <!-- Trust Pill -->
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>البديل الأذكى والأوفر لأجهزة البصمة التقليدية في مصر والوطن العربي</span>
+        </div>
+
+        <!-- Main Headline -->
+        <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight sm:leading-tight">
+          حوّل هواتف موظفيك إلى
+          <span class="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">جهاز حضور وانصراف ذكي</span>
+        </h1>
+
+        <!-- Subtitle Description -->
+        <p class="text-sm sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          منظومة سحابية متكاملة لتوثيق حضور الموظفين بالوجه والموقع الجغرافي (GPS) داخل نطاق مقر العمل، مع احتساب فوري لساعات العمل والتأخيرات والرواتب، بدون أجهزة معقدة وبدون تكاليف صيانة.
+        </p>
+
+        <!-- Call to Action Buttons -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+          <!-- Primary: Register Activity -->
+          <button type="button" onclick="App.showRegisterView()"
+            class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:scale-98 flex items-center justify-center gap-2.5 cursor-pointer">
+            <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+            <span>تسجيل نشاط جديد (ابدأ تجربة مجانية 14 يوماً)</span>
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Secondary: Login -->
+          <button type="button" onclick="App.showLoginView()"
+            class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white font-bold text-sm sm:text-base border border-slate-200 dark:border-slate-800 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="user-check" class="w-5 h-5 text-emerald-500"></i>
+            <span>تسجيل الدخول للنظام</span>
+          </button>
+        </div>
+
+        <!-- Trust Badges Bar -->
+        <div class="pt-4 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i> تجربة مجانية 14 يوماً بكافة الصلاحيات</span>
+          <span class="flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> بدون الحاجة لأي بطاقة بنكية</span>
+          <span class="flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4 text-emerald-500"></i> بدء التشغيل في أقل من دقيقة</span>
+        </div>
+
+        <!-- 3 Quick KPI Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 max-w-3xl mx-auto text-right">
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+              <i data-lucide="badge-dollar-sign" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white font-mono">100%</h3>
+            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">توفير تكلفة شراء وصيانة أجهزة البصمة</p>
+          </div>
+
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+              <i data-lucide="scan-face" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white font-mono">ثانية واحدة</h3>
+            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">لتسجيل كل موظف حضوره من هاتفه بدون طوابير</p>
+          </div>
+
+          <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-3">
+              <i data-lucide="calculator" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white font-mono">آلي بالكامل</h3>
+            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">احتساب الخصومات والتأخير ومسير الرواتب</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.3 Comparison Section: WAQTY vs Traditional Biometric Devices -->
+    <section id="comparison" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-6xl mx-auto space-y-12">
+        <div class="text-center space-y-3 max-w-2xl mx-auto">
+          <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">مقارنة شاملة وصريحة</span>
+          <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            لماذا تستبدل أجهزة البصمة التقليدية بنظام وقتي الذكي؟
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            مقارنة حقيقية بين التكاليف والمتاعب التي تسببها أجهزة البصمة الحائطية، وبين المرونة الفائقة والذكاء الذي يوفره نظام وقتي السحابي.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+          <!-- Card 1: Traditional Device (Flaws & High Costs) -->
+          <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/40 shadow-sm flex flex-col justify-between space-y-6 relative overflow-hidden">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="archive" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">جهاز البصمة الحائطي التقليدي</h3>
+                    <span class="text-xs text-rose-500 font-bold block">مكلف، معقد، ويتعطل باستمرار</span>
+                  </div>
+                </div>
+              </div>
+
+              <ul class="space-y-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>تكلفة شراء باهظة:</strong> يتراوح سعر الجهاز الواحد بين 3,000 و 8,000 جنيه لكل فرع، بالإضافة لأسلاك التوصيل وتكاليف التركيب.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>أعطال مستمرة وصيانة دورية:</strong> عطل في عدسة البصمة، انقطاع كابل الشبكة، أو انقطاع الكهرباء يوقف تسجيل الحضور تماماً.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>سهولة التحايل والتلاعب:</strong> إمكانية حضور موظف مكان زميله بالبصمة المطاطية، أو التلاعب في وقت وساعة الجهاز الداخلي.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>عاجز عن متابعة العمل الميداني:</strong> لا يمكنه تسجيل حضور مناديب المبيعات، الفنيين، مهندسي المواقع، أو الموظفين عن بعد.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>سحب البيانات شاق وبطئ:</strong> يتطلب فلاش ميموري (USB) أو برامج حاسوب قديمة معقدة لحساب التأخيرات ومسير الرواتب يدوياً كل شهر.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="x-circle" class="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>طوابير وازدحام صباحي:</strong> وقوف الموظفين في طابور طويل أمام جهاز واحد مما يسبب ضياع وقت العمل الصباحي.</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+              النتيجة: مصاريف شراء وصيانة مستمرة + هدر في وقت العمل + صعوبة في حساب الرواتب.
+            </div>
+          </div>
+
+          <!-- Card 2: WAQTY Smart Attendance (The Modern Solution) -->
+          <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 flex flex-col justify-between space-y-6 relative overflow-hidden">
+            <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+
+            <div class="space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 ring-2 ring-emerald-500/20">
+                    <i data-lucide="smartphone" class="w-6 h-6"></i>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>منظومة وقتي الذكية</span>
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold">الحل الموصى به</span>
+                    </h3>
+                    <span class="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">سحابي، فوري، وبدون أي أجهزة</span>
+                  </div>
+                </div>
+              </div>
+
+              <ul class="space-y-3.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>تكلفة أجهزة صفرية (0 ج.م):</strong> يعمل مباشرة من هواتف الموظفين (iOS وأندرويد) دون شراء أي جهاز ودون رسوم تركيب.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>توثيق ثلاثي يمنع التلاعب نهائياً:</strong> مطابقة فورية لملامح الوجه وحيويته + التأكد من تواجد الموظف جغرافياً داخل مقر الفرع (GPS) بالمتر.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>إدارة كاملة للفروع والعمل الميداني:</strong> أضف أي عدد من الفروع والمواقع وتابع حركة حضور وانصراف مناديبك في أي مكان لحظياً.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>مسير رواتب وخصومات آلي بالكامل:</strong> احتساب ساعات العمل، دقائق التأخير، الغياب، والإضافي (Overtime) وإصدار قسائم الرواتب وإرسالها عبر واتساب بضغطة زر.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>تسجيل فوري بدون أي انتظار:</strong> كل موظف يثبت حضوره من هاتفه الشخصي في ثانية واحدة؛ تنتهي الطوابير تماماً.</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5"></i>
+                  <span><strong>سحابي وآمن دائماً:</strong> بيانات شركتك وسجلاتك مشفرة ومحفوظة بنسخ احتياطي دوري ولا تتأثر بانقطاع كهرباء أو أعطال حواسيب.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="pt-2">
+              <button type="button" onclick="App.showRegisterView()"
+                class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                <span>ابدأ تجربة وقتي المجانية الآن (14 يوماً)</span>
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.4 System Features Showcase -->
+    <section id="features" class="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-6xl mx-auto space-y-12">
+        <div class="text-center space-y-3 max-w-2xl mx-auto">
+          <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">قدرات المنظومة</span>
+          <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            كل ما تحتاجه لإدارة الحضور والرواتب في مكان واحد
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            صُمم نظام وقتي ليغطي كافة متطلبات العمل في الشركات والمتاجر والمؤسسات باحترافية كاملة ودقة متناهية.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Feature 1 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <i data-lucide="scan-face" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">بصمة الوجه الحيوية الذكية</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              مطابقة ثلاثية متقدمة لملامح الوجه بتقنيات الذكاء الاصطناعي مع منع استخدام الصور الثابتة أو الشاشات لضمان حضور الموظف بنفسه.
+            </p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+              <i data-lucide="map-pin" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">السياج الجغرافي الصارم (GPS)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              تحديد محيط موقع العمل بالمتر (مثل 100 متر)، مع فحص دقة الإحداثيات ورفض أي محاولة تسجيل من خارج مقر العمل بدقة متناهية.
+            </p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <i data-lucide="clock" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">محرك ساعات العمل الإضافي</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              إمكانية تفعيل الـ Overtime اختياًرياً لكل شركة مع تحديد سعر وساعات العمل الإضافي قبل الدوام أو بعده واحتساب قيمتها تلقائياً للراتب.
+            </p>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <i data-lucide="calculator" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">مسير الرواتب والخصومات الذكي</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              حساب فوري للراتب الأساسي، خصومات دقائق التأخير، أيام الغياب، السلف المعتمدة، والمكافآت مع إمكانية إرسال قسائم الرواتب عبر واتساب.
+            </p>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <i data-lucide="git-branch" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">إدارة الفروع والورديات المتعددة</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              إضافة فروع متعددة وتحديد مدراء فروع وورديات صباحية ومسائية مخصصة مع فترات سماح مرنة لمواعيد الدوام بما يناسب طبيعة نشاطك.
+            </p>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <i data-lucide="calendar-check" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">بوابة الخدمة الذاتية للموظف</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              يتيح للموظف متابعة مؤشر التزامه، تقديم طلبات الإجازات والأذونات والسلف من هاتفه ومتابعة اعتماد الإدارة بضغطة زر.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.5 Subscription Packages & Pricing Section -->
+    <section id="packages" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-6xl mx-auto space-y-12">
+        <div class="text-center space-y-3 max-w-2xl mx-auto">
+          <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">أسعار شفافة وبسيطة</span>
+          <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            باقات الاشتراك في منظومة وقتي
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            جميع الباقات تشمل فترة تجريبية مجانية لمدة 14 يوماً بكامل الميزات دون أي التزام مالي.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+          <!-- Package 1: Monthly -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-slate-400 block mb-1">شهرياً (30 يوم)</span>
+                <h3 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة الشهرية</h3>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">75</span>
+                <span class="text-xs font-bold text-slate-400">ج.م / شهرياً</span>
+              </div>
+              <ul class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> تسجيل حضور دقيق بالبصمة وGPS</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> إدارة كاملة للموظفين دون حد أقصى</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> تقارير شهرية مفصلة مع تصدير Excel</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> حساب فوري للخصومات والتأخيرات</li>
+              </ul>
+            </div>
+            <button type="button" onclick="App.showRegisterView()"
+              class="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-all cursor-pointer">
+              بدء تجربة مجانية
+            </button>
+          </div>
+
+          <!-- Package 2: Quarterly -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div>
+                <span class="text-xs font-bold text-slate-400 block mb-1">كل 3 شهور (90 يوم)</span>
+                <h3 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة ربع السنوية</h3>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">180</span>
+                <span class="text-xs font-bold text-slate-400">ج.م / 3 شهور</span>
+              </div>
+              <ul class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> جميع ميزات الباقة الشهرية كاملة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> نظام السلف والمكافآت ومسير الرواتب</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> إدارة طلبات الإجازات والأذونات</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> أولوية في الدعم الفني المباشر</li>
+              </ul>
+            </div>
+            <button type="button" onclick="App.showRegisterView()"
+              class="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-all cursor-pointer">
+              بدء تجربة مجانية
+            </button>
+          </div>
+
+          <!-- Package 3: Semi-Annual -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-6">
+            <div class="space-y-4">
+              <div>
+                <div class="inline-block px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold mb-1">
+                  خصم 25% (توفير 100 ج.م)
+                </div>
+                <h3 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة نصف السنوية</h3>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">300</span>
+                <span class="text-xs font-bold text-slate-400 line-through mr-1 font-mono">400</span>
+                <span class="text-xs font-bold text-slate-400">ج.م / 6 شهور</span>
+              </div>
+              <ul class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> جميع ميزات الباقة ربع السنوية</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> مؤشرات التزام الموظفين ولوحة التميز</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> إشعارات وتقارير ذكية دورية</li>
+                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> توفير 100 ج.م مقارنة بالشهري</li>
+              </ul>
+            </div>
+            <button type="button" onclick="App.showRegisterView()"
+              class="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-all cursor-pointer">
+              بدء تجربة مجانية
+            </button>
+          </div>
+
+          <!-- Package 4: Annual (Featured / Most Popular) -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 flex flex-col justify-between space-y-6 relative overflow-hidden">
+            <div class="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+
+            <div class="space-y-4">
+              <div>
+                <div class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold mb-1">
+                  أعلى توفير - الأكثر طلباً
+                </div>
+                <h3 class="font-extrabold text-lg text-slate-900 dark:text-white">الباقة السنوية</h3>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">600</span>
+                <span class="text-xs font-bold text-slate-400 line-through mr-1 font-mono">800</span>
+                <span class="text-xs font-bold text-slate-400">ج.م / سنة كاملة</span>
+              </div>
+              <ul class="space-y-2.5 text-xs text-slate-700 dark:text-slate-200 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> سنة كاملة مستمرة بدون أي توقف</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> كافة التحديثات والميزات الجديدة مجاناً</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> دعم فني VIP خاص على مدار الساعة</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i> توفير 200 ج.م كاملة</li>
+              </ul>
+            </div>
+            <button type="button" onclick="App.showRegisterView()"
+              class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-md shadow-emerald-500/20 transition-all cursor-pointer">
+              بدء تجربة مجانية 14 يوماً
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.6 How It Works Section -->
+    <section id="how-it-works" class="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-5xl mx-auto space-y-12">
+        <div class="text-center space-y-3 max-w-2xl mx-auto">
+          <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">سهولة الاستخدام</span>
+          <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            كيف تبدأ استخدام منظومة وقتي في 3 خطوات بسيطة؟
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            لا تحتاج لخبرة تقنية أو مهندس تركيبات، يمكنك إطلاق النظام لمنشأتك بالكامل في دقيقة واحدة.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center relative">
+          <!-- Step 1 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white font-mono font-black text-lg flex items-center justify-center mx-auto shadow-md shadow-emerald-500/25">
+              1
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">أنشئ حساب منشأتك</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              سجل اسم شركتك وبيانات الدخول في نموذج التسجيل، وستبدأ فوراً فترة تجريبية مجانية لمدة 14 يوماً.
+            </p>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white font-mono font-black text-lg flex items-center justify-center mx-auto shadow-md shadow-emerald-500/25">
+              2
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">اضبط الموقع والمواعيد</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              حدد موقع فرعك على الخريطة بضغطة زر، واضبط مواعيد الدوام وساعات العمل وأسماء موظفيك.
+            </p>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white font-mono font-black text-lg flex items-center justify-center mx-auto shadow-md shadow-emerald-500/25">
+              3
+            </div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">يسجل موظفوك في ثانية</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              يفتح الموظفون الرابط من هواتفهم لإثبات الحضور والانصراف بالوجه والموقع الجغرافي وتتابع أنت كل شيء لحظياً.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.7 FAQ Section -->
+    <section id="faq" class="py-16 sm:py-24 bg-slate-100/60 dark:bg-slate-900/40 border-y border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto space-y-8">
+        <div class="text-center space-y-3">
+          <span class="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">إجابات واضحة</span>
+          <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            الأسئلة الشائعة حول منظومة وقتي
+          </h2>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Question 1 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+              <span>هل يحتاج النظام لشراء أي أجهزة بصمة أو كابلات؟</span>
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pr-6">
+              لا على الإطلاق. نظام وقتي سحابي بالكامل (Cloud-based)، ويعمل مباشرة عبر متصفحات هواتف الموظفين (آيفون وأندرويد) دون الحاجة لشراء أو تركيب أي أجهزة إضافية.
+            </p>
+          </div>
+
+          <!-- Question 2 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+              <span>كيف يمنع النظام الموظف من تسجيل الحضور من منزله أو تزييف صورته؟</span>
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pr-6">
+              يعتمد النظام على فحص أمني مزدوج ومحسوب على الخادم: أولاً مطابقة ملامح الوجه وحيويته، وثانياً حساب المسافة الجغرافية (Haversine) بين موقع الهاتف الفعلي ومقر العمل، فإذا كان الموظف خارج النطاق أو الصورة غير مطابقة يُرفض التسجيل فوراً.
+            </p>
+          </div>
+
+          <!-- Question 3 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+              <span>هل يمكنني استخدام النظام لأكثر من فرع ومواعيد عمل مختلفة؟</span>
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pr-6">
+              نعم بالتأكيد. يمكنك إضافة فروع متعددة للشركة، وتعيين ورديات عمل مختلفة (صباحية ومسائية) وتحديد موقع جغرافي مستقل لكل فرع، مع لوحة تحكم مركزية تتابع منها كل الفروع في شاشة واحدة.
+            </p>
+          </div>
+
+          <!-- Question 4 -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+              <span>ماذا يحدث بعد انتهاء الفترة التجريبية المجانية (14 يوماً)؟</span>
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pr-6">
+              تظل بياناتك وسجلاتك محفوظة بالكامل، ويمكنك اختيار أي باقة اشتراك تناسبك (شهرية، ربع سنوية، نصف سنوية، أو سنوية) وتفعيلها للاستمرار دون أي انقطاع.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.8 Call To Action Bottom Banner -->
+    <section class="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 text-center relative overflow-hidden">
+      <div class="max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 text-white shadow-2xl space-y-6 relative">
+        <h2 class="text-2xl sm:text-4xl font-black tracking-tight leading-snug">
+          جاهز لتنظيم حضور موظفيك وتوفير آلاف الجنيهات؟
+        </h2>
+        <p class="text-xs sm:text-base text-emerald-100 max-w-xl mx-auto leading-relaxed">
+          انضم لمئات المنشآت والأنشطة التجارية التي تعتمد على وقتي لإدارة دوام ورواتب موظفيها بأعلى دقة.
+        </p>
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+          <button type="button" onclick="App.showRegisterView()"
+            class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-emerald-800 font-extrabold text-sm shadow-lg hover:bg-slate-50 transition-all cursor-pointer">
+            ابدأ تجربتك المجانية الآن (14 يوماً)
+          </button>
+          <a href="https://wa.me/201093320211" target="_blank" rel="noopener noreferrer"
+            class="w-full sm:w-auto px-6 py-4 rounded-2xl bg-emerald-800/60 hover:bg-emerald-800 text-white font-bold text-sm border border-emerald-400/30 transition-all flex items-center justify-center gap-2">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>تواصل مباشرة عبر واتساب</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 0.9 Footer -->
+    <footer class="mt-auto py-10 bg-white dark:bg-[#070d1e] border-t border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+          <img src="/waqty-logo.png" alt="وقتي" class="h-8 w-auto object-contain" />
+          <span class="font-bold text-slate-700 dark:text-slate-300">وقتي | WAQTY - نظام الحضور الذكي</span>
+        </div>
+
+        <div class="flex items-center gap-6 font-semibold">
+          <button type="button" onclick="App.showLoginView()" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">تسجيل الدخول</button>
+          <button type="button" onclick="App.showRegisterView()" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">تسجيل نشاط جديد</button>
+          <button type="button" onclick="App.openSupportModal()" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">الدعم الفني</button>
+        </div>
+
+        <div class="text-[11px] text-slate-400">
+          جميع الحقوق محفوظة © وقتي 2026
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ========================================== -->
   <!-- 1. LOGIN SCREEN VIEW -->
   <!-- ========================================== -->
-  <div id="login-view" class="min-h-screen w-full flex items-center justify-center p-4 relative overflow-y-auto bg-slate-50 dark:bg-slate-950">
+  <div id="login-view" class="min-h-screen w-full flex items-center justify-center p-4 relative overflow-y-auto bg-slate-50 dark:bg-slate-950 hidden">
     <!-- Background glowing accents -->
     <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-teal-600/10 blur-3xl pointer-events-none"></div>
 
     <div class="max-w-md w-full my-auto bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 dark:border-slate-800 relative z-10 modal-enter max-h-none">
       <!-- Brand & Header -->
-      <div class="text-center mb-8">
+      <div class="mb-4 flex items-center justify-between">
+          <button type="button" onclick="App.showLandingView()" class="text-xs font-bold text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للرئيسية</span>
+          </button>
+          <button type="button" onclick="App.toggleTheme()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer">
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          </button>
+        </div>
+        <div class="text-center mb-8">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge-emerald-pill text-xs font-bold mb-4 shadow-sm">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>نظام حضور ذكي • أمان وموقع جغرافي</span>
@@ -205,6 +825,16 @@
 
     <div class="max-w-2xl w-full my-auto bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl border border-slate-200/80 dark:border-slate-800 relative z-10 modal-enter max-h-none">
       <!-- Header -->
+      <div class="mb-4 flex items-center justify-between">
+        <button type="button" onclick="App.showLandingView()" class="text-xs font-bold text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          <span>العودة للرئيسية</span>
+        </button>
+        <button type="button" onclick="App.toggleTheme()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer">
+          <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+        </button>
+      </div>
       <div class="text-center mb-6">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full badge-emerald-pill text-xs font-bold mb-3 shadow-xs">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -1316,15 +1946,15 @@
   <!-- Scripts with Cache Busters -->
   <!-- SweetAlert2 UI Modal & Notification Engine -->
   <script src="/js/sweetalert2.all.min.js"></script>
-  <script src="/js/i18n.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/api.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/tafqeet.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/map.js?v=20261116_security_cookies_v1"></script>
+  <script src="/js/i18n.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/api.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/tafqeet.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/map.js?v=20261119_landing_page_v1"></script>
   <script src="/js/face-api.min.js"></script>
-  <script src="/js/face-service.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/employee-ui.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/manager-ui.js?v=20261116_security_cookies_v1"></script>
-  <script src="/js/app.js?v=20261116_security_cookies_v1"></script>
+  <script src="/js/face-service.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/employee-ui.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/manager-ui.js?v=20261119_landing_page_v1"></script>
+  <script src="/js/app.js?v=20261119_landing_page_v1"></script>
 
   <!-- PWA Service Worker & Install Handling -->
   <script>

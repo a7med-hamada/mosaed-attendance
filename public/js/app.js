@@ -75,10 +75,12 @@ const App = {
     }
     window.addEventListener('popstate', () => {
       if (!API.getToken()) {
-        if (window.location.hash === '#register' || window.location.pathname.includes('/register')) {
+        if (window.location.hash === '#register' || window.location.pathname.includes('/register') || window.location.pathname.includes('/signup')) {
           this.showRegisterView();
-        } else {
+        } else if (window.location.hash === '#login' || window.location.pathname.includes('/login')) {
           this.showLoginView();
+        } else {
+          this.showLandingView();
         }
       }
     });
@@ -88,10 +90,13 @@ const App = {
     const token = API.getToken();
     if (!token) {
       const isReg = window.location.hash === '#register' || window.location.pathname.includes('/register') || window.location.pathname.includes('/signup');
+      const isLogin = window.location.hash === '#login' || window.location.pathname.includes('/login');
       if (isReg) {
         this.showRegisterView();
-      } else {
+      } else if (isLogin) {
         this.showLoginView();
+      } else {
+        this.showLandingView();
       }
       return;
     }
@@ -253,7 +258,7 @@ const App = {
     this.currentUser = null;
     if (EmployeeUI.stopCameraStream) EmployeeUI.stopCameraStream();
     if (ManagerUI.stopLivePolling) ManagerUI.stopLivePolling();
-    this.showLoginView();
+    this.showLandingView();
     showToast('تم تسجيل الخروج بنجاح', 'info');
   },
 
@@ -297,19 +302,41 @@ const App = {
     document.body.classList.remove('overflow-hidden');
   },
 
-  showLoginView() {
+  showLandingView() {
+    const landingView = document.getElementById('landing-view');
+    if (landingView) landingView.classList.remove('hidden');
+    const loginView = document.getElementById('login-view');
+    if (loginView) loginView.classList.add('hidden');
     const regView = document.getElementById('register-view');
     if (regView) regView.classList.add('hidden');
-    document.getElementById('login-view').classList.remove('hidden');
-    document.getElementById('app-view').classList.add('hidden');
-    if (window.location.hash === '#register') {
+    const appView = document.getElementById('app-view');
+    if (appView) appView.classList.add('hidden');
+    if (window.location.hash && (window.location.hash === '#login' || window.location.hash === '#register')) {
       history.pushState(null, '', window.location.pathname);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.lucide) lucide.createIcons();
   },
 
+  showLoginView() {
+    const landingView = document.getElementById('landing-view');
+    if (landingView) landingView.classList.add('hidden');
+    const regView = document.getElementById('register-view');
+    if (regView) regView.classList.add('hidden');
+    const loginView = document.getElementById('login-view');
+    if (loginView) loginView.classList.remove('hidden');
+    const appView = document.getElementById('app-view');
+    if (appView) appView.classList.add('hidden');
+    if (window.location.hash !== '#login') {
+      history.pushState(null, '', '#login');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.lucide) lucide.createIcons();
+  },
+
   showRegisterView() {
+    const landingView = document.getElementById('landing-view');
+    if (landingView) landingView.classList.add('hidden');
     const loginView = document.getElementById('login-view');
     if (loginView) loginView.classList.add('hidden');
     const appView = document.getElementById('app-view');
@@ -324,10 +351,14 @@ const App = {
   },
 
   showAppView() {
+    const landingView = document.getElementById('landing-view');
+    if (landingView) landingView.classList.add('hidden');
     const regView = document.getElementById('register-view');
     if (regView) regView.classList.add('hidden');
-    document.getElementById('login-view').classList.add('hidden');
-    document.getElementById('app-view').classList.remove('hidden');
+    const loginView = document.getElementById('login-view');
+    if (loginView) loginView.classList.add('hidden');
+    const appView = document.getElementById('app-view');
+    if (appView) appView.classList.remove('hidden');
 
     // Update Header user info
     const user = this.currentUser || API.getCurrentUser() || {};
